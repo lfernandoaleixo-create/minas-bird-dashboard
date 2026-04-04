@@ -10,3 +10,6 @@
 - [x] Calendário anual com seletor de ano
 - [x] Feriados escritos no rodapé de cada mês do calendário
 - [x] Diminuir tamanho dos 3 cards iniciais de ação
+- [x] Duplicar dieta existente para criar variações rapidamente
+- [x] Filtro por fase (Manutenção, Reprodução, etc.) na listagem de dietas salvas
+- [x] Exportação do calendário anual completo em PDF para impressão

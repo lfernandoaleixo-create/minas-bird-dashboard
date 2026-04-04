@@ -16,7 +16,7 @@ import {
   AlertCircle, CheckCircle2, BarChart3, RefreshCw,
   FilePlus, Edit3, FolderOpen, Save, Download, Trash2,
   Eye, Copy, Users, ArrowLeft, FileText, CalendarDays, Paintbrush,
-
+  FileDown, CopyPlus, Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { species, type Species } from "@/data/feeding";
@@ -29,6 +29,7 @@ import {
   feedingToPetbirdId,
 } from "@/data/petbird";
 import { exportDietAsText, generateDietId, type SavedDiet } from "@/lib/dietStorage";
+import { exportCalendarPdf, exportAllCalendarsPdf } from "@/lib/calendarPdf";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -136,6 +137,9 @@ export default function FeedingModule() {
   const [dayDetailDiet, setDayDetailDiet] = useState<SavedDiet | null>(null);
   const [dayDetailKey, setDayDetailKey] = useState<string>("");
   // Calendarios por espécie carregados do servidor via tRPC
+
+  // --- Filtro por fase ---
+  const [phaseFilter, setPhaseFilter] = useState<string>("all");
 
   // --- Saved diets list (from server via tRPC) ---
   const [savedDietsFilter, setSavedDietsFilter] = useState("");
@@ -446,6 +450,38 @@ export default function FeedingModule() {
       toast.error("Erro ao copiar. Tente exportar como arquivo.");
     });
   }, []);
+
+  // --- Duplicar dieta ---
+  const handleDuplicateDiet = useCallback(async (diet: SavedDiet) => {
+    const newId = generateDietId();
+    const newName = `${diet.name} (cópia)`;
+    try {
+      await createDietMut.mutateAsync({
+        id: newId,
+        name: newName,
+        speciesId: diet.speciesId,
+        speciesName: diet.speciesName,
+        racaoId: diet.racaoId,
+        racaoName: diet.racaoName,
+        vegetaisIds: diet.vegetaisIds,
+        frutasIds: diet.frutasIds,
+        proteicosIds: diet.proteicosIds,
+        weight: diet.weight,
+        phaseId: diet.phaseId,
+        enclosureId: diet.enclosureId,
+        birdCount: diet.birdCount,
+        notes: diet.notes || undefined,
+        mer: diet.mer,
+        totalGrams: diet.totalGrams,
+        totalKcal: diet.totalKcal,
+        items: diet.items,
+      });
+      toast.success(`Dieta duplicada: "${newName}"`);
+    } catch (err) {
+      console.error("Erro ao duplicar dieta:", err);
+      toast.error("Erro ao duplicar dieta.");
+    }
+  }, [createDietMut]);
 
   // --- Delete diet ---
   const handleDeleteDiet = useCallback(async (id: string) => {
@@ -976,6 +1012,22 @@ export default function FeedingModule() {
                   })}
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> Feriado</span>
                   <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm ring-1 ring-emerald-500 inline-block" /> Hoje</span>
+                  <button
+                    onClick={() => {
+                      exportCalendarPdf({
+                        year: calendarYear,
+                        speciesName: speciesName,
+                        speciesId: speciesId,
+                        diets: dietsForSpecies,
+                        calendar: calendarForSpecies,
+                      });
+                      toast.success("PDF do calendário exportado!");
+                    }}
+                    className="ml-auto flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors"
+                    title="Exportar calendário em PDF"
+                  >
+                    <FileDown className="w-3 h-3" /> Exportar PDF
+                  </button>
                 </div>
 
                 {/* Lista de dietas com ações */}
@@ -1017,6 +1069,13 @@ export default function FeedingModule() {
                               <Edit3 className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => handleDuplicateDiet(diet)}
+                              className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                              title="Duplicar"
+                            >
+                              <CopyPlus className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleExportDiet(diet)}
                               className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                               title="Exportar"
@@ -1042,6 +1101,27 @@ export default function FeedingModule() {
             );
           });
         })()}
+
+        {/* Botão de exportar todos os calendários em PDF */}
+        {savedDiets.length > 0 && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                exportAllCalendarsPdf(
+                  calendarYear,
+                  activeFlockSpecies.map(sp => ({ id: sp.id, commonName: sp.commonName })),
+                  savedDiets,
+                  speciesCalendars,
+                );
+                toast.success("PDF completo exportado com sucesso!");
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
+            >
+              <FileDown className="w-4 h-4" />
+              Exportar Todos os Calendários em PDF ({calendarYear})
+            </button>
+          </div>
+        )}
         </>
       )}
 
@@ -1060,16 +1140,31 @@ export default function FeedingModule() {
                   <span className="text-xs text-stone-400">({savedDiets.length})</span>
                 </div>
               </div>
-              {savedDiets.length > 3 && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <input
-                    type="text" placeholder="Buscar dieta..."
-                    value={savedDietsFilter} onChange={e => setSavedDietsFilter(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:border-emerald-400"
-                  />
+              <div className="flex items-center gap-2">
+                {savedDiets.length > 3 && (
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <input
+                      type="text" placeholder="Buscar dieta..."
+                      value={savedDietsFilter} onChange={e => setSavedDietsFilter(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:border-emerald-400"
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-stone-400" />
+                  <select
+                    value={phaseFilter}
+                    onChange={e => setPhaseFilter(e.target.value)}
+                    className="text-xs border border-stone-200 rounded-md px-2 py-2 bg-white text-stone-700 focus:outline-none focus:border-emerald-400"
+                  >
+                    <option value="all">Todas as fases</option>
+                    {lifePeriods.map(p => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
+              </div>
             </div>
 
             {savedDiets.length === 0 ? (
@@ -1088,9 +1183,10 @@ export default function FeedingModule() {
               <div className="divide-y divide-stone-100">
                 {activeFlockSpecies.map(sp => {
                   const dietsForSp = savedDiets.filter(d => d.speciesId === sp.id);
+                  const phaseFilteredDiets = phaseFilter === "all" ? dietsForSp : dietsForSp.filter(d => d.phaseId === phaseFilter);
                   const filteredDietsForSp = savedDietsFilter
-                    ? dietsForSp.filter(d => d.name.toLowerCase().includes(savedDietsFilter.toLowerCase()) || d.speciesName.toLowerCase().includes(savedDietsFilter.toLowerCase()))
-                    : dietsForSp;
+                    ? phaseFilteredDiets.filter(d => d.name.toLowerCase().includes(savedDietsFilter.toLowerCase()) || d.speciesName.toLowerCase().includes(savedDietsFilter.toLowerCase()))
+                    : phaseFilteredDiets;
                   const isExpanded = expandedRegistries.has(sp.id + "-saved");
                   const toggleExpand = () => {
                     setExpandedRegistries(prev => {
@@ -1154,6 +1250,9 @@ export default function FeedingModule() {
                                       )}
                                     </div>
                                     <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
+                                      <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 font-medium text-[10px]">
+                                        {lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId}
+                                      </span>
                                       <span>{diet.totalGrams.toFixed(1)}g/ave</span>
                                       <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
                                       {(() => {
@@ -1186,6 +1285,13 @@ export default function FeedingModule() {
                                       title="Editar"
                                     >
                                       <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDuplicateDiet(diet)}
+                                      className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                                      title="Duplicar"
+                                    >
+                                      <CopyPlus className="w-4 h-4" />
                                     </button>
                                     <button
                                       onClick={() => handleCopyDiet(diet)}
@@ -1239,6 +1345,9 @@ export default function FeedingModule() {
                 <button onClick={() => loadDietForEditing(viewingDiet)} className="px-3 py-1.5 text-xs bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors flex items-center gap-1">
                   <Edit3 className="w-3 h-3" /> Editar
                 </button>
+                <button onClick={() => handleDuplicateDiet(viewingDiet)} className="px-3 py-1.5 text-xs bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-1">
+                  <CopyPlus className="w-3 h-3" /> Duplicar
+                </button>
                 <button onClick={() => handleCopyDiet(viewingDiet)} className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1">
                   <Copy className="w-3 h-3" /> Copiar
                 </button>
@@ -1249,10 +1358,18 @@ export default function FeedingModule() {
             </div>
 
             {/* Info grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
               <div className="bg-stone-50 rounded-lg p-3">
                 <span className="text-[10px] text-stone-500 font-medium">Espécie</span>
                 <p className="text-sm font-semibold text-stone-800">{viewingDiet.speciesName}</p>
+              </div>
+              <div className="bg-stone-50 rounded-lg p-3">
+                <span className="text-[10px] text-stone-500 font-medium">Fase</span>
+                <p className="text-sm font-semibold text-stone-800">{lifePeriods.find(p => p.id === viewingDiet.phaseId)?.label || viewingDiet.phaseId}</p>
+              </div>
+              <div className="bg-stone-50 rounded-lg p-3">
+                <span className="text-[10px] text-stone-500 font-medium">Ambiente</span>
+                <p className="text-sm font-semibold text-stone-800">{enclosureTypes.find(e => e.id === viewingDiet.enclosureId)?.label || viewingDiet.enclosureId}</p>
               </div>
               <div className="bg-stone-50 rounded-lg p-3">
                 <span className="text-[10px] text-stone-500 font-medium">Peso</span>
@@ -1267,6 +1384,14 @@ export default function FeedingModule() {
                 <p className="text-sm font-semibold text-emerald-700">{viewingDiet.mer.toFixed(1)} kcal/dia</p>
               </div>
             </div>
+
+            {/* Observações */}
+            {viewingDiet.notes && (
+              <div className="mb-4 bg-amber-50 rounded-lg border border-amber-200 p-3">
+                <span className="text-[10px] text-amber-700 font-semibold uppercase tracking-wider">Observações</span>
+                <p className="text-sm text-stone-700 mt-1">{viewingDiet.notes}</p>
+              </div>
+            )}
 
             {/* Dias atribuídos no calendário */}
             {(() => {
