@@ -1,6 +1,10 @@
 /**
  * Diet Storage — Persistência local de dietas salvas
  * Usa localStorage para manter dietas entre sessões
+ *
+ * NOVO: O calendário de atribuição de dietas a dias é separado da dieta.
+ * A dieta é apenas a "receita". A atribuição de dias é feita no
+ * speciesCalendar, que mapeia espécie → { "mês-dia" → dietId }.
  */
 
 export interface SavedDietItem {
@@ -11,11 +15,6 @@ export interface SavedDietItem {
   energyKcalPerKg: number;
 }
 
-/**
- * schedule: mapa de mês (1-12) → array de dias (1-31)
- * Ex: { 1: [1,5,10], 3: [1,2,...,31] }
- * Se um mês não está no mapa, não tem dias programados
- */
 export interface SavedDiet {
   id: string;
   name: string;
@@ -33,12 +32,8 @@ export interface SavedDiet {
   mer: number;
   totalGrams: number;
   totalKcal: number;
-  /** @deprecated Use schedule instead */
-  selectedDays?: number[];
-  /** @deprecated Use schedule instead */
-  selectedMonths?: number[];
-  /** Mapa mês→dias: { 1: [1,5], 4: [1,...,30] } */
-  schedule: Record<number, number[]>;
+  /** @deprecated Mantido para compatibilidade, não mais usado na criação */
+  schedule?: Record<number, number[]>;
   items: {
     racao: SavedDietItem[];
     vegetais: SavedDietItem[];
@@ -51,52 +46,26 @@ export interface SavedDiet {
 
 const STORAGE_KEY = "minas-bird-saved-diets";
 
-const MONTH_NAMES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+/**
+ * SpeciesCalendar — Mapa de atribuição de dietas a dias por espécie
+ * Estrutura: { speciesId: { "mês-dia": dietId } }
+ * Ex: { "ringneck": { "1-5": "abc123", "1-6": "abc123", "3-10": "def456" } }
+ */
+export type SpeciesCalendarMap = Record<string, Record<string, string>>;
+
+const CALENDAR_STORAGE_KEY = "minas-bird-species-calendar";
+
+// ===== DIETAS CRUD =====
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
-}
-
-/**
- * Migra dados antigos (selectedDays + selectedMonths) para o novo formato schedule
- */
-function migrateToSchedule(diet: any): Record<number, number[]> {
-  if (diet.schedule && Object.keys(diet.schedule).length > 0) {
-    // Já tem schedule, converter keys para number
-    const result: Record<number, number[]> = {};
-    for (const [k, v] of Object.entries(diet.schedule)) {
-      const month = Number(k);
-      if (month >= 1 && month <= 12 && Array.isArray(v) && (v as number[]).length > 0) {
-        result[month] = v as number[];
-      }
-    }
-    return result;
-  }
-  // Migrar do formato antigo
-  const months: number[] = diet.selectedMonths || [];
-  const days: number[] = diet.selectedDays || [];
-  if (months.length === 0 && days.length === 0) return {};
-  const result: Record<number, number[]> = {};
-  if (months.length > 0 && days.length > 0) {
-    months.forEach(m => { result[m] = [...days]; });
-  } else if (months.length > 0) {
-    months.forEach(m => { result[m] = []; });
-  }
-  return result;
 }
 
 export function getSavedDiets(): SavedDiet[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return [];
-    const diets = JSON.parse(data) as any[];
-    return diets.map(d => ({
-      ...d,
-      schedule: migrateToSchedule(d),
-    }));
+    return JSON.parse(data) as SavedDiet[];
   } catch {
     return [];
   }
@@ -107,7 +76,6 @@ export function saveDiet(diet: Omit<SavedDiet, "id" | "createdAt" | "updatedAt">
   const now = new Date().toISOString();
   const newDiet: SavedDiet = {
     ...diet,
-    schedule: diet.schedule || {},
     id: generateId(),
     createdAt: now,
     updatedAt: now,
@@ -131,6 +99,8 @@ export function deleteDiet(id: string): boolean {
   const filtered = diets.filter(d => d.id !== id);
   if (filtered.length === diets.length) return false;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  // Também remover do calendário
+  removeCalendarEntriesForDiet(id);
   return true;
 }
 
@@ -138,19 +108,88 @@ export function getDietsBySpecies(speciesId: string): SavedDiet[] {
   return getSavedDiets().filter(d => d.speciesId === speciesId);
 }
 
-function formatSchedule(schedule: Record<number, number[]>): string {
-  const entries = Object.entries(schedule)
-    .map(([m, days]) => ({ month: Number(m), days }))
-    .filter(e => e.days.length > 0)
-    .sort((a, b) => a.month - b.month);
-  if (entries.length === 0) return "Nenhum período selecionado";
-  return entries.map(e => {
-    const monthName = MONTH_NAMES[e.month - 1];
-    const daysInMonth = new Date(2026, e.month, 0).getDate();
-    const daysStr = e.days.length === daysInMonth ? "todos os dias" : `dias ${e.days.sort((a, b) => a - b).join(", ")}`;
-    return `${monthName}: ${daysStr}`;
-  }).join(" | ");
+// ===== SPECIES CALENDAR CRUD =====
+
+export function getSpeciesCalendar(): SpeciesCalendarMap {
+  try {
+    const data = localStorage.getItem(CALENDAR_STORAGE_KEY);
+    if (!data) return {};
+    return JSON.parse(data) as SpeciesCalendarMap;
+  } catch {
+    return {};
+  }
 }
+
+export function getCalendarForSpecies(speciesId: string): Record<string, string> {
+  const all = getSpeciesCalendar();
+  return all[speciesId] || {};
+}
+
+/**
+ * Atribuir uma dieta a um dia específico para uma espécie
+ * dayKey no formato "mês-dia", ex: "1-5" para 5 de janeiro
+ */
+export function assignDietToDay(speciesId: string, dayKey: string, dietId: string): void {
+  const all = getSpeciesCalendar();
+  if (!all[speciesId]) all[speciesId] = {};
+  all[speciesId][dayKey] = dietId;
+  localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(all));
+}
+
+/**
+ * Remover a atribuição de dieta de um dia
+ */
+export function removeDietFromDay(speciesId: string, dayKey: string): void {
+  const all = getSpeciesCalendar();
+  if (!all[speciesId]) return;
+  delete all[speciesId][dayKey];
+  if (Object.keys(all[speciesId]).length === 0) delete all[speciesId];
+  localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(all));
+}
+
+/**
+ * Atribuir uma dieta a múltiplos dias de uma vez
+ */
+export function assignDietToDays(speciesId: string, dayKeys: string[], dietId: string): void {
+  const all = getSpeciesCalendar();
+  if (!all[speciesId]) all[speciesId] = {};
+  dayKeys.forEach(key => { all[speciesId][key] = dietId; });
+  localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(all));
+}
+
+/**
+ * Remover todas as entradas de calendário de uma dieta deletada
+ */
+function removeCalendarEntriesForDiet(dietId: string): void {
+  const all = getSpeciesCalendar();
+  let changed = false;
+  for (const speciesId of Object.keys(all)) {
+    for (const dayKey of Object.keys(all[speciesId])) {
+      if (all[speciesId][dayKey] === dietId) {
+        delete all[speciesId][dayKey];
+        changed = true;
+      }
+    }
+    if (Object.keys(all[speciesId]).length === 0) delete all[speciesId];
+  }
+  if (changed) localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(all));
+}
+
+/**
+ * Salvar o calendário inteiro de uma espécie
+ */
+export function saveCalendarForSpecies(speciesId: string, calendar: Record<string, string>): void {
+  const all = getSpeciesCalendar();
+  all[speciesId] = calendar;
+  localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(all));
+}
+
+// ===== EXPORT =====
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
 
 export function exportDietAsText(diet: SavedDiet): string {
   const lines: string[] = [];
@@ -163,10 +202,24 @@ export function exportDietAsText(diet: SavedDiet): string {
   lines.push(`Quantidade de aves: ${diet.birdCount}`);
   lines.push(`MER: ${diet.mer.toFixed(1)} kcal/dia por ave`);
 
-  // Período de uso
-  const schedule = diet.schedule || {};
-  if (Object.keys(schedule).length > 0) {
-    lines.push(`Período de uso: ${formatSchedule(schedule)}`);
+  // Dias atribuídos no calendário
+  const calendar = getCalendarForSpecies(diet.speciesId);
+  const assignedDays = Object.entries(calendar)
+    .filter(([, id]) => id === diet.id)
+    .map(([key]) => key);
+  if (assignedDays.length > 0) {
+    // Agrupar por mês
+    const byMonth: Record<number, number[]> = {};
+    assignedDays.forEach(key => {
+      const [m, d] = key.split("-").map(Number);
+      if (!byMonth[m]) byMonth[m] = [];
+      byMonth[m].push(d);
+    });
+    const schedule = Object.entries(byMonth)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([m, days]) => `${MONTH_NAMES[Number(m) - 1]}: dias ${days.sort((a, b) => a - b).join(", ")}`)
+      .join(" | ");
+    lines.push(`Período de uso: ${schedule}`);
   }
 
   lines.push("");

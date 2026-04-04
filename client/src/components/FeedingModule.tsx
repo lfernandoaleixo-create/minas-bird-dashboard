@@ -15,7 +15,7 @@ import {
   Home, Egg, Feather, Lock, Zap, Plus, X, ArrowRight,
   AlertCircle, CheckCircle2, BarChart3, RefreshCw,
   FilePlus, Edit3, FolderOpen, Save, Download, Trash2,
-  Eye, Copy, Users, ArrowLeft, FileText, CalendarDays,
+  Eye, Copy, Users, ArrowLeft, FileText, CalendarDays, Paintbrush,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { species, type Species } from "@/data/feeding";
@@ -27,10 +27,7 @@ import {
   type LifePeriod as LifePeriodType, type EnclosureType,
   feedingToPetbirdId,
 } from "@/data/petbird";
-import {
-  getSavedDiets, saveDiet, updateDiet, deleteDiet,
-  exportDietAsText, type SavedDiet,
-} from "@/lib/dietStorage";
+import { getSavedDiets, saveDiet, updateDiet, deleteDiet, exportDietAsText, getCalendarForSpecies, assignDietToDay, removeDietFromDay, saveCalendarForSpecies, type SavedDiet } from "@/lib/dietStorage";
 import { toast } from "sonner";
 
 const HERO_IMAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/hero-alimentacao-9qkdhc8VaTxqHLKvqK3hAv.webp";
@@ -127,15 +124,15 @@ export default function FeedingModule() {
   const [dietName, setDietName] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
-  // --- Schedule: mapa mês→dias selecionados ---
-  const [schedule, setSchedule] = useState<Record<number, number[]>>({});
-  // --- Mês ativo no seletor de dias (1-12) ---
-  const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth() + 1);
-  // --- Mês visualizado no calendário ---
-  const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
-  const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
-  // --- Painéis de registro expandidos ---
+  // --- Calendário interativo por espécie ---
   const [expandedRegistries, setExpandedRegistries] = useState<Set<string>>(new Set());
+  // Dieta ativa selecionada para "pintar" no calendário (dietId)
+  const [activePaintDiet, setActivePaintDiet] = useState<string | null>(null);
+  // Dieta sendo visualizada no resumo (ao clicar num dia)
+  const [dayDetailDiet, setDayDetailDiet] = useState<SavedDiet | null>(null);
+  const [dayDetailKey, setDayDetailKey] = useState<string>("");
+  // Calendarios por espécie carregados do localStorage
+  const [speciesCalendars, setSpeciesCalendars] = useState<Record<string, Record<string, string>>>({});
 
   // --- Saved diets list ---
   const [savedDiets, setSavedDiets] = useState<SavedDiet[]>(() => getSavedDiets());
@@ -147,11 +144,34 @@ export default function FeedingModule() {
     setSavedDiets(diets);
   }, [dietMode]);
 
+  // Carregar calendários do localStorage
+  useEffect(() => {
+    const loadCalendars = () => {
+      const allDiets = getSavedDiets();
+      const speciesIds = Array.from(new Set(allDiets.map(d => d.speciesId)));
+      const calendars: Record<string, Record<string, string>> = {};
+      speciesIds.forEach(sid => {
+        calendars[sid] = getCalendarForSpecies(sid);
+      });
+      setSpeciesCalendars(calendars);
+    };
+    loadCalendars();
+  }, [dietMode, savedDiets]);
+
   // Also listen for storage events (cross-tab sync)
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "minas-bird-saved-diets") {
         setSavedDiets(getSavedDiets());
+      }
+      if (e.key === "minas-bird-species-calendar") {
+        const allDiets = getSavedDiets();
+        const speciesIds = Array.from(new Set(allDiets.map(d => d.speciesId)));
+        const calendars: Record<string, Record<string, string>> = {};
+        speciesIds.forEach(sid => {
+          calendars[sid] = getCalendarForSpecies(sid);
+        });
+        setSpeciesCalendars(calendars);
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -326,8 +346,7 @@ export default function FeedingModule() {
     setEditingDietId(null);
     setDietName("");
     setShowSaveDialog(false);
-    setSchedule({});
-    setActiveMonth(new Date().getMonth() + 1);
+
   }, []);
 
   // --- Load saved diet into editor ---
@@ -354,10 +373,7 @@ export default function FeedingModule() {
 
     setEditingDietId(diet.id);
     setDietName(diet.name);
-    setSchedule(diet.schedule || {});
-    // Definir o activeMonth como o primeiro mês do schedule ou o mês atual
-    const scheduleMonths = Object.keys(diet.schedule || {}).map(Number).sort((a, b) => a - b);
-    setActiveMonth(scheduleMonths.length > 0 ? scheduleMonths[0] : new Date().getMonth() + 1);
+
     setExpandedStep(null);
   }, []);
 
@@ -383,7 +399,6 @@ export default function FeedingModule() {
       mer,
       totalGrams: nossaDieta.total.grams,
       totalKcal: nossaDieta.total.kcal,
-      schedule,
       items: {
         racao: nossaDieta.racao.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.racao.kcal, energyKcalPerKg: i.food.energyKcal })),
         vegetais: nossaDieta.vegetais.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.vegetais.kcal / Math.max(1, selectedVegetais.length), energyKcalPerKg: i.food.energyKcal })),
@@ -426,13 +441,10 @@ export default function FeedingModule() {
       setEditingDietId(null);
       setDietName("");
       setShowSaveDialog(false);
-      setSchedule({});
-      setActiveMonth(new Date().getMonth() + 1);
-      setCalendarMonth(new Date().getMonth());
-      setCalendarYear(new Date().getFullYear());
+
       setDietMode("menu");
     }, 600);
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, schedule]);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -553,8 +565,6 @@ export default function FeedingModule() {
                 setEditingDietId(null);
                 setDietName("");
                 setShowSaveDialog(false);
-                setSchedule({});
-                setActiveMonth(new Date().getMonth() + 1);
                 setDietMode("creating");
               }}
               className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
@@ -611,7 +621,6 @@ export default function FeedingModule() {
         {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
         {savedDiets.length > 0 && (() => {
           const MONTH_NAMES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-          const MONTH_NAMES_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
           const FERIADOS_REG: Record<string, string> = {
             "1-1": "Confraternização Universal",
             "2-17": "Carnaval", "2-18": "Carnaval",
@@ -626,19 +635,20 @@ export default function FeedingModule() {
             "12-25": "Natal",
           };
           const DIET_COLORS = [
-            { bg: "bg-emerald-500", text: "text-emerald-800", light: "bg-emerald-100", border: "border-emerald-300" },
-            { bg: "bg-blue-500", text: "text-blue-800", light: "bg-blue-100", border: "border-blue-300" },
-            { bg: "bg-amber-500", text: "text-amber-800", light: "bg-amber-100", border: "border-amber-300" },
-            { bg: "bg-purple-500", text: "text-purple-800", light: "bg-purple-100", border: "border-purple-300" },
-            { bg: "bg-red-400", text: "text-red-800", light: "bg-red-100", border: "border-red-300" },
-            { bg: "bg-teal-500", text: "text-teal-800", light: "bg-teal-100", border: "border-teal-300" },
+            { bg: "bg-emerald-500", text: "text-emerald-800", light: "bg-emerald-100", border: "border-emerald-300", hex: "#10b981" },
+            { bg: "bg-blue-500", text: "text-blue-800", light: "bg-blue-100", border: "border-blue-300", hex: "#3b82f6" },
+            { bg: "bg-amber-500", text: "text-amber-800", light: "bg-amber-100", border: "border-amber-300", hex: "#f59e0b" },
+            { bg: "bg-purple-500", text: "text-purple-800", light: "bg-purple-100", border: "border-purple-300", hex: "#a855f7" },
+            { bg: "bg-red-400", text: "text-red-800", light: "bg-red-100", border: "border-red-300", hex: "#f87171" },
+            { bg: "bg-teal-500", text: "text-teal-800", light: "bg-teal-100", border: "border-teal-300", hex: "#14b8a6" },
           ];
 
           return Object.entries(groupedSavedDiets).map(([speciesName, dietsForSpecies]) => {
-            // Atribuir cor única a cada dieta
             const dietColorMap = new Map<string, typeof DIET_COLORS[0]>();
             dietsForSpecies.forEach((d, i) => dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]));
 
+            const speciesId = dietsForSpecies[0]?.speciesId;
+            const calendarForSpecies = speciesCalendars[speciesId] || {};
             const now = new Date();
             const currentYear = now.getFullYear();
 
@@ -652,6 +662,9 @@ export default function FeedingModule() {
               });
             };
 
+            // Contar dias atribuídos
+            const totalAssigned = Object.keys(calendarForSpecies).length;
+
             return (
               <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
                 <button
@@ -664,6 +677,11 @@ export default function FeedingModule() {
                     <h2 className="font-bold text-stone-800">{speciesName}</h2>
                     <span className="text-xs text-stone-400">Registro de Alimentação {currentYear}</span>
                     <span className="text-[11px] text-stone-400 ml-1">({dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""})</span>
+                    {totalAssigned > 0 && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
+                        {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
+                      </span>
+                    )}
                     <span className="ml-auto">
                       {isExpanded
                         ? <ChevronDown className="w-5 h-5 text-stone-400" />
@@ -687,20 +705,141 @@ export default function FeedingModule() {
 
                 {isExpanded && (
                   <>
-                {/* Legenda das dietas */}
+                {/* Seletor de dieta para pintar no calendário */}
                 <div className="px-5 py-3 border-b border-stone-100 bg-stone-50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Paintbrush className="w-4 h-4 text-stone-500" />
+                    <span className="text-xs font-semibold text-stone-600">Selecione uma dieta e clique nos dias do calendário para atribuí-la:</span>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {dietsForSpecies.map(diet => {
                       const color = dietColorMap.get(diet.id)!;
+                      const isActive = activePaintDiet === diet.id;
+                      const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;
                       return (
-                        <div key={diet.id} className="flex items-center gap-1.5">
-                          <span className={cn("w-3 h-3 rounded-sm", color.bg)} />
-                          <span className="text-[11px] font-medium text-stone-700">{diet.name}</span>
-                        </div>
+                        <button
+                          key={diet.id}
+                          type="button"
+                          onClick={() => {
+                            setActivePaintDiet(isActive ? null : diet.id);
+                            setDayDetailDiet(null);
+                          }}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                            isActive
+                              ? `${color.bg} text-white border-transparent ring-2 ring-offset-1 ring-stone-400 shadow-md`
+                              : `${color.light} ${color.text} ${color.border} hover:shadow-sm`
+                          )}
+                        >
+                          <span className={cn("w-3 h-3 rounded-sm", isActive ? "bg-white/40" : color.bg)} />
+                          {diet.name}
+                          {assignedCount > 0 && (
+                            <span className={cn(
+                              "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
+                              isActive ? "bg-white/30 text-white" : "bg-white text-stone-600"
+                            )}>
+                              {assignedCount}d
+                            </span>
+                          )}
+                        </button>
                       );
                     })}
+                    {activePaintDiet && (
+                      <button
+                        type="button"
+                        onClick={() => setActivePaintDiet(null)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-stone-500 border border-stone-200 hover:bg-stone-100 transition-colors"
+                      >
+                        <X className="w-3 h-3" /> Cancelar
+                      </button>
+                    )}
                   </div>
+                  {activePaintDiet && (
+                    <p className="text-[11px] text-emerald-700 mt-2 font-medium">
+                      Modo pintura ativo — clique nos dias para atribuir/remover a dieta selecionada
+                    </p>
+                  )}
                 </div>
+
+                {/* Resumo da dieta do dia clicado */}
+                {dayDetailDiet && dayDetailKey && (() => {
+                  const [mStr, dStr] = dayDetailKey.split("-");
+                  const monthName = MONTH_NAMES_FULL[Number(mStr) - 1];
+                  const dayNum = Number(dStr);
+                  const color = dietColorMap.get(dayDetailDiet.id);
+                  return (
+                    <div className="px-5 py-3 border-b border-stone-100 bg-blue-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-bold text-stone-800">{dayNum} de {monthName}</span>
+                          {color && <span className={cn("w-3 h-3 rounded-sm", color.bg)} />}
+                          <span className="text-sm font-medium text-blue-700">{dayDetailDiet.name}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setDayDetailDiet(null); setDayDetailKey(""); }}
+                          className="p-1 text-stone-400 hover:text-stone-600 rounded transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-white rounded-lg p-2 border border-blue-100">
+                          <span className="text-[10px] text-stone-400 uppercase">Total/ave</span>
+                          <p className="text-sm font-bold text-stone-800">{dayDetailDiet.totalGrams.toFixed(1)}g</p>
+                          <p className="text-[10px] text-stone-500">{dayDetailDiet.totalKcal.toFixed(1)} kcal</p>
+                        </div>
+                        {dayDetailDiet.items.racao.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-amber-100">
+                            <span className="text-[10px] text-amber-600 uppercase font-semibold">Ração</span>
+                            {dayDetailDiet.items.racao.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                            ))}
+                          </div>
+                        )}
+                        {dayDetailDiet.items.vegetais.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-green-100">
+                            <span className="text-[10px] text-green-600 uppercase font-semibold">Vegetais</span>
+                            {dayDetailDiet.items.vegetais.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                            ))}
+                          </div>
+                        )}
+                        {dayDetailDiet.items.frutas.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-red-100">
+                            <span className="text-[10px] text-red-600 uppercase font-semibold">Frutas</span>
+                            {dayDetailDiet.items.frutas.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                            ))}
+                          </div>
+                        )}
+                        {dayDetailDiet.items.proteicos.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-yellow-100">
+                            <span className="text-[10px] text-yellow-700 uppercase font-semibold">Proteícos</span>
+                            {dayDetailDiet.items.proteicos.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-2">
+                        <button
+                          onClick={() => { setViewingDiet(dayDetailDiet); setDietMode("saved-detail"); }}
+                          className="text-[11px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        >
+                          <Eye className="w-3 h-3" /> Ver dieta completa
+                        </button>
+                        <button
+                          onClick={() => loadDietForEditing(dayDetailDiet)}
+                          className="text-[11px] text-amber-600 hover:text-amber-800 font-medium flex items-center gap-1"
+                        >
+                          <Edit3 className="w-3 h-3" /> Editar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Grid de meses */}
                 <div className="p-5">
@@ -709,12 +848,6 @@ export default function FeedingModule() {
                       const month = monthIdx + 1;
                       const daysInMonth = new Date(currentYear, month, 0).getDate();
                       const firstDayOffset = new Date(currentYear, monthIdx, 1).getDay();
-
-                      // Encontrar dietas ativas neste mês
-                      const activeDietsThisMonth = dietsForSpecies.filter(d => {
-                        const months = Object.keys(d.schedule || {}).map(Number);
-                        return months.length === 0 || months.includes(month);
-                      });
 
                       return (
                         <div key={month} className="border border-stone-200 rounded-lg overflow-hidden">
@@ -730,47 +863,73 @@ export default function FeedingModule() {
                             </div>
                             {/* Grid de dias */}
                             <div className="grid grid-cols-7 gap-px">
-                              {/* Espaços vazios */}
                               {Array.from({ length: firstDayOffset }, (_, i) => (
                                 <div key={`e-${i}`} className="aspect-square" />
                               ))}
-                              {/* Dias */}
                               {Array.from({ length: daysInMonth }, (_, i) => {
                                 const day = i + 1;
-                                // Encontrar dietas ativas neste dia
-                                const activeDietsThisDay = activeDietsThisMonth.filter(d => {
-                                  const daysForMonth = (d.schedule || {})[month] || [];
-                                  return daysForMonth.length === 0 || daysForMonth.includes(day);
-                                });
-                                const isToday = day === now.getDate() && monthIdx === now.getMonth();
-                                const hasDiet = activeDietsThisDay.length > 0;
-                                const firstDiet = hasDiet ? activeDietsThisDay[0] : null;
-                                const firstColor = firstDiet ? dietColorMap.get(firstDiet.id) : null;
+                                const dayKey = `${month}-${day}`;
+                                const assignedDietId = calendarForSpecies[dayKey];
+                                const assignedDiet = assignedDietId ? dietsForSpecies.find(d => d.id === assignedDietId) : null;
+                                const assignedColor = assignedDiet ? dietColorMap.get(assignedDiet.id) : null;
+                                const isToday = day === now.getDate() && monthIdx === now.getMonth() && currentYear === now.getFullYear();
+                                const feriadoKey = `${month}-${day}`;
+                                const feriado = FERIADOS_REG[feriadoKey];
+                                const isActivePaintTarget = activePaintDiet !== null;
+                                const isViewingThisDay = dayDetailKey === dayKey && dayDetailDiet !== null;
 
                                 return (
-                                  <div
+                                  <button
                                     key={day}
-                                    className={cn(
-                                      "aspect-square rounded-sm flex items-center justify-center text-[9px] font-medium relative",
-                                      hasDiet && firstColor ? `${firstColor.light} ${firstColor.text}` : "text-stone-400",
-                                      isToday && "ring-1 ring-emerald-500 font-bold",
-                                      activeDietsThisDay.length > 1 && "ring-1 ring-offset-0 ring-stone-300"
-                                    )}
+                                    type="button"
+                                    onClick={() => {
+                                      if (isActivePaintTarget && activePaintDiet) {
+                                        // Modo pintura: atribuir ou remover dieta
+                                        const newCal = { ...calendarForSpecies };
+                                        if (assignedDietId === activePaintDiet) {
+                                          // Remover
+                                          delete newCal[dayKey];
+                                          removeDietFromDay(speciesId, dayKey);
+                                        } else {
+                                          // Atribuir
+                                          newCal[dayKey] = activePaintDiet;
+                                          assignDietToDay(speciesId, dayKey, activePaintDiet);
+                                        }
+                                        setSpeciesCalendars(prev => ({ ...prev, [speciesId]: newCal }));
+                                      } else if (assignedDiet) {
+                                        // Modo visualização: mostrar resumo da dieta
+                                        if (isViewingThisDay) {
+                                          setDayDetailDiet(null);
+                                          setDayDetailKey("");
+                                        } else {
+                                          setDayDetailDiet(assignedDiet);
+                                          setDayDetailKey(dayKey);
+                                        }
+                                      }
+                                    }}
                                     title={(() => {
-                                      const ferKey = `${month}-${day}`;
-                                      const ferName = FERIADOS_REG[ferKey];
-                                      const dietNames = hasDiet ? activeDietsThisDay.map(d => d.name).join(" \u00b7 ") : "";
-                                      if (ferName && dietNames) return `${ferName} | ${dietNames}`;
-                                      if (ferName) return ferName;
-                                      if (dietNames) return dietNames;
-                                      return undefined;
+                                      const parts: string[] = [];
+                                      if (feriado) parts.push(feriado);
+                                      if (assignedDiet) parts.push(assignedDiet.name);
+                                      return parts.length > 0 ? parts.join(" | ") : undefined;
                                     })()}
+                                    className={cn(
+                                      "aspect-square rounded-sm flex items-center justify-center text-[9px] font-medium relative transition-all",
+                                      assignedColor
+                                        ? `${assignedColor.light} ${assignedColor.text} hover:opacity-80`
+                                        : "text-stone-400 hover:bg-stone-100",
+                                      isToday && "ring-1 ring-emerald-500 font-bold",
+                                      isActivePaintTarget && !assignedDietId && "hover:bg-emerald-50 cursor-crosshair",
+                                      isActivePaintTarget && assignedDietId && "cursor-crosshair",
+                                      isViewingThisDay && "ring-2 ring-blue-500",
+                                      feriado && !assignedColor && "text-red-400"
+                                    )}
                                   >
                                     {day}
-                                    {activeDietsThisDay.length > 1 && (
-                                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-stone-500" />
+                                    {feriado && (
+                                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500" />
                                     )}
-                                  </div>
+                                  </button>
                                 );
                               })}
                             </div>
@@ -781,10 +940,26 @@ export default function FeedingModule() {
                   </div>
                 </div>
 
+                {/* Legenda */}
+                <div className="px-5 pb-3 flex flex-wrap items-center gap-3 text-[10px] text-stone-400">
+                  {dietsForSpecies.map(diet => {
+                    const color = dietColorMap.get(diet.id)!;
+                    return (
+                      <span key={diet.id} className="flex items-center gap-1">
+                        <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
+                        {diet.name}
+                      </span>
+                    );
+                  })}
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> Feriado</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm ring-1 ring-emerald-500 inline-block" /> Hoje</span>
+                </div>
+
                 {/* Lista de dietas com ações */}
                 <div className="border-t border-stone-100">
                   {dietsForSpecies.map(diet => {
                     const color = dietColorMap.get(diet.id)!;
+                    const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;
                     return (
                       <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-b-0">
                         <div className="flex items-center justify-between">
@@ -797,9 +972,9 @@ export default function FeedingModule() {
                               </span>
                             )}
                             <span className="text-[11px] text-stone-400">{diet.totalGrams.toFixed(1)}g/ave</span>
-                            {Object.keys(diet.schedule || {}).length > 0 && (
-                              <span className="text-[10px] text-blue-600">
-                                {Object.keys(diet.schedule || {}).length === 12 ? "Ano todo" : Object.keys(diet.schedule || {}).map(Number).sort((a,b) => a-b).map(m => MONTH_NAMES_SHORT[m - 1]).join(", ")}
+                            {assignedCount > 0 && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
+                                {assignedCount} dia{assignedCount > 1 ? "s" : ""}
                               </span>
                             )}
                           </div>
@@ -913,14 +1088,12 @@ export default function FeedingModule() {
                               <span>{diet.totalGrams.toFixed(1)}g/ave</span>
                               <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
                               {(() => {
-                                const sched = diet.schedule || {};
-                                const schedMonths = Object.keys(sched).map(Number);
-                                const totalDays = Object.values(sched).reduce((sum, days) => sum + (days as number[]).length, 0);
-                                return schedMonths.length > 0 ? (
-                                  <span className="flex items-center gap-0.5 text-blue-600">
+                                const cal = speciesCalendars[diet.speciesId] || {};
+                                const assignedDays = Object.values(cal).filter(id => id === diet.id).length;
+                                return assignedDays > 0 ? (
+                                  <span className="flex items-center gap-0.5 text-emerald-600">
                                     <CalendarDays className="w-3 h-3" />
-                                    {schedMonths.length === 12 ? "Ano todo" : `${schedMonths.length} ${schedMonths.length === 1 ? "mês" : "meses"}`}
-                                    {totalDays > 0 && ` · ${totalDays} dia${totalDays > 1 ? "s" : ""}`}
+                                    {assignedDays} dia{assignedDays > 1 ? "s" : ""}
                                   </span>
                                 ) : null;
                               })()}
@@ -1019,30 +1192,40 @@ export default function FeedingModule() {
               </div>
             </div>
 
-            {/* Período de uso (schedule) */}
+            {/* Dias atribuídos no calendário */}
             {(() => {
-              const sched = viewingDiet.schedule || {};
-              const schedMonths = Object.keys(sched).map(Number).sort((a, b) => a - b);
-              if (schedMonths.length === 0) return null;
+              const cal = speciesCalendars[viewingDiet.speciesId] || {};
+              const assignedDayKeys = Object.entries(cal)
+                .filter(([, id]) => id === viewingDiet.id)
+                .map(([key]) => key);
+              if (assignedDayKeys.length === 0) return null;
               const MONTH_NAMES_VIEW = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+              // Agrupar por mês
+              const byMonth: Record<number, number[]> = {};
+              assignedDayKeys.forEach(key => {
+                const [m, d] = key.split("-").map(Number);
+                if (!byMonth[m]) byMonth[m] = [];
+                byMonth[m].push(d);
+              });
+              const months = Object.keys(byMonth).map(Number).sort((a, b) => a - b);
               return (
                 <div className="mb-4">
-                  <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
+                  <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
                     <div className="flex items-center gap-1.5 mb-2">
-                      <CalendarDays className="w-3.5 h-3.5 text-blue-700" />
-                      <span className="text-xs font-medium text-blue-800">
-                        Período de uso ({schedMonths.length === 12 ? "ano todo" : `${schedMonths.length} ${schedMonths.length === 1 ? "mês" : "meses"}`})
+                      <CalendarDays className="w-3.5 h-3.5 text-emerald-700" />
+                      <span className="text-xs font-medium text-emerald-800">
+                        Dias programados ({assignedDayKeys.length} dia{assignedDayKeys.length > 1 ? "s" : ""})
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {schedMonths.map(m => {
-                        const days = sched[m] || [];
+                      {months.map(m => {
+                        const days = byMonth[m].sort((a, b) => a - b);
                         const daysInMonth = new Date(2026, m, 0).getDate();
                         return (
-                          <div key={m} className="bg-white/80 rounded-lg p-2 border border-blue-100">
+                          <div key={m} className="bg-white/80 rounded-lg p-2 border border-emerald-100">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[11px] font-bold text-blue-800">{MONTH_NAMES_VIEW[m - 1]}</span>
-                              <span className="text-[10px] text-blue-500">
+                              <span className="text-[11px] font-bold text-emerald-800">{MONTH_NAMES_VIEW[m - 1]}</span>
+                              <span className="text-[10px] text-emerald-500">
                                 {days.length === daysInMonth ? "todos os dias" : `${days.length} dia${days.length > 1 ? "s" : ""}`}
                               </span>
                             </div>
@@ -1055,7 +1238,7 @@ export default function FeedingModule() {
                                     className={cn(
                                       "w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center",
                                       isActive
-                                        ? "bg-blue-600 text-white"
+                                        ? "bg-emerald-600 text-white"
                                         : "bg-stone-100 text-stone-300"
                                     )}
                                   >
@@ -1603,257 +1786,7 @@ export default function FeedingModule() {
         </div>
       )}
 
-      {/* ===== CALENDÁRIO DE MESES E DIAS DE USO ===== */}
-      {nossaDieta && (dietMode === "creating" || dietMode === "editing") && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <CalendarDays className="w-5 h-5 text-emerald-700" />
-              <div>
-                <h3 className="font-bold text-stone-800">Período de Uso da Dieta</h3>
-                <p className="text-[11px] text-stone-500">Selecione os meses e dias em que esta dieta será utilizada</p>
-              </div>
-            </div>
 
-            {/* ===== SELETOR DE MESES ===== */}
-            {(() => {
-              const FERIADOS_NACIONAIS: Record<string, string> = {
-                "1-1": "Confraternização Universal",
-                "2-17": "Carnaval", "2-18": "Carnaval",
-                "3-4": "Quarta-feira de Cinzas",
-                "4-18": "Sexta-feira Santa", "4-20": "Páscoa",
-                "4-21": "Tiradentes",
-                "5-1": "Dia do Trabalho",
-                "6-19": "Corpus Christi",
-                "9-7": "Independência do Brasil",
-                "10-12": "N. Sra. Aparecida",
-                "11-2": "Finados", "11-15": "Proclamação da República", "11-20": "Consciência Negra",
-                "12-25": "Natal",
-              };
-              const MONTH_NAMES_CAL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-              const schedMonths = Object.keys(schedule).map(Number);
-              const currentDays = schedule[activeMonth] || [];
-              const daysInActiveMonth = new Date(2026, activeMonth, 0).getDate();
-              const firstDayOffset = new Date(2026, activeMonth - 1, 1).getDay();
-              const now = new Date();
-              const totalScheduledDays = Object.values(schedule).reduce((sum, d) => sum + d.length, 0);
-
-              return (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">1. Selecione os meses</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (schedMonths.length === 12) {
-                            setSchedule({});
-                          } else {
-                            const newSched: Record<number, number[]> = {};
-                            for (let m = 1; m <= 12; m++) newSched[m] = schedule[m] || [];
-                            setSchedule(newSched);
-                          }
-                        }}
-                        className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
-                      >
-                        {schedMonths.length === 12 ? "Desmarcar" : "Todos os meses"}
-                      </button>
-                      {schedMonths.length > 0 && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-800">
-                          {schedMonths.length} {schedMonths.length === 1 ? "mês" : "meses"}
-                          {totalScheduledDays > 0 && ` · ${totalScheduledDays} dia${totalScheduledDays > 1 ? "s" : ""}`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 mb-4">
-                    {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((name, idx) => {
-                      const month = idx + 1;
-                      const isInSchedule = month in schedule;
-                      const daysCount = (schedule[month] || []).length;
-                      const isCurrent = month === now.getMonth() + 1;
-                      const isActive = month === activeMonth;
-                      return (
-                        <button
-                          key={month}
-                          type="button"
-                          onClick={() => {
-                            if (isInSchedule) {
-                              // Se clicar no mês ativo, remove do schedule
-                              if (isActive) {
-                                const newSched = { ...schedule };
-                                delete newSched[month];
-                                setSchedule(newSched);
-                              } else {
-                                // Apenas navegar para esse mês
-                                setActiveMonth(month);
-                              }
-                            } else {
-                              // Adicionar mês ao schedule e navegar
-                              setSchedule(prev => ({ ...prev, [month]: [] }));
-                              setActiveMonth(month);
-                            }
-                          }}
-                          onDoubleClick={() => {
-                            // Double-click remove o mês
-                            const newSched = { ...schedule };
-                            delete newSched[month];
-                            setSchedule(newSched);
-                          }}
-                          className={cn(
-                            "py-2 px-1 rounded-lg text-xs font-medium transition-all duration-150 border text-center relative",
-                            isActive
-                              ? "ring-2 ring-emerald-500 border-emerald-500"
-                              : "",
-                            isInSchedule
-                              ? "bg-blue-600 text-white border-blue-700 shadow-sm hover:bg-blue-700"
-                              : "bg-stone-50 text-stone-600 border-stone-200 hover:border-blue-400 hover:bg-blue-50",
-                            isCurrent && !isInSchedule && "ring-2 ring-blue-300 border-blue-300 font-bold"
-                          )}
-                        >
-                          {name}
-                          {daysCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[8px] font-bold flex items-center justify-center">
-                              {daysCount}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Separador */}
-                  <div className="border-t border-stone-200 my-4" />
-
-                  {/* ===== SELETOR DE DIAS DO MÊS ATIVO ===== */}
-                  {activeMonth in schedule && (
-                    <>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">
-                          2. Dias de {MONTH_NAMES_CAL[activeMonth - 1]}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const allDays = Array.from({ length: daysInActiveMonth }, (_, i) => i + 1);
-                              setSchedule(prev => ({
-                                ...prev,
-                                [activeMonth]: currentDays.length === daysInActiveMonth ? [] : allDays
-                              }));
-                            }}
-                            className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
-                          >
-                            {currentDays.length === daysInActiveMonth ? "Desmarcar" : "Todos os dias"}
-                          </button>
-                          {currentDays.length > 0 && (
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
-                              {currentDays.length} dia{currentDays.length > 1 ? "s" : ""}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Cabeçalho dos dias da semana */}
-                      <div className="grid grid-cols-7 gap-1 mb-1">
-                        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
-                          <div key={d} className="text-center text-[10px] font-semibold text-stone-400 uppercase tracking-wider py-1">
-                            {d}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Grid do calendário */}
-                      <div className="grid grid-cols-7 gap-1.5">
-                        {/* Espaços vazios */}
-                        {Array.from({ length: firstDayOffset }, (_, i) => (
-                          <div key={`empty-${i}`} />
-                        ))}
-                        {/* Dias */}
-                        {Array.from({ length: daysInActiveMonth }, (_, i) => {
-                          const day = i + 1;
-                          const isSelected = currentDays.includes(day);
-                          const isToday = day === now.getDate() && activeMonth === now.getMonth() + 1 && 2026 === now.getFullYear();
-                          const feriadoKey = `${activeMonth}-${day}`;
-                          const feriado = FERIADOS_NACIONAIS[feriadoKey];
-                          return (
-                            <button
-                              key={day}
-                              type="button"
-                              title={feriado || undefined}
-                              onClick={() => {
-                                setSchedule(prev => {
-                                  const prevDays = prev[activeMonth] || [];
-                                  const newDays = prevDays.includes(day)
-                                    ? prevDays.filter(d => d !== day)
-                                    : [...prevDays, day].sort((a, b) => a - b);
-                                  return { ...prev, [activeMonth]: newDays };
-                                });
-                              }}
-                              className={cn(
-                                "w-full aspect-square rounded-lg text-sm font-medium transition-all duration-150 border relative",
-                                isSelected
-                                  ? "bg-emerald-600 text-white border-emerald-700 shadow-sm hover:bg-emerald-700"
-                                  : "bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50",
-                                isToday && !isSelected && "ring-2 ring-emerald-300 border-emerald-300 font-bold",
-                                isToday && isSelected && "ring-2 ring-white",
-                                feriado && !isSelected && "bg-red-50 border-red-200 text-red-600",
-                                feriado && isSelected && "bg-red-600 border-red-700"
-                              )}
-                            >
-                              {day}
-                              {feriado && (
-                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Feriados do mês */}
-                      {(() => {
-                        const feriadosDoMes = Object.entries(FERIADOS_NACIONAIS)
-                          .filter(([key]) => key.startsWith(`${activeMonth}-`))
-                          .map(([key, name]) => ({ day: Number(key.split("-")[1]), name }));
-                        if (feriadosDoMes.length === 0) return null;
-                        return (
-                          <div className="mt-2 p-2 bg-red-50 rounded-lg border border-red-100">
-                            <span className="text-[10px] font-semibold text-red-700 uppercase">Feriados:</span>
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                              {feriadosDoMes.map(f => (
-                                <span key={f.day} className="text-[10px] text-red-600">
-                                  {f.day} — {f.name}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-
-                  {!(activeMonth in schedule) && (
-                    <div className="text-center py-6 text-stone-400">
-                      <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p className="text-sm">Clique em um mês acima para selecioná-lo e escolher os dias</p>
-                    </div>
-                  )}
-
-                  {/* Legenda */}
-                  <div className="flex items-center gap-4 mt-3 text-[10px] text-stone-400">
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-600 inline-block" /> Dia selecionado</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-600 inline-block" /> Mês selecionado</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Feriado</span>
-                    {Object.keys(schedule).length === 0 && (
-                      <span className="italic ml-auto">Opcional</span>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </motion.div>
-      )}
 
       {/* ===== RESUMO FINAL ===== */}
       {nossaDieta && (dietMode === "creating" || dietMode === "editing") && (
