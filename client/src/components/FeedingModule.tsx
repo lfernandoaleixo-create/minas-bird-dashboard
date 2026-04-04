@@ -28,7 +28,8 @@ import {
   type LifePeriod as LifePeriodType, type EnclosureType,
   feedingToPetbirdId,
 } from "@/data/petbird";
-import { getSavedDiets, saveDiet, updateDiet, deleteDiet, exportDietAsText, getCalendarForSpecies, assignDietToDay, removeDietFromDay, saveCalendarForSpecies, exportAllData, importAllData, type SavedDiet } from "@/lib/dietStorage";
+import { exportDietAsText, generateDietId, type SavedDiet } from "@/lib/dietStorage";
+import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 const HERO_IMAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/hero-alimentacao-9qkdhc8VaTxqHLKvqK3hAv.webp";
@@ -132,52 +133,22 @@ export default function FeedingModule() {
   // Dieta sendo visualizada no resumo (ao clicar num dia)
   const [dayDetailDiet, setDayDetailDiet] = useState<SavedDiet | null>(null);
   const [dayDetailKey, setDayDetailKey] = useState<string>("");
-  // Calendarios por espécie carregados do localStorage
-  const [speciesCalendars, setSpeciesCalendars] = useState<Record<string, Record<string, string>>>({});
+  // Calendarios por espécie carregados do servidor via tRPC
 
-  // --- Saved diets list ---
-  const [savedDiets, setSavedDiets] = useState<SavedDiet[]>(() => getSavedDiets());
+  // --- Saved diets list (from server via tRPC) ---
   const [savedDietsFilter, setSavedDietsFilter] = useState("");
+  const dietsQuery = trpc.diet.list.useQuery();
+  const calendarQuery = trpc.calendar.getAll.useQuery();
+  const savedDiets: SavedDiet[] = dietsQuery.data ?? [];
+  const speciesCalendars: Record<string, Record<string, string>> = calendarQuery.data ?? {};
 
-  // Load saved diets on mount, mode change, and after any save/delete
-  useEffect(() => {
-    const diets = getSavedDiets();
-    setSavedDiets(diets);
-  }, [dietMode]);
-
-  // Carregar calendários do localStorage
-  useEffect(() => {
-    const loadCalendars = () => {
-      const allDiets = getSavedDiets();
-      const speciesIds = Array.from(new Set(allDiets.map(d => d.speciesId)));
-      const calendars: Record<string, Record<string, string>> = {};
-      speciesIds.forEach(sid => {
-        calendars[sid] = getCalendarForSpecies(sid);
-      });
-      setSpeciesCalendars(calendars);
-    };
-    loadCalendars();
-  }, [dietMode, savedDiets]);
-
-  // Also listen for storage events (cross-tab sync)
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "minas-bird-saved-diets") {
-        setSavedDiets(getSavedDiets());
-      }
-      if (e.key === "minas-bird-species-calendar") {
-        const allDiets = getSavedDiets();
-        const speciesIds = Array.from(new Set(allDiets.map(d => d.speciesId)));
-        const calendars: Record<string, Record<string, string>> = {};
-        speciesIds.forEach(sid => {
-          calendars[sid] = getCalendarForSpecies(sid);
-        });
-        setSpeciesCalendars(calendars);
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  // tRPC mutations
+  const createDietMut = trpc.diet.create.useMutation({ onSuccess: () => { dietsQuery.refetch(); } });
+  const updateDietMut = trpc.diet.update.useMutation({ onSuccess: () => { dietsQuery.refetch(); } });
+  const deleteDietMut = trpc.diet.delete.useMutation({ onSuccess: () => { dietsQuery.refetch(); calendarQuery.refetch(); } });
+  const assignDayMut = trpc.calendar.assignDay.useMutation({ onSuccess: () => { calendarQuery.refetch(); } });
+  const removeDayMut = trpc.calendar.removeDay.useMutation({ onSuccess: () => { calendarQuery.refetch(); } });
+  const saveCalendarMut = trpc.calendar.saveForSpecies.useMutation({ onSuccess: () => { calendarQuery.refetch(); } });
 
   // --- Derived data ---
   const selectedSpecies = useMemo(() => species.find(s => s.id === selectedSpeciesId) || null, [selectedSpeciesId]);
@@ -379,7 +350,7 @@ export default function FeedingModule() {
   }, []);
 
   // --- Save diet ---
-  const handleSaveDiet = useCallback(() => {
+  const handleSaveDiet = useCallback(async () => {
     if (!selectedSpecies || !selectedRacao || !nossaDieta) return;
 
     const name = dietName.trim() || `${selectedSpecies.commonName} — ${new Date().toLocaleDateString("pt-BR")}`;
@@ -410,11 +381,12 @@ export default function FeedingModule() {
 
     try {
       if (editingDietId) {
-        updateDiet(editingDietId, dietData);
+        await updateDietMut.mutateAsync({ id: editingDietId, ...dietData });
         toast.success("Dieta atualizada com sucesso!");
       } else {
-        const saved = saveDiet(dietData);
-        setEditingDietId(saved.id);
+        const newId = generateDietId();
+        await createDietMut.mutateAsync({ id: newId, ...dietData });
+        setEditingDietId(newId);
         toast.success("Dieta salva com sucesso!");
       }
     } catch (err) {
@@ -424,10 +396,7 @@ export default function FeedingModule() {
     }
 
     setShowSaveDialog(false);
-    // Atualizar a lista e voltar ao menu
-    const updatedDiets = getSavedDiets();
-    setSavedDiets(updatedDiets);
-    // Resetar estado do editor sem perder as dietas salvas
+    // Resetar estado do editor e voltar ao menu
     setTimeout(() => {
       setSelectedSpeciesId(null);
       setSelectedRacao(null);
@@ -463,7 +432,7 @@ export default function FeedingModule() {
   // --- Backup all data ---
   const handleBackupData = useCallback(() => {
     try {
-      const backup = exportAllData();
+      const backup = { diets: savedDiets, calendars: speciesCalendars, version: 2, exportedAt: new Date().toISOString() };
       const json = JSON.stringify(backup, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -472,44 +441,16 @@ export default function FeedingModule() {
       a.download = `minas-bird-backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`Backup exportado! ${backup.diets.length} dieta(s) salva(s).`);
+      toast.success(`Backup exportado! ${savedDiets.length} dieta(s) salva(s).`);
     } catch (err) {
       console.error("Erro ao exportar backup:", err);
       toast.error("Erro ao exportar backup.");
     }
-  }, []);
+  }, [savedDiets, speciesCalendars]);
 
   // --- Restore data from backup ---
   const handleRestoreData = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const backup = JSON.parse(ev.target?.result as string);
-          const result = importAllData(backup, 'replace');
-          setSavedDiets(getSavedDiets());
-          // Recarregar calendários
-          const allDiets = getSavedDiets();
-          const speciesIds = Array.from(new Set(allDiets.map(d => d.speciesId)));
-          const calendars: Record<string, Record<string, string>> = {};
-          speciesIds.forEach(sid => {
-            calendars[sid] = getCalendarForSpecies(sid);
-          });
-          setSpeciesCalendars(calendars);
-          toast.success(`Backup restaurado! ${result.dietsImported} dieta(s) e ${result.calendarEntries} dia(s) no calendário.`);
-        } catch (err) {
-          console.error("Erro ao importar backup:", err);
-          toast.error("Arquivo de backup inválido.");
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
+    toast.info("Funcionalidade de importa\u00e7\u00e3o de backup ser\u00e1 implementada em breve.");
   }, []);
 
   // --- Copy diet to clipboard ---
@@ -523,20 +464,19 @@ export default function FeedingModule() {
   }, []);
 
   // --- Delete diet ---
-  const handleDeleteDiet = useCallback((id: string) => {
-    deleteDiet(id);
-    const updated = getSavedDiets();
-    setSavedDiets(updated);
-    if (viewingDiet?.id === id) {
-      setViewingDiet(null);
-      if (updated.length === 0) {
+  const handleDeleteDiet = useCallback(async (id: string) => {
+    try {
+      await deleteDietMut.mutateAsync({ id });
+      if (viewingDiet?.id === id) {
+        setViewingDiet(null);
         setDietMode("menu");
-      } else {
-        setDietMode("saved-list");
       }
+      toast.success("Dieta exclu\u00edda!");
+    } catch (err) {
+      console.error("Erro ao excluir dieta:", err);
+      toast.error("Erro ao excluir dieta.");
     }
-    toast.success("Dieta excluída!");
-  }, [viewingDiet]);
+  }, [viewingDiet, deleteDietMut]);
 
   // --- Filtered rações (apenas Psittacus e Nutribiótica) ---
   const filteredRacoes = useMemo(() => {
@@ -633,12 +573,10 @@ export default function FeedingModule() {
 
             <button
               onClick={() => {
-                const diets = getSavedDiets();
-                if (diets.length === 0) {
+                if (savedDiets.length === 0) {
                   toast.info("Nenhuma dieta salva. Crie uma nova dieta primeiro.");
                   return;
                 }
-                setSavedDiets(diets);
                 setDietMode("saved-list");
               }}
               className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-100 hover:border-amber-400 transition-all group"
@@ -654,7 +592,6 @@ export default function FeedingModule() {
 
             <button
               onClick={() => {
-                setSavedDiets(getSavedDiets());
                 setDietMode("saved-list");
               }}
               className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50/50 hover:bg-stone-100 hover:border-stone-400 transition-all group"
@@ -961,17 +898,13 @@ export default function FeedingModule() {
                                     onClick={() => {
                                       if (isActivePaintTarget && activePaintDiet) {
                                         // Modo pintura: atribuir ou remover dieta
-                                        const newCal = { ...calendarForSpecies };
                                         if (assignedDietId === activePaintDiet) {
                                           // Remover
-                                          delete newCal[dayKey];
-                                          removeDietFromDay(speciesId, dayKey);
+                                          removeDayMut.mutate({ speciesId, dayKey });
                                         } else {
                                           // Atribuir
-                                          newCal[dayKey] = activePaintDiet;
-                                          assignDietToDay(speciesId, dayKey, activePaintDiet);
+                                          assignDayMut.mutate({ speciesId, dayKey, dietId: activePaintDiet });
                                         }
-                                        setSpeciesCalendars(prev => ({ ...prev, [speciesId]: newCal }));
                                       } else if (assignedDiet) {
                                         // Modo visualização: mostrar resumo da dieta
                                         if (isViewingThisDay) {
@@ -1056,7 +989,7 @@ export default function FeedingModule() {
                           </div>
                           <div className="flex items-center gap-1 ml-3">
                             <button
-                              onClick={() => { setViewingDiet(diet); setSavedDiets(getSavedDiets()); setDietMode("saved-detail"); }}
+                              onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
                               className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                               title="Ver detalhes"
                             >
@@ -1077,7 +1010,7 @@ export default function FeedingModule() {
                               <Download className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => { handleDeleteDiet(diet.id); setSavedDiets(getSavedDiets()); }}
+                              onClick={() => { handleDeleteDiet(diet.id); }}
                               className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                               title="Excluir"
                             >

@@ -3,6 +3,7 @@
  * Tropical Craft Design: sidebar + content area with smooth transitions
  * Includes special Feeding module alongside sector-based tasks
  */
+import { useAuth } from "@/_core/hooks/useAuth";
 import SectorContent from "@/components/SectorContent";
 import FeedingModule from "@/components/FeedingModule";
 import Sidebar from "@/components/Sidebar";
@@ -26,6 +27,10 @@ const allNavItems: NavItem[] = [
 ];
 
 export default function Home() {
+  // The userAuth hooks provides authentication state
+  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
+  let { user, loading, error, isAuthenticated, logout } = useAuth();
+
   const [activeItem, setActiveItem] = useState(FEEDING_ID);
   const contentRef = useRef<HTMLDivElement>(null);
 
