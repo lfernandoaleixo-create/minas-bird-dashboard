@@ -13,3 +13,4 @@
 - [x] Duplicar dieta existente para criar variações rapidamente
 - [x] Filtro por fase (Manutenção, Reprodução, etc.) na listagem de dietas salvas
 - [x] Exportação do calendário anual completo em PDF para impressão
+- [x] Nome da dieta com prefixo automático fixo: "Ave — Fase — Ambiente" + complemento opcional

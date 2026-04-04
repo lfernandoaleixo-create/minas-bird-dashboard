@@ -351,7 +351,11 @@ export default function FeedingModule() {
     setSelectedProteicos(pro);
 
     setEditingDietId(diet.id);
-    setDietName(diet.name);
+    // Extrair apenas o complemento do nome (remover prefixo "Ave — Fase — Ambiente — ")
+    const nameParts = diet.name.split(" — ");
+    // Se tem 4+ partes, o complemento é tudo após as 3 primeiras
+    const complement = nameParts.length >= 4 ? nameParts.slice(3).join(" — ") : (nameParts.length <= 2 ? diet.name : "");
+    setDietName(complement);
     setDietNotes(diet.notes || "");
 
     setExpandedStep(null);
@@ -361,7 +365,11 @@ export default function FeedingModule() {
   const handleSaveDiet = useCallback(async () => {
     if (!selectedSpecies || !selectedRacao || !nossaDieta) return;
 
-    const name = dietName.trim() || `${selectedSpecies.commonName} — ${new Date().toLocaleDateString("pt-BR")}`;
+    const phaseLabel = lifePeriods.find(p => p.id === phaseId)?.label || phaseId;
+    const enclosureLabel = enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId;
+    const prefix = `${selectedSpecies.commonName} — ${phaseLabel} — ${enclosureLabel}`;
+    const suffix = dietName.trim();
+    const name = suffix ? `${prefix} — ${suffix}` : prefix;
 
     const dietData = {
       name,
@@ -2059,17 +2067,23 @@ export default function FeedingModule() {
                       />
                     </div>
 
-                    {/* Separador + Nome da dieta */}
+                    {/* Separador + Nome da dieta (prefixo automático + complemento) */}
                     <div className="pt-2 border-t border-emerald-200">
                       <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Nome da dieta</label>
-                      <input
-                        type="text"
-                        value={dietName}
-                        onChange={e => setDietName(e.target.value)}
-                        placeholder={`${selectedSpecies?.commonName || "Espécie"} — ${new Date().toLocaleDateString("pt-BR")}`}
-                        className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-md focus:outline-none focus:border-emerald-500 bg-white"
-                        autoFocus
-                      />
+                      <div className="flex items-center gap-0 rounded-md border border-emerald-300 bg-white overflow-hidden">
+                        <span className="px-3 py-2 text-sm font-medium text-stone-600 bg-stone-100 border-r border-emerald-200 whitespace-nowrap flex-shrink-0">
+                          {selectedSpecies?.commonName || "Espécie"} — {lifePeriods.find(p => p.id === phaseId)?.label || phaseId} — {enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId}
+                        </span>
+                        <input
+                          type="text"
+                          value={dietName}
+                          onChange={e => setDietName(e.target.value)}
+                          placeholder="complemento (opcional)"
+                          className="flex-1 px-3 py-2 text-sm focus:outline-none bg-transparent min-w-0"
+                          autoFocus
+                        />
+                      </div>
+                      <p className="text-[10px] text-stone-400 mt-1">O nome será salvo como: <span className="font-medium text-stone-600">{selectedSpecies?.commonName} — {lifePeriods.find(p => p.id === phaseId)?.label} — {enclosureTypes.find(e => e.id === enclosureId)?.label}{dietName.trim() ? ` — ${dietName.trim()}` : ""}</span></p>
                     </div>
 
                     <div className="flex items-center gap-2 pt-1">
