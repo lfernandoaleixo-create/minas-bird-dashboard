@@ -975,8 +975,30 @@ export default function FeedingModule() {
       )}
 
       {/* Main Card — só aparece quando criando/editando */}
+      {/* Botão de retorno ao menu */}
       {(dietMode === "creating" || dietMode === "editing") && (
-      <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 mb-3">
+          <button
+            onClick={() => { handleResetAll(); setDietMode("menu"); }}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-600 hover:text-stone-800 bg-white hover:bg-stone-50 rounded-xl border border-stone-200 shadow-sm transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao Menu
+          </button>
+          <div className="flex-1" />
+          {dietMode === "editing" && (
+            <span className="px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">Editando dieta</span>
+          )}
+          {selectedSpeciesId && (
+            <button onClick={handleResetAll} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-stone-500 hover:text-red-600 bg-white hover:bg-red-50 rounded-lg border border-stone-200 transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" /> Recomeçar
+            </button>
+          )}
+        </div>
+      )}
+
+      {(dietMode === "creating" || dietMode === "editing") && (
+      <div className="bg-white rounded-xl border border-stone-200 shadow-sm">
 
         {/* ===== STEP 1: ESPÉCIE ===== */}
         <div className="p-5 border-b border-stone-100">
@@ -989,16 +1011,6 @@ export default function FeedingModule() {
                 <h3 className="font-semibold text-stone-800 text-sm">1. Espécie</h3>
                 <p className="text-[11px] text-stone-500">Selecione para iniciar o cálculo da dieta</p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {dietMode === "editing" && (
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700">Editando</span>
-              )}
-              {selectedSpeciesId && (
-                <button onClick={handleResetAll} className="text-xs text-stone-500 hover:text-red-600 flex items-center gap-1 transition-colors">
-                  <RefreshCw className="w-3 h-3" /> Recomeçar
-                </button>
-              )}
             </div>
           </div>
 
@@ -1350,7 +1362,7 @@ export default function FeedingModule() {
           </div>
 
           {/* STEP 3: VEGETAIS */}
-          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("vegetais") ? "border-green-200 border-l-green-500" : "border-stone-200 border-l-stone-300")}>
+          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("vegetais") ? "border-green-200 border-l-green-500" : "border-stone-200 border-l-green-300")}>
             <FoodStepCard
               step="vegetais" stepNumber={3}
               unlocked={unlockedSteps.has("vegetais")}
@@ -1369,7 +1381,7 @@ export default function FeedingModule() {
           </div>
 
           {/* STEP 4: FRUTAS */}
-          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("frutas") ? "border-red-200 border-l-red-400" : "border-stone-200 border-l-stone-300")}>
+          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("frutas") ? "border-red-200 border-l-red-400" : "border-stone-200 border-l-red-300")}>
             <FoodStepCard
               step="frutas" stepNumber={4}
               unlocked={unlockedSteps.has("frutas")}
@@ -1388,7 +1400,7 @@ export default function FeedingModule() {
           </div>
 
           {/* STEP 5: PROTEICOS */}
-          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("proteicos") ? "border-yellow-200 border-l-yellow-500" : "border-stone-200 border-l-stone-300")}>
+          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("proteicos") ? "border-yellow-200 border-l-yellow-500" : "border-stone-200 border-l-yellow-300")}>
             <FoodStepCard
               step="proteicos" stepNumber={5}
               unlocked={unlockedSteps.has("proteicos")}
@@ -1691,7 +1703,7 @@ function FoodStepCard({
   }, [foods, search]);
 
   return (
-    <div className={cn(!unlocked && "opacity-40 pointer-events-none")}>
+    <div className={cn(!unlocked && "pointer-events-none")}>
       <button
         onClick={unlocked ? onToggle : undefined}
         className={cn(
@@ -1700,12 +1712,14 @@ function FoodStepCard({
         )}
       >
         <div className="flex items-center gap-3">
-          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shadow-sm", unlocked ? config.bgColor : "bg-stone-50")}>
-            {unlocked ? <Icon className={cn("w-5 h-5", config.color)} /> : <Lock className="w-4 h-4 text-stone-300" />}
+          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shadow-sm",
+            unlocked ? config.bgColor : "bg-stone-100"
+          )}>
+            {unlocked ? <Icon className={cn("w-5 h-5", config.color)} /> : <Lock className="w-4 h-4 text-stone-400" />}
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-stone-800 text-sm">{stepNumber}. {config.label}</h3>
+              <h3 className={cn("font-bold text-sm", unlocked ? "text-stone-800" : "text-stone-500")}>{stepNumber}. {config.label}</h3>
               <span className="text-[10px] text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded-full">{foods.length} itens</span>
               {selectedCount > 0 && (
                 <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded-full",
@@ -1729,10 +1743,17 @@ function FoodStepCard({
                  "Adicione sementes e proteicos"}
               </p>
             )}
+            {!unlocked && (
+              <p className="text-[11px] text-stone-400 mt-0.5 flex items-center gap-1">
+                <Lock className="w-3 h-3" /> Selecione a ração para desbloquear
+              </p>
+            )}
           </div>
         </div>
-        {unlocked && (
+        {unlocked ? (
           <ChevronDown className={cn("w-5 h-5 text-stone-400 transition-transform duration-200", expanded && "rotate-180")} />
+        ) : (
+          <Lock className="w-4 h-4 text-stone-300" />
         )}
       </button>
 
