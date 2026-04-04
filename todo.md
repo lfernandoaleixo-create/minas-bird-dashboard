@@ -15,3 +15,6 @@
 - [x] Exportação do calendário anual completo em PDF para impressão
 - [x] Nome da dieta com prefixo automático fixo: "Ave — Fase — Ambiente" + complemento opcional
 - [x] Remover os 4 campos informativos (Ave, Fase, Ambiente, Observações) do dialog de salvamento
+- [x] Lista de Compras: seletor de período + espécie(s), gera lista consolidada de ingredientes
+- [x] Rotina Diária do Tratador: seletor de período + espécie(s), resumo dia a dia do que fazer
+- [x] Guia de Preparo: seletor de dia + espécie(s), organiza preparo dos alimentos

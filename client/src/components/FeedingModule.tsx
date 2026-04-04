@@ -30,6 +30,7 @@ import {
 } from "@/data/petbird";
 import { exportDietAsText, generateDietId, type SavedDiet } from "@/lib/dietStorage";
 import { exportCalendarPdf, exportAllCalendarsPdf } from "@/lib/calendarPdf";
+import OperationalTools from "@/components/OperationalTools";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -1129,6 +1130,14 @@ export default function FeedingModule() {
               Exportar Todos os Calendários em PDF ({calendarYear})
             </button>
           </div>
+        )}
+
+        {/* ===== FERRAMENTAS OPERACIONAIS ===== */}
+        {savedDiets.length > 0 && (
+          <OperationalTools
+            savedDiets={savedDiets}
+            speciesCalendars={speciesCalendars}
+          />
         )}
         </>
       )}
