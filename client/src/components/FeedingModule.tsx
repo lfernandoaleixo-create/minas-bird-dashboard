@@ -15,7 +15,7 @@ import {
   Home, Egg, Feather, Lock, Zap, Plus, X, ArrowRight,
   AlertCircle, CheckCircle2, BarChart3, RefreshCw,
   FilePlus, Edit3, FolderOpen, Save, Download, Trash2,
-  Eye, Copy, Users, ArrowLeft, FileText,
+  Eye, Copy, Users, ArrowLeft, FileText, CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { species, type Species } from "@/data/feeding";
@@ -126,6 +126,9 @@ export default function FeedingModule() {
   // --- Dieta salva nome ---
   const [dietName, setDietName] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+
+  // --- Dias do mês selecionados ---
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   // --- Saved diets list ---
   const [savedDiets, setSavedDiets] = useState<SavedDiet[]>([]);
@@ -304,6 +307,7 @@ export default function FeedingModule() {
     setEditingDietId(null);
     setDietName("");
     setShowSaveDialog(false);
+    setSelectedDays([]);
   }, []);
 
   // --- Load saved diet into editor ---
@@ -330,6 +334,7 @@ export default function FeedingModule() {
 
     setEditingDietId(diet.id);
     setDietName(diet.name);
+    setSelectedDays(diet.selectedDays || []);
     setDietMode("editing");
     setExpandedStep(null);
   }, []);
@@ -356,6 +361,7 @@ export default function FeedingModule() {
       mer,
       totalGrams: nossaDieta.total.grams,
       totalKcal: nossaDieta.total.kcal,
+      selectedDays,
       items: {
         racao: nossaDieta.racao.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.racao.kcal, energyKcalPerKg: i.food.energyKcal })),
         vegetais: nossaDieta.vegetais.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.vegetais.kcal / Math.max(1, selectedVegetais.length), energyKcalPerKg: i.food.energyKcal })),
@@ -375,7 +381,11 @@ export default function FeedingModule() {
 
     setShowSaveDialog(false);
     setSavedDiets(getSavedDiets());
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId]);
+    // Voltar à página inicial após salvar
+    setTimeout(() => {
+      handleResetAll();
+    }, 600);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, selectedDays, handleResetAll]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -593,6 +603,12 @@ export default function FeedingModule() {
                             <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
                               <span>{diet.totalGrams.toFixed(1)}g/ave</span>
                               <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
+                              {diet.selectedDays && diet.selectedDays.length > 0 && (
+                                <span className="flex items-center gap-0.5 text-emerald-600">
+                                  <CalendarDays className="w-3 h-3" />
+                                  {diet.selectedDays.length === 31 ? "Todos os dias" : `${diet.selectedDays.length} dia${diet.selectedDays.length > 1 ? "s" : ""}`}
+                                </span>
+                              )}
                               <span>{formatDate(diet.updatedAt)}</span>
                             </div>
                           </div>
@@ -687,6 +703,39 @@ export default function FeedingModule() {
                 <p className="text-sm font-semibold text-emerald-700">{viewingDiet.mer.toFixed(1)} kcal/dia</p>
               </div>
             </div>
+
+            {/* Dias de uso */}
+            {viewingDiet.selectedDays && viewingDiet.selectedDays.length > 0 && (
+              <div className="mb-4">
+                <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <CalendarDays className="w-3.5 h-3.5 text-emerald-700" />
+                    <span className="text-xs font-medium text-emerald-800">
+                      Dias de uso no mês
+                      {viewingDiet.selectedDays.length === 31 ? " (todos)" : ` (${viewingDiet.selectedDays.length} dia${viewingDiet.selectedDays.length > 1 ? "s" : ""})`}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
+                      const isActive = viewingDiet.selectedDays.includes(day);
+                      return (
+                        <span
+                          key={day}
+                          className={cn(
+                            "w-7 h-7 rounded-md text-[10px] font-medium flex items-center justify-center border",
+                            isActive
+                              ? "bg-emerald-600 text-white border-emerald-700"
+                              : "bg-white/60 text-stone-300 border-stone-100"
+                          )}
+                        >
+                          {day}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Per bird */}
             <div className="mb-4">
@@ -1230,7 +1279,59 @@ export default function FeedingModule() {
                       className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-md focus:outline-none focus:border-emerald-500 bg-white"
                       autoFocus
                     />
-                    <div className="flex items-center gap-2 mt-3">
+
+                    {/* Seletor de dias do mês */}
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-medium text-emerald-800 flex items-center gap-1.5">
+                          <CalendarDays className="w-3.5 h-3.5" />
+                          Dias de uso no mês
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDays(selectedDays.length === 31 ? [] : Array.from({ length: 31 }, (_, i) => i + 1))}
+                            className="text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2 transition-colors"
+                          >
+                            {selectedDays.length === 31 ? "Desmarcar todos" : "Selecionar todos"}
+                          </button>
+                          {selectedDays.length > 0 && selectedDays.length < 31 && (
+                            <span className="text-[10px] text-stone-500">({selectedDays.length} dia{selectedDays.length > 1 ? "s" : ""})</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
+                          const isSelected = selectedDays.includes(day);
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => {
+                                setSelectedDays(prev =>
+                                  prev.includes(day)
+                                    ? prev.filter(d => d !== day)
+                                    : [...prev, day].sort((a, b) => a - b)
+                                );
+                              }}
+                              className={cn(
+                                "w-full aspect-square rounded-md text-xs font-medium transition-all duration-150 border",
+                                isSelected
+                                  ? "bg-emerald-600 text-white border-emerald-700 shadow-sm"
+                                  : "bg-white text-stone-600 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50"
+                              )}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedDays.length === 0 && (
+                        <p className="text-[10px] text-stone-400 mt-1.5 italic">Opcional — selecione os dias em que esta dieta será utilizada</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-4">
                       <button
                         onClick={handleSaveDiet}
                         className="px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1"

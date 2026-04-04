@@ -28,6 +28,7 @@ export interface SavedDiet {
   mer: number;
   totalGrams: number;
   totalKcal: number;
+  selectedDays: number[]; // dias do mês (1-31) em que a dieta será usada
   items: {
     racao: SavedDietItem[];
     vegetais: SavedDietItem[];
@@ -48,7 +49,12 @@ export function getSavedDiets(): SavedDiet[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return [];
-    return JSON.parse(data);
+    const diets = JSON.parse(data) as SavedDiet[];
+    // Migração: garantir que dietas antigas tenham selectedDays
+    return diets.map(d => ({
+      ...d,
+      selectedDays: d.selectedDays || [],
+    }));
   } catch {
     return [];
   }
@@ -59,6 +65,7 @@ export function saveDiet(diet: Omit<SavedDiet, "id" | "createdAt" | "updatedAt">
   const now = new Date().toISOString();
   const newDiet: SavedDiet = {
     ...diet,
+    selectedDays: diet.selectedDays || [],
     id: generateId(),
     createdAt: now,
     updatedAt: now,
@@ -89,6 +96,13 @@ export function getDietsBySpecies(speciesId: string): SavedDiet[] {
   return getSavedDiets().filter(d => d.speciesId === speciesId);
 }
 
+function formatSelectedDays(days: number[]): string {
+  if (!days || days.length === 0) return "Nenhum dia selecionado";
+  if (days.length === 31) return "Todos os dias do mês";
+  const sorted = [...days].sort((a, b) => a - b);
+  return sorted.join(", ");
+}
+
 export function exportDietAsText(diet: SavedDiet): string {
   const lines: string[] = [];
   lines.push("═══════════════════════════════════════════════════");
@@ -99,6 +113,13 @@ export function exportDietAsText(diet: SavedDiet): string {
   lines.push(`Peso: ${diet.weight}g`);
   lines.push(`Quantidade de aves: ${diet.birdCount}`);
   lines.push(`MER: ${diet.mer.toFixed(1)} kcal/dia por ave`);
+
+  // Dias de uso
+  const days = diet.selectedDays || [];
+  if (days.length > 0) {
+    lines.push(`Dias de uso: ${formatSelectedDays(days)}`);
+  }
+
   lines.push("");
   lines.push("───────────────────────────────────────────────────");
   lines.push("  POR AVE (diário)");
