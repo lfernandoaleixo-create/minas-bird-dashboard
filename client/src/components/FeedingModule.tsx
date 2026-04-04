@@ -1326,71 +1326,179 @@ export default function FeedingModule() {
           </div>
         )}
 
-        {/* ===== FOOD SELECTION STEPS ===== */}
-        {/* STEP 2: RAÇÃO */}
-        <FoodStepCard
-          step="racao" stepNumber={2}
-          unlocked={unlockedSteps.has("racao")}
-          expanded={expandedStep === "racao"}
-          onToggle={() => setExpandedStep(expandedStep === "racao" ? null : "racao")}
-          foods={sortFoods(filteredRacoes)}
-          search={racaoSearch} onSearchChange={setRacaoSearch}
-          selectedSingle={selectedRacao}
-          onSelectSingle={(food) => { setSelectedRacao(food); setExpandedStep("vegetais"); }}
-          nossaDieta={nossaDieta}
-          idealDiet={idealDiet}
-          groupKey="ap"
-        />
-
-        {/* STEP 3: VEGETAIS */}
-        <FoodStepCard
-          step="vegetais" stepNumber={3}
-          unlocked={unlockedSteps.has("vegetais")}
-          expanded={expandedStep === "vegetais"}
-          onToggle={() => setExpandedStep(expandedStep === "vegetais" ? null : "vegetais")}
-          foods={sortFoods(vegetais)}
-          search={vegetaisSearch} onSearchChange={setVegetaisSearch}
-          selectedMultiple={selectedVegetais}
-          onToggleMultiple={(food) => toggleFood(setSelectedVegetais, food)}
-          nossaDieta={nossaDieta}
-          idealDiet={idealDiet}
-          groupKey="vegetais"
-          nextStepLabel="Frutas"
-          onAdvance={() => setExpandedStep("frutas")}
-        />
-
-        {/* STEP 4: FRUTAS */}
-        <FoodStepCard
-          step="frutas" stepNumber={4}
-          unlocked={unlockedSteps.has("frutas")}
-          expanded={expandedStep === "frutas"}
-          onToggle={() => setExpandedStep(expandedStep === "frutas" ? null : "frutas")}
-          foods={sortFoods(frutas)}
-          search={frutasSearch} onSearchChange={setFrutasSearch}
-          selectedMultiple={selectedFrutas}
-          onToggleMultiple={(food) => toggleFood(setSelectedFrutas, food)}
-          nossaDieta={nossaDieta}
-          idealDiet={idealDiet}
-          groupKey="frutas"
-          nextStepLabel="Proteicos"
-          onAdvance={() => setExpandedStep("proteicos")}
-        />
-
-        {/* STEP 5: PROTEICOS */}
-        <FoodStepCard
-          step="proteicos" stepNumber={5}
-          unlocked={unlockedSteps.has("proteicos")}
-          expanded={expandedStep === "proteicos"}
-          onToggle={() => setExpandedStep(expandedStep === "proteicos" ? null : "proteicos")}
-          foods={sortFoods(proteicos)}
-          search={proteicosSearch} onSearchChange={setProteicosSearch}
-          selectedMultiple={selectedProteicos}
-          onToggleMultiple={(food) => toggleFood(setSelectedProteicos, food)}
-          nossaDieta={nossaDieta}
-          idealDiet={idealDiet}
-          groupKey="proteico"
-        />
       </div>
+      )}
+
+      {/* ===== FOOD SELECTION STEPS — CARDS SEPARADOS ===== */}
+      {(dietMode === "creating" || dietMode === "editing") && (
+        <div className="space-y-3">
+          {/* STEP 2: RAÇÃO */}
+          <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden border-l-4 border-l-amber-500">
+            <FoodStepCard
+              step="racao" stepNumber={2}
+              unlocked={unlockedSteps.has("racao")}
+              expanded={expandedStep === "racao"}
+              onToggle={() => setExpandedStep(expandedStep === "racao" ? null : "racao")}
+              foods={sortFoods(filteredRacoes)}
+              search={racaoSearch} onSearchChange={setRacaoSearch}
+              selectedSingle={selectedRacao}
+              onSelectSingle={(food) => { setSelectedRacao(food); setExpandedStep("vegetais"); }}
+              nossaDieta={nossaDieta}
+              idealDiet={idealDiet}
+              groupKey="ap"
+            />
+          </div>
+
+          {/* STEP 3: VEGETAIS */}
+          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("vegetais") ? "border-green-200 border-l-green-500" : "border-stone-200 border-l-stone-300")}>
+            <FoodStepCard
+              step="vegetais" stepNumber={3}
+              unlocked={unlockedSteps.has("vegetais")}
+              expanded={expandedStep === "vegetais"}
+              onToggle={() => setExpandedStep(expandedStep === "vegetais" ? null : "vegetais")}
+              foods={sortFoods(vegetais)}
+              search={vegetaisSearch} onSearchChange={setVegetaisSearch}
+              selectedMultiple={selectedVegetais}
+              onToggleMultiple={(food) => toggleFood(setSelectedVegetais, food)}
+              nossaDieta={nossaDieta}
+              idealDiet={idealDiet}
+              groupKey="vegetais"
+              nextStepLabel="Frutas"
+              onAdvance={() => setExpandedStep("frutas")}
+            />
+          </div>
+
+          {/* STEP 4: FRUTAS */}
+          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("frutas") ? "border-red-200 border-l-red-400" : "border-stone-200 border-l-stone-300")}>
+            <FoodStepCard
+              step="frutas" stepNumber={4}
+              unlocked={unlockedSteps.has("frutas")}
+              expanded={expandedStep === "frutas"}
+              onToggle={() => setExpandedStep(expandedStep === "frutas" ? null : "frutas")}
+              foods={sortFoods(frutas)}
+              search={frutasSearch} onSearchChange={setFrutasSearch}
+              selectedMultiple={selectedFrutas}
+              onToggleMultiple={(food) => toggleFood(setSelectedFrutas, food)}
+              nossaDieta={nossaDieta}
+              idealDiet={idealDiet}
+              groupKey="frutas"
+              nextStepLabel="Proteicos"
+              onAdvance={() => setExpandedStep("proteicos")}
+            />
+          </div>
+
+          {/* STEP 5: PROTEICOS */}
+          <div className={cn("bg-white rounded-xl border shadow-sm overflow-hidden border-l-4", unlockedSteps.has("proteicos") ? "border-yellow-200 border-l-yellow-500" : "border-stone-200 border-l-stone-300")}>
+            <FoodStepCard
+              step="proteicos" stepNumber={5}
+              unlocked={unlockedSteps.has("proteicos")}
+              expanded={expandedStep === "proteicos"}
+              onToggle={() => setExpandedStep(expandedStep === "proteicos" ? null : "proteicos")}
+              foods={sortFoods(proteicos)}
+              search={proteicosSearch} onSearchChange={setProteicosSearch}
+              selectedMultiple={selectedProteicos}
+              onToggleMultiple={(food) => toggleFood(setSelectedProteicos, food)}
+              nossaDieta={nossaDieta}
+              idealDiet={idealDiet}
+              groupKey="proteico"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ===== CALENDÁRIO DE DIAS DE USO ===== */}
+      {nossaDieta && (dietMode === "creating" || dietMode === "editing") && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-emerald-700" />
+                <div>
+                  <h3 className="font-bold text-stone-800">Dias de Uso no Mês</h3>
+                  <p className="text-[11px] text-stone-500">Selecione os dias em que esta dieta será utilizada</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDays(selectedDays.length === 31 ? [] : Array.from({ length: 31 }, (_, i) => i + 1))}
+                  className="text-xs font-medium text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded-md hover:bg-emerald-50 transition-colors"
+                >
+                  {selectedDays.length === 31 ? "Desmarcar todos" : "Selecionar todos"}
+                </button>
+                {selectedDays.length > 0 && (
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                    {selectedDays.length} dia{selectedDays.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Cabeçalho dos dias da semana */}
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
+                <div key={d} className="text-center text-[10px] font-semibold text-stone-400 uppercase tracking-wider py-1">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Grid do calendário — calcular offset do dia 1 do mês atual */}
+            {(() => {
+              const now = new Date();
+              const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+              const startOffset = firstDayOfMonth.getDay(); // 0=Dom, 1=Seg...
+              const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+              const cells = [];
+              // Espaços vazios antes do dia 1
+              for (let i = 0; i < startOffset; i++) {
+                cells.push(<div key={`empty-${i}`} />);
+              }
+              // Dias do mês
+              for (let day = 1; day <= daysInMonth; day++) {
+                const isSelected = selectedDays.includes(day);
+                const isToday = day === now.getDate();
+                cells.push(
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDays(prev =>
+                        prev.includes(day)
+                          ? prev.filter(d => d !== day)
+                          : [...prev, day].sort((a, b) => a - b)
+                      );
+                    }}
+                    className={cn(
+                      "w-full aspect-square rounded-lg text-sm font-medium transition-all duration-150 border relative",
+                      isSelected
+                        ? "bg-emerald-600 text-white border-emerald-700 shadow-sm hover:bg-emerald-700"
+                        : "bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50",
+                      isToday && !isSelected && "ring-2 ring-emerald-300 border-emerald-300 font-bold",
+                      isToday && isSelected && "ring-2 ring-white"
+                    )}
+                  >
+                    {day}
+                  </button>
+                );
+              }
+              return (
+                <div className="grid grid-cols-7 gap-1.5">
+                  {cells}
+                </div>
+              );
+            })()}
+
+            {/* Legenda */}
+            <div className="flex items-center gap-4 mt-3 text-[10px] text-stone-400">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-600 inline-block" /> Selecionado</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-stone-50 border border-stone-200 ring-2 ring-emerald-300 inline-block" /> Hoje</span>
+              {selectedDays.length === 0 && (
+                <span className="italic ml-auto">Opcional — nenhum dia selecionado</span>
+              )}
+            </div>
+          </div>
+        </motion.div>
       )}
 
       {/* ===== RESUMO FINAL ===== */}
@@ -1413,7 +1521,7 @@ export default function FeedingModule() {
               </div>
             </div>
 
-            {/* Save Dialog */}
+            {/* Save Dialog — simplificado (só nome) */}
             <AnimatePresence>
               {showSaveDialog && (
                 <motion.div
@@ -1430,59 +1538,7 @@ export default function FeedingModule() {
                       className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-md focus:outline-none focus:border-emerald-500 bg-white"
                       autoFocus
                     />
-
-                    {/* Seletor de dias do mês */}
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-medium text-emerald-800 flex items-center gap-1.5">
-                          <CalendarDays className="w-3.5 h-3.5" />
-                          Dias de uso no mês
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedDays(selectedDays.length === 31 ? [] : Array.from({ length: 31 }, (_, i) => i + 1))}
-                            className="text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2 transition-colors"
-                          >
-                            {selectedDays.length === 31 ? "Desmarcar todos" : "Selecionar todos"}
-                          </button>
-                          {selectedDays.length > 0 && selectedDays.length < 31 && (
-                            <span className="text-[10px] text-stone-500">({selectedDays.length} dia{selectedDays.length > 1 ? "s" : ""})</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-7 gap-1">
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
-                          const isSelected = selectedDays.includes(day);
-                          return (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => {
-                                setSelectedDays(prev =>
-                                  prev.includes(day)
-                                    ? prev.filter(d => d !== day)
-                                    : [...prev, day].sort((a, b) => a - b)
-                                );
-                              }}
-                              className={cn(
-                                "w-full aspect-square rounded-md text-xs font-medium transition-all duration-150 border",
-                                isSelected
-                                  ? "bg-emerald-600 text-white border-emerald-700 shadow-sm"
-                                  : "bg-white text-stone-600 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50"
-                              )}
-                            >
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {selectedDays.length === 0 && (
-                        <p className="text-[10px] text-stone-400 mt-1.5 italic">Opcional — selecione os dias em que esta dieta será utilizada</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-4">
+                    <div className="flex items-center gap-2 mt-3">
                       <button
                         onClick={handleSaveDiet}
                         className="px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1"
@@ -1635,35 +1691,48 @@ function FoodStepCard({
   }, [foods, search]);
 
   return (
-    <div className={cn("border-b border-stone-100", !unlocked && "opacity-40 pointer-events-none")}>
+    <div className={cn(!unlocked && "opacity-40 pointer-events-none")}>
       <button
         onClick={unlocked ? onToggle : undefined}
         className={cn(
-          "w-full flex items-center justify-between px-5 py-4 transition-colors",
-          unlocked ? "hover:bg-stone-50 cursor-pointer" : "cursor-not-allowed"
+          "w-full flex items-center justify-between px-5 py-4 transition-colors rounded-t-xl",
+          unlocked ? "hover:bg-stone-50/50 cursor-pointer" : "cursor-not-allowed"
         )}
       >
         <div className="flex items-center gap-3">
-          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", unlocked ? config.bgColor : "bg-stone-50")}>
-            {unlocked ? <Icon className={cn("w-4 h-4", config.color)} /> : <Lock className="w-4 h-4 text-stone-300" />}
+          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shadow-sm", unlocked ? config.bgColor : "bg-stone-50")}>
+            {unlocked ? <Icon className={cn("w-5 h-5", config.color)} /> : <Lock className="w-4 h-4 text-stone-300" />}
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-stone-800 text-sm">{stepNumber}. {config.label}</h3>
-              <span className="text-[10px] text-stone-400">{foods.length}</span>
+              <h3 className="font-bold text-stone-800 text-sm">{stepNumber}. {config.label}</h3>
+              <span className="text-[10px] text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded-full">{foods.length} itens</span>
               {selectedCount > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded-full",
+                  step === "racao" ? "bg-amber-100 text-amber-800" :
+                  step === "vegetais" ? "bg-green-100 text-green-800" :
+                  step === "frutas" ? "bg-red-100 text-red-800" :
+                  "bg-yellow-100 text-yellow-800"
+                )}>
                   {selectedCount} selecionado{selectedCount > 1 ? "s" : ""}
                 </span>
               )}
             </div>
             {selectedCount > 0 && totalGroupGrams > 0 && (
-              <p className="text-[11px] text-stone-500">{totalGroupGrams.toFixed(1)}g na nossa dieta</p>
+              <p className="text-[11px] text-stone-500 mt-0.5">{totalGroupGrams.toFixed(1)}g na nossa dieta</p>
+            )}
+            {selectedCount === 0 && unlocked && (
+              <p className="text-[11px] text-stone-400 mt-0.5 italic">
+                {step === "racao" ? "Selecione a ração base da dieta" :
+                 step === "vegetais" ? "Adicione vegetais para balancear" :
+                 step === "frutas" ? "Adicione frutas para diversificar" :
+                 "Adicione sementes e proteicos"}
+              </p>
             )}
           </div>
         </div>
         {unlocked && (
-          <ChevronDown className={cn("w-4 h-4 text-stone-400 transition-transform", expanded && "rotate-180")} />
+          <ChevronDown className={cn("w-5 h-5 text-stone-400 transition-transform duration-200", expanded && "rotate-180")} />
         )}
       </button>
 
@@ -1676,26 +1745,55 @@ function FoodStepCard({
             className="overflow-hidden"
           >
             <div className="px-5 pb-4">
+              {/* Separador visual */}
+              <div className={cn("h-0.5 rounded-full mb-4",
+                step === "racao" ? "bg-amber-200" :
+                step === "vegetais" ? "bg-green-200" :
+                step === "frutas" ? "bg-red-200" :
+                "bg-yellow-200"
+              )} />
+
               {/* Selected items with calculated grams */}
               {isMulti && selectedMultiple && selectedMultiple.length > 0 && groupItems.length > 0 && (
-                <div className="mb-3 space-y-1">
-                  <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">Selecionados — gramas calculadas</p>
-                  {groupItems.map((item: SelectedFood) => (
-                    <div key={item.food.id} className="flex items-center justify-between px-3 py-1.5 bg-emerald-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => onToggleMultiple?.(item.food)} className="text-red-400 hover:text-red-600"><X className="w-3 h-3" /></button>
-                        <span className="text-sm text-stone-700">{item.food.name}</span>
-                        {classificationBadge(item.food.classification)}
+                <div className="mb-4">
+                  <p className={cn("text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5",
+                    step === "vegetais" ? "text-green-700" :
+                    step === "frutas" ? "text-red-600" :
+                    "text-yellow-700"
+                  )}>
+                    <Check className="w-3 h-3" />
+                    Selecionados — gramas calculadas
+                  </p>
+                  <div className="space-y-1.5">
+                    {groupItems.map((item: SelectedFood) => (
+                      <div key={item.food.id} className={cn("flex items-center justify-between px-3 py-2 rounded-lg border",
+                        step === "vegetais" ? "bg-green-50 border-green-200" :
+                        step === "frutas" ? "bg-red-50 border-red-200" :
+                        "bg-yellow-50 border-yellow-200"
+                      )}>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => onToggleMultiple?.(item.food)} className="text-red-400 hover:text-red-600 p-0.5 rounded hover:bg-red-50 transition-colors"><X className="w-3.5 h-3.5" /></button>
+                          <span className="text-sm font-medium text-stone-700">{item.food.name}</span>
+                          {classificationBadge(item.food.classification)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-stone-400">{item.food.energyKcal} kcal/kg</span>
+                          <span className={cn("font-bold text-sm",
+                            step === "vegetais" ? "text-green-700" :
+                            step === "frutas" ? "text-red-600" :
+                            "text-yellow-700"
+                          )}>{item.grams.toFixed(1)}g</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-stone-500">{item.food.energyKcal} kcal/kg</span>
-                        <span className="font-bold text-sm text-emerald-700">{item.grams.toFixed(1)}g</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                   {nextStepLabel && onAdvance && (
-                    <button onClick={onAdvance} className="mt-2 flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-900 font-medium">
-                      Avançar para {nextStepLabel} <ArrowRight className="w-3 h-3" />
+                    <button onClick={onAdvance} className={cn("mt-3 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors",
+                      step === "vegetais" ? "text-green-700 hover:bg-green-100" :
+                      step === "frutas" ? "text-red-600 hover:bg-red-100" :
+                      "text-yellow-700 hover:bg-yellow-100"
+                    )}>
+                      Avançar para {nextStepLabel} <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -1703,8 +1801,12 @@ function FoodStepCard({
 
               {/* Single selected (ração) */}
               {!isMulti && selectedSingle && totalGroupGrams > 0 && (
-                <div className="mb-3">
-                  <div className="flex items-center justify-between px-3 py-2 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2 text-amber-700 flex items-center gap-1.5">
+                    <Check className="w-3 h-3" />
+                    Ração selecionada
+                  </p>
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-amber-50 rounded-lg border border-amber-200">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-amber-600" />
                       <span className="text-sm font-medium text-stone-700">{selectedSingle.name}</span>
@@ -1719,38 +1821,58 @@ function FoodStepCard({
               )}
 
               {/* Search */}
-              <div className="relative mb-2">
+              <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                 <input
-                  type="text" placeholder={`Buscar em ${foods.length} alimentos...`}
+                  type="text" placeholder={`Buscar em ${foods.length} ${config.label.toLowerCase()}...`}
                   value={search} onChange={e => onSearchChange(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:border-emerald-400"
+                  className={cn("w-full pl-9 pr-3 py-2.5 text-sm border rounded-lg focus:outline-none transition-colors",
+                    step === "racao" ? "border-amber-200 focus:border-amber-400 bg-amber-50/30" :
+                    step === "vegetais" ? "border-green-200 focus:border-green-400 bg-green-50/30" :
+                    step === "frutas" ? "border-red-200 focus:border-red-400 bg-red-50/30" :
+                    "border-yellow-200 focus:border-yellow-400 bg-yellow-50/30"
+                  )}
                 />
               </div>
 
               {/* Food list */}
-              <div className="max-h-64 overflow-y-auto space-y-0.5 rounded-lg border border-stone-100">
+              <div className={cn("max-h-64 overflow-y-auto rounded-lg border",
+                step === "racao" ? "border-amber-200" :
+                step === "vegetais" ? "border-green-200" :
+                step === "frutas" ? "border-red-200" :
+                "border-yellow-200"
+              )}>
                 {filteredFoods.map(food => {
                   const isSelected = isMulti
                     ? selectedMultiple?.some(s => s.id === food.id)
                     : selectedSingle?.id === food.id;
+
+                  const selectedBg = step === "racao" ? "bg-amber-50 border-l-amber-500" :
+                    step === "vegetais" ? "bg-green-50 border-l-green-500" :
+                    step === "frutas" ? "bg-red-50 border-l-red-400" :
+                    "bg-yellow-50 border-l-yellow-500";
+
+                  const selectedIconColor = step === "racao" ? "text-amber-600" :
+                    step === "vegetais" ? "text-green-600" :
+                    step === "frutas" ? "text-red-500" :
+                    "text-yellow-600";
 
                   return (
                     <button
                       key={food.id}
                       onClick={() => isMulti ? onToggleMultiple?.(food) : onSelectSingle?.(food)}
                       className={cn(
-                        "w-full flex items-center justify-between px-3 py-2 text-left transition-colors text-sm",
-                        isSelected ? "bg-emerald-50 border-l-2 border-emerald-500" : "hover:bg-stone-50 border-l-2 border-transparent"
+                        "w-full flex items-center justify-between px-3 py-2.5 text-left transition-all text-sm border-l-3",
+                        isSelected ? selectedBg : "hover:bg-stone-50 border-l-transparent"
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         {isSelected ? (
-                          <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          <Check className={cn("w-4 h-4 flex-shrink-0", selectedIconColor)} />
                         ) : (
                           <Plus className="w-4 h-4 text-stone-300 flex-shrink-0" />
                         )}
-                        <span className={cn("truncate", isSelected ? "font-medium text-stone-800" : "text-stone-600")}>{food.name}</span>
+                        <span className={cn("truncate", isSelected ? "font-semibold text-stone-800" : "text-stone-600")}>{food.name}</span>
                         {classificationBadge(food.classification)}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
