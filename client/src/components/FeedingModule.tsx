@@ -127,13 +127,15 @@ export default function FeedingModule() {
   const [dietName, setDietName] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
-  // --- Dias do mês selecionados ---
-  const [selectedDays, setSelectedDays] = useState<number[]>([]);
-  // --- Meses do ano selecionados ---
-  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  // --- Schedule: mapa mês→dias selecionados ---
+  const [schedule, setSchedule] = useState<Record<number, number[]>>({});
+  // --- Mês ativo no seletor de dias (1-12) ---
+  const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth() + 1);
   // --- Mês visualizado no calendário ---
   const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
+  // --- Painéis de registro expandidos ---
+  const [expandedRegistries, setExpandedRegistries] = useState<Set<string>>(new Set());
 
   // --- Saved diets list ---
   const [savedDiets, setSavedDiets] = useState<SavedDiet[]>(() => getSavedDiets());
@@ -324,7 +326,8 @@ export default function FeedingModule() {
     setEditingDietId(null);
     setDietName("");
     setShowSaveDialog(false);
-    setSelectedDays([]);
+    setSchedule({});
+    setActiveMonth(new Date().getMonth() + 1);
   }, []);
 
   // --- Load saved diet into editor ---
@@ -351,8 +354,10 @@ export default function FeedingModule() {
 
     setEditingDietId(diet.id);
     setDietName(diet.name);
-    setSelectedDays(diet.selectedDays || []);
-    setSelectedMonths(diet.selectedMonths || []);
+    setSchedule(diet.schedule || {});
+    // Definir o activeMonth como o primeiro mês do schedule ou o mês atual
+    const scheduleMonths = Object.keys(diet.schedule || {}).map(Number).sort((a, b) => a - b);
+    setActiveMonth(scheduleMonths.length > 0 ? scheduleMonths[0] : new Date().getMonth() + 1);
     setExpandedStep(null);
   }, []);
 
@@ -378,8 +383,7 @@ export default function FeedingModule() {
       mer,
       totalGrams: nossaDieta.total.grams,
       totalKcal: nossaDieta.total.kcal,
-      selectedDays,
-      selectedMonths,
+      schedule,
       items: {
         racao: nossaDieta.racao.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.racao.kcal, energyKcalPerKg: i.food.energyKcal })),
         vegetais: nossaDieta.vegetais.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.vegetais.kcal / Math.max(1, selectedVegetais.length), energyKcalPerKg: i.food.energyKcal })),
@@ -422,13 +426,13 @@ export default function FeedingModule() {
       setEditingDietId(null);
       setDietName("");
       setShowSaveDialog(false);
-      setSelectedDays([]);
-      setSelectedMonths([]);
+      setSchedule({});
+      setActiveMonth(new Date().getMonth() + 1);
       setCalendarMonth(new Date().getMonth());
       setCalendarYear(new Date().getFullYear());
       setDietMode("menu");
     }, 600);
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, selectedDays, selectedMonths]);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, schedule]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -549,7 +553,8 @@ export default function FeedingModule() {
                 setEditingDietId(null);
                 setDietName("");
                 setShowSaveDialog(false);
-                setSelectedDays([]);
+                setSchedule({});
+                setActiveMonth(new Date().getMonth() + 1);
                 setDietMode("creating");
               }}
               className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
@@ -607,6 +612,19 @@ export default function FeedingModule() {
         {savedDiets.length > 0 && (() => {
           const MONTH_NAMES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
           const MONTH_NAMES_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+          const FERIADOS_REG: Record<string, string> = {
+            "1-1": "Confraternização Universal",
+            "2-17": "Carnaval", "2-18": "Carnaval",
+            "3-4": "Quarta-feira de Cinzas",
+            "4-18": "Sexta-feira Santa", "4-20": "Páscoa",
+            "4-21": "Tiradentes",
+            "5-1": "Dia do Trabalho",
+            "6-19": "Corpus Christi",
+            "9-7": "Independência do Brasil",
+            "10-12": "N. Sra. Aparecida",
+            "11-2": "Finados", "11-15": "Proclamação da República", "11-20": "Consciência Negra",
+            "12-25": "Natal",
+          };
           const DIET_COLORS = [
             { bg: "bg-emerald-500", text: "text-emerald-800", light: "bg-emerald-100", border: "border-emerald-300" },
             { bg: "bg-blue-500", text: "text-blue-800", light: "bg-blue-100", border: "border-blue-300" },
@@ -624,17 +642,51 @@ export default function FeedingModule() {
             const now = new Date();
             const currentYear = now.getFullYear();
 
+            const isExpanded = expandedRegistries.has(speciesName);
+            const toggleExpand = () => {
+              setExpandedRegistries(prev => {
+                const next = new Set(prev);
+                if (next.has(speciesName)) next.delete(speciesName);
+                else next.add(speciesName);
+                return next;
+              });
+            };
+
             return (
               <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-stone-100">
+                <button
+                  type="button"
+                  onClick={toggleExpand}
+                  className="w-full p-5 border-b border-stone-100 text-left hover:bg-stone-50 transition-colors"
+                >
                   <div className="flex items-center gap-2">
                     <Bird className="w-5 h-5 text-emerald-600" />
                     <h2 className="font-bold text-stone-800">{speciesName}</h2>
                     <span className="text-xs text-stone-400">Registro de Alimentação {currentYear}</span>
+                    <span className="text-[11px] text-stone-400 ml-1">({dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""})</span>
+                    <span className="ml-auto">
+                      {isExpanded
+                        ? <ChevronDown className="w-5 h-5 text-stone-400" />
+                        : <ChevronRight className="w-5 h-5 text-stone-400" />}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-stone-500 mt-1">Calendário anual mostrando quais dietas estão programadas para cada mês e dia</p>
-                </div>
+                  {!isExpanded && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {dietsForSpecies.map(diet => {
+                        const color = dietColorMap.get(diet.id)!;
+                        return (
+                          <span key={diet.id} className="flex items-center gap-1">
+                            <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
+                            <span className="text-[11px] text-stone-600">{diet.name}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </button>
 
+                {isExpanded && (
+                  <>
                 {/* Legenda das dietas */}
                 <div className="px-5 py-3 border-b border-stone-100 bg-stone-50">
                   <div className="flex flex-wrap gap-2">
@@ -660,7 +712,7 @@ export default function FeedingModule() {
 
                       // Encontrar dietas ativas neste mês
                       const activeDietsThisMonth = dietsForSpecies.filter(d => {
-                        const months = d.selectedMonths || [];
+                        const months = Object.keys(d.schedule || {}).map(Number);
                         return months.length === 0 || months.includes(month);
                       });
 
@@ -687,8 +739,8 @@ export default function FeedingModule() {
                                 const day = i + 1;
                                 // Encontrar dietas ativas neste dia
                                 const activeDietsThisDay = activeDietsThisMonth.filter(d => {
-                                  const days = d.selectedDays || [];
-                                  return days.length === 0 || days.includes(day);
+                                  const daysForMonth = (d.schedule || {})[month] || [];
+                                  return daysForMonth.length === 0 || daysForMonth.includes(day);
                                 });
                                 const isToday = day === now.getDate() && monthIdx === now.getMonth();
                                 const hasDiet = activeDietsThisDay.length > 0;
@@ -704,7 +756,15 @@ export default function FeedingModule() {
                                       isToday && "ring-1 ring-emerald-500 font-bold",
                                       activeDietsThisDay.length > 1 && "ring-1 ring-offset-0 ring-stone-300"
                                     )}
-                                    title={hasDiet ? activeDietsThisDay.map(d => d.name).join(" + ") : `Dia ${day}`}
+                                    title={(() => {
+                                      const ferKey = `${month}-${day}`;
+                                      const ferName = FERIADOS_REG[ferKey];
+                                      const dietNames = hasDiet ? activeDietsThisDay.map(d => d.name).join(" \u00b7 ") : "";
+                                      if (ferName && dietNames) return `${ferName} | ${dietNames}`;
+                                      if (ferName) return ferName;
+                                      if (dietNames) return dietNames;
+                                      return undefined;
+                                    })()}
                                   >
                                     {day}
                                     {activeDietsThisDay.length > 1 && (
@@ -737,9 +797,9 @@ export default function FeedingModule() {
                               </span>
                             )}
                             <span className="text-[11px] text-stone-400">{diet.totalGrams.toFixed(1)}g/ave</span>
-                            {diet.selectedMonths && diet.selectedMonths.length > 0 && (
+                            {Object.keys(diet.schedule || {}).length > 0 && (
                               <span className="text-[10px] text-blue-600">
-                                {diet.selectedMonths.length === 12 ? "Ano todo" : diet.selectedMonths.map(m => MONTH_NAMES_SHORT[m - 1]).join(", ")}
+                                {Object.keys(diet.schedule || {}).length === 12 ? "Ano todo" : Object.keys(diet.schedule || {}).map(Number).sort((a,b) => a-b).map(m => MONTH_NAMES_SHORT[m - 1]).join(", ")}
                               </span>
                             )}
                           </div>
@@ -778,6 +838,8 @@ export default function FeedingModule() {
                     );
                   })}
                 </div>
+                  </>
+                )}
               </div>
             );
           });
@@ -850,18 +912,18 @@ export default function FeedingModule() {
                             <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
                               <span>{diet.totalGrams.toFixed(1)}g/ave</span>
                               <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
-                              {diet.selectedMonths && diet.selectedMonths.length > 0 && (
-                                <span className="flex items-center gap-0.5 text-blue-600">
-                                  <CalendarDays className="w-3 h-3" />
-                                  {diet.selectedMonths.length === 12 ? "Todos os meses" : `${diet.selectedMonths.length} ${diet.selectedMonths.length === 1 ? "mês" : "meses"}`}
-                                </span>
-                              )}
-                              {diet.selectedDays && diet.selectedDays.length > 0 && (
-                                <span className="flex items-center gap-0.5 text-emerald-600">
-                                  <CalendarDays className="w-3 h-3" />
-                                  {diet.selectedDays.length === 31 ? "Todos os dias" : `${diet.selectedDays.length} dia${diet.selectedDays.length > 1 ? "s" : ""}`}
-                                </span>
-                              )}
+                              {(() => {
+                                const sched = diet.schedule || {};
+                                const schedMonths = Object.keys(sched).map(Number);
+                                const totalDays = Object.values(sched).reduce((sum, days) => sum + (days as number[]).length, 0);
+                                return schedMonths.length > 0 ? (
+                                  <span className="flex items-center gap-0.5 text-blue-600">
+                                    <CalendarDays className="w-3 h-3" />
+                                    {schedMonths.length === 12 ? "Ano todo" : `${schedMonths.length} ${schedMonths.length === 1 ? "mês" : "meses"}`}
+                                    {totalDays > 0 && ` · ${totalDays} dia${totalDays > 1 ? "s" : ""}`}
+                                  </span>
+                                ) : null;
+                              })()}
                               <span>{formatDate(diet.updatedAt)}</span>
                             </div>
                           </div>
@@ -957,71 +1019,59 @@ export default function FeedingModule() {
               </div>
             </div>
 
-            {/* Meses de uso */}
-            {viewingDiet.selectedMonths && viewingDiet.selectedMonths.length > 0 && (
-              <div className="mb-4">
-                <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <CalendarDays className="w-3.5 h-3.5 text-blue-700" />
-                    <span className="text-xs font-medium text-blue-800">
-                      Meses de uso
-                      {viewingDiet.selectedMonths.length === 12 ? " (todos)" : ` (${viewingDiet.selectedMonths.length})`}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((name, idx) => {
-                      const isActive = viewingDiet.selectedMonths.includes(idx + 1);
-                      return (
-                        <span
-                          key={idx}
-                          className={cn(
-                            "px-2 py-1 rounded-md text-[10px] font-medium border",
-                            isActive
-                              ? "bg-blue-600 text-white border-blue-700"
-                              : "bg-white/60 text-stone-300 border-stone-100"
-                          )}
-                        >
-                          {name}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Dias de uso */}
-            {viewingDiet.selectedDays && viewingDiet.selectedDays.length > 0 && (
-              <div className="mb-4">
-                <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <CalendarDays className="w-3.5 h-3.5 text-emerald-700" />
-                    <span className="text-xs font-medium text-emerald-800">
-                      Dias de uso no mês
-                      {viewingDiet.selectedDays.length === 31 ? " (todos)" : ` (${viewingDiet.selectedDays.length} dia${viewingDiet.selectedDays.length > 1 ? "s" : ""})`}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
-                      const isActive = viewingDiet.selectedDays.includes(day);
-                      return (
-                        <span
-                          key={day}
-                          className={cn(
-                            "w-7 h-7 rounded-md text-[10px] font-medium flex items-center justify-center border",
-                            isActive
-                              ? "bg-emerald-600 text-white border-emerald-700"
-                              : "bg-white/60 text-stone-300 border-stone-100"
-                          )}
-                        >
-                          {day}
-                        </span>
-                      );
-                    })}
+            {/* Período de uso (schedule) */}
+            {(() => {
+              const sched = viewingDiet.schedule || {};
+              const schedMonths = Object.keys(sched).map(Number).sort((a, b) => a - b);
+              if (schedMonths.length === 0) return null;
+              const MONTH_NAMES_VIEW = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+              return (
+                <div className="mb-4">
+                  <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <CalendarDays className="w-3.5 h-3.5 text-blue-700" />
+                      <span className="text-xs font-medium text-blue-800">
+                        Período de uso ({schedMonths.length === 12 ? "ano todo" : `${schedMonths.length} ${schedMonths.length === 1 ? "mês" : "meses"}`})
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {schedMonths.map(m => {
+                        const days = sched[m] || [];
+                        const daysInMonth = new Date(2026, m, 0).getDate();
+                        return (
+                          <div key={m} className="bg-white/80 rounded-lg p-2 border border-blue-100">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[11px] font-bold text-blue-800">{MONTH_NAMES_VIEW[m - 1]}</span>
+                              <span className="text-[10px] text-blue-500">
+                                {days.length === daysInMonth ? "todos os dias" : `${days.length} dia${days.length > 1 ? "s" : ""}`}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-0.5">
+                              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+                                const isActive = days.includes(day);
+                                return (
+                                  <span
+                                    key={day}
+                                    className={cn(
+                                      "w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center",
+                                      isActive
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-stone-100 text-stone-300"
+                                    )}
+                                  >
+                                    {day}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Per bird */}
             <div className="mb-4">
@@ -1566,169 +1616,241 @@ export default function FeedingModule() {
             </div>
 
             {/* ===== SELETOR DE MESES ===== */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">Meses</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMonths(selectedMonths.length === 12 ? [] : Array.from({ length: 12 }, (_, i) => i + 1))}
-                    className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
-                  >
-                    {selectedMonths.length === 12 ? "Desmarcar" : "Todos"}
-                  </button>
-                  {selectedMonths.length > 0 && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-800">
-                      {selectedMonths.length} {selectedMonths.length === 1 ? "mês" : "meses"}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((name, idx) => {
-                  const month = idx + 1;
-                  const isSelected = selectedMonths.includes(month);
-                  const now = new Date();
-                  const isCurrent = (idx === now.getMonth()) && (calendarYear === now.getFullYear());
-                  return (
-                    <button
-                      key={month}
-                      type="button"
-                      onClick={() => {
-                        setSelectedMonths(prev =>
-                          prev.includes(month)
-                            ? prev.filter(m => m !== month)
-                            : [...prev, month].sort((a, b) => a - b)
-                        );
-                      }}
-                      className={cn(
-                        "py-2 px-1 rounded-lg text-xs font-medium transition-all duration-150 border text-center",
-                        isSelected
-                          ? "bg-blue-600 text-white border-blue-700 shadow-sm hover:bg-blue-700"
-                          : "bg-stone-50 text-stone-600 border-stone-200 hover:border-blue-400 hover:bg-blue-50",
-                        isCurrent && !isSelected && "ring-2 ring-blue-300 border-blue-300 font-bold"
-                      )}
-                    >
-                      {name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Separador */}
-            <div className="border-t border-stone-200 my-4" />
-
-            {/* ===== SELETOR DE DIAS ===== */}
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">Dias do Mês</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-                    setSelectedDays(selectedDays.length === daysInMonth ? [] : Array.from({ length: daysInMonth }, (_, i) => i + 1));
-                  }}
-                  className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
-                >
-                  {selectedDays.length >= 28 ? "Desmarcar" : "Todos"}
-                </button>
-                {selectedDays.length > 0 && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
-                    {selectedDays.length} dia{selectedDays.length > 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Navegação do mês no calendário */}
-            <div className="flex items-center justify-between mb-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(y => y - 1); }
-                  else setCalendarMonth(m => m - 1);
-                }}
-                className="p-1 rounded hover:bg-stone-100 text-stone-500 hover:text-stone-700 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <span className="text-sm font-semibold text-stone-700">
-                {["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][calendarMonth]} {calendarYear}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(y => y + 1); }
-                  else setCalendarMonth(m => m + 1);
-                }}
-                className="p-1 rounded hover:bg-stone-100 text-stone-500 hover:text-stone-700 transition-colors"
-              >
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Cabeçalho dos dias da semana */}
-            <div className="grid grid-cols-7 gap-1 mb-1">
-              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
-                <div key={d} className="text-center text-[10px] font-semibold text-stone-400 uppercase tracking-wider py-1">
-                  {d}
-                </div>
-              ))}
-            </div>
-
-            {/* Grid do calendário */}
             {(() => {
+              const FERIADOS_NACIONAIS: Record<string, string> = {
+                "1-1": "Confraternização Universal",
+                "2-17": "Carnaval", "2-18": "Carnaval",
+                "3-4": "Quarta-feira de Cinzas",
+                "4-18": "Sexta-feira Santa", "4-20": "Páscoa",
+                "4-21": "Tiradentes",
+                "5-1": "Dia do Trabalho",
+                "6-19": "Corpus Christi",
+                "9-7": "Independência do Brasil",
+                "10-12": "N. Sra. Aparecida",
+                "11-2": "Finados", "11-15": "Proclamação da República", "11-20": "Consciência Negra",
+                "12-25": "Natal",
+              };
+              const MONTH_NAMES_CAL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+              const schedMonths = Object.keys(schedule).map(Number);
+              const currentDays = schedule[activeMonth] || [];
+              const daysInActiveMonth = new Date(2026, activeMonth, 0).getDate();
+              const firstDayOffset = new Date(2026, activeMonth - 1, 1).getDay();
               const now = new Date();
-              const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1);
-              const startOffset = firstDayOfMonth.getDay();
-              const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-              const cells = [];
-              for (let i = 0; i < startOffset; i++) {
-                cells.push(<div key={`empty-${i}`} />);
-              }
-              for (let day = 1; day <= daysInMonth; day++) {
-                const isSelected = selectedDays.includes(day);
-                const isToday = day === now.getDate() && calendarMonth === now.getMonth() && calendarYear === now.getFullYear();
-                cells.push(
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDays(prev =>
-                        prev.includes(day)
-                          ? prev.filter(d => d !== day)
-                          : [...prev, day].sort((a, b) => a - b)
-                      );
-                    }}
-                    className={cn(
-                      "w-full aspect-square rounded-lg text-sm font-medium transition-all duration-150 border relative",
-                      isSelected
-                        ? "bg-emerald-600 text-white border-emerald-700 shadow-sm hover:bg-emerald-700"
-                        : "bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50",
-                      isToday && !isSelected && "ring-2 ring-emerald-300 border-emerald-300 font-bold",
-                      isToday && isSelected && "ring-2 ring-white"
-                    )}
-                  >
-                    {day}
-                  </button>
-                );
-              }
+              const totalScheduledDays = Object.values(schedule).reduce((sum, d) => sum + d.length, 0);
+
               return (
-                <div className="grid grid-cols-7 gap-1.5">
-                  {cells}
-                </div>
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">1. Selecione os meses</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (schedMonths.length === 12) {
+                            setSchedule({});
+                          } else {
+                            const newSched: Record<number, number[]> = {};
+                            for (let m = 1; m <= 12; m++) newSched[m] = schedule[m] || [];
+                            setSchedule(newSched);
+                          }
+                        }}
+                        className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
+                      >
+                        {schedMonths.length === 12 ? "Desmarcar" : "Todos os meses"}
+                      </button>
+                      {schedMonths.length > 0 && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-800">
+                          {schedMonths.length} {schedMonths.length === 1 ? "mês" : "meses"}
+                          {totalScheduledDays > 0 && ` · ${totalScheduledDays} dia${totalScheduledDays > 1 ? "s" : ""}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 mb-4">
+                    {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((name, idx) => {
+                      const month = idx + 1;
+                      const isInSchedule = month in schedule;
+                      const daysCount = (schedule[month] || []).length;
+                      const isCurrent = month === now.getMonth() + 1;
+                      const isActive = month === activeMonth;
+                      return (
+                        <button
+                          key={month}
+                          type="button"
+                          onClick={() => {
+                            if (isInSchedule) {
+                              // Se clicar no mês ativo, remove do schedule
+                              if (isActive) {
+                                const newSched = { ...schedule };
+                                delete newSched[month];
+                                setSchedule(newSched);
+                              } else {
+                                // Apenas navegar para esse mês
+                                setActiveMonth(month);
+                              }
+                            } else {
+                              // Adicionar mês ao schedule e navegar
+                              setSchedule(prev => ({ ...prev, [month]: [] }));
+                              setActiveMonth(month);
+                            }
+                          }}
+                          onDoubleClick={() => {
+                            // Double-click remove o mês
+                            const newSched = { ...schedule };
+                            delete newSched[month];
+                            setSchedule(newSched);
+                          }}
+                          className={cn(
+                            "py-2 px-1 rounded-lg text-xs font-medium transition-all duration-150 border text-center relative",
+                            isActive
+                              ? "ring-2 ring-emerald-500 border-emerald-500"
+                              : "",
+                            isInSchedule
+                              ? "bg-blue-600 text-white border-blue-700 shadow-sm hover:bg-blue-700"
+                              : "bg-stone-50 text-stone-600 border-stone-200 hover:border-blue-400 hover:bg-blue-50",
+                            isCurrent && !isInSchedule && "ring-2 ring-blue-300 border-blue-300 font-bold"
+                          )}
+                        >
+                          {name}
+                          {daysCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[8px] font-bold flex items-center justify-center">
+                              {daysCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Separador */}
+                  <div className="border-t border-stone-200 my-4" />
+
+                  {/* ===== SELETOR DE DIAS DO MÊS ATIVO ===== */}
+                  {activeMonth in schedule && (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">
+                          2. Dias de {MONTH_NAMES_CAL[activeMonth - 1]}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const allDays = Array.from({ length: daysInActiveMonth }, (_, i) => i + 1);
+                              setSchedule(prev => ({
+                                ...prev,
+                                [activeMonth]: currentDays.length === daysInActiveMonth ? [] : allDays
+                              }));
+                            }}
+                            className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
+                          >
+                            {currentDays.length === daysInActiveMonth ? "Desmarcar" : "Todos os dias"}
+                          </button>
+                          {currentDays.length > 0 && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                              {currentDays.length} dia{currentDays.length > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Cabeçalho dos dias da semana */}
+                      <div className="grid grid-cols-7 gap-1 mb-1">
+                        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
+                          <div key={d} className="text-center text-[10px] font-semibold text-stone-400 uppercase tracking-wider py-1">
+                            {d}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Grid do calendário */}
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {/* Espaços vazios */}
+                        {Array.from({ length: firstDayOffset }, (_, i) => (
+                          <div key={`empty-${i}`} />
+                        ))}
+                        {/* Dias */}
+                        {Array.from({ length: daysInActiveMonth }, (_, i) => {
+                          const day = i + 1;
+                          const isSelected = currentDays.includes(day);
+                          const isToday = day === now.getDate() && activeMonth === now.getMonth() + 1 && 2026 === now.getFullYear();
+                          const feriadoKey = `${activeMonth}-${day}`;
+                          const feriado = FERIADOS_NACIONAIS[feriadoKey];
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              title={feriado || undefined}
+                              onClick={() => {
+                                setSchedule(prev => {
+                                  const prevDays = prev[activeMonth] || [];
+                                  const newDays = prevDays.includes(day)
+                                    ? prevDays.filter(d => d !== day)
+                                    : [...prevDays, day].sort((a, b) => a - b);
+                                  return { ...prev, [activeMonth]: newDays };
+                                });
+                              }}
+                              className={cn(
+                                "w-full aspect-square rounded-lg text-sm font-medium transition-all duration-150 border relative",
+                                isSelected
+                                  ? "bg-emerald-600 text-white border-emerald-700 shadow-sm hover:bg-emerald-700"
+                                  : "bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50",
+                                isToday && !isSelected && "ring-2 ring-emerald-300 border-emerald-300 font-bold",
+                                isToday && isSelected && "ring-2 ring-white",
+                                feriado && !isSelected && "bg-red-50 border-red-200 text-red-600",
+                                feriado && isSelected && "bg-red-600 border-red-700"
+                              )}
+                            >
+                              {day}
+                              {feriado && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Feriados do mês */}
+                      {(() => {
+                        const feriadosDoMes = Object.entries(FERIADOS_NACIONAIS)
+                          .filter(([key]) => key.startsWith(`${activeMonth}-`))
+                          .map(([key, name]) => ({ day: Number(key.split("-")[1]), name }));
+                        if (feriadosDoMes.length === 0) return null;
+                        return (
+                          <div className="mt-2 p-2 bg-red-50 rounded-lg border border-red-100">
+                            <span className="text-[10px] font-semibold text-red-700 uppercase">Feriados:</span>
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                              {feriadosDoMes.map(f => (
+                                <span key={f.day} className="text-[10px] text-red-600">
+                                  {f.day} — {f.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
+
+                  {!(activeMonth in schedule) && (
+                    <div className="text-center py-6 text-stone-400">
+                      <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">Clique em um mês acima para selecioná-lo e escolher os dias</p>
+                    </div>
+                  )}
+
+                  {/* Legenda */}
+                  <div className="flex items-center gap-4 mt-3 text-[10px] text-stone-400">
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-600 inline-block" /> Dia selecionado</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-600 inline-block" /> Mês selecionado</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Feriado</span>
+                    {Object.keys(schedule).length === 0 && (
+                      <span className="italic ml-auto">Opcional</span>
+                    )}
+                  </div>
+                </>
               );
             })()}
-
-            {/* Legenda */}
-            <div className="flex items-center gap-4 mt-3 text-[10px] text-stone-400">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-600 inline-block" /> Dia selecionado</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-600 inline-block" /> Mês selecionado</span>
-              {selectedDays.length === 0 && selectedMonths.length === 0 && (
-                <span className="italic ml-auto">Opcional</span>
-              )}
-            </div>
           </div>
         </motion.div>
       )}

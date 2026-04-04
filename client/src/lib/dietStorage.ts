@@ -11,6 +11,11 @@ export interface SavedDietItem {
   energyKcalPerKg: number;
 }
 
+/**
+ * schedule: mapa de mês (1-12) → array de dias (1-31)
+ * Ex: { 1: [1,5,10], 3: [1,2,...,31] }
+ * Se um mês não está no mapa, não tem dias programados
+ */
 export interface SavedDiet {
   id: string;
   name: string;
@@ -28,8 +33,12 @@ export interface SavedDiet {
   mer: number;
   totalGrams: number;
   totalKcal: number;
-  selectedDays: number[]; // dias do mês (1-31) em que a dieta será usada
-  selectedMonths: number[]; // meses do ano (1-12) em que a dieta será usada
+  /** @deprecated Use schedule instead */
+  selectedDays?: number[];
+  /** @deprecated Use schedule instead */
+  selectedMonths?: number[];
+  /** Mapa mês→dias: { 1: [1,5], 4: [1,...,30] } */
+  schedule: Record<number, number[]>;
   items: {
     racao: SavedDietItem[];
     vegetais: SavedDietItem[];
@@ -51,16 +60,42 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
 }
 
+/**
+ * Migra dados antigos (selectedDays + selectedMonths) para o novo formato schedule
+ */
+function migrateToSchedule(diet: any): Record<number, number[]> {
+  if (diet.schedule && Object.keys(diet.schedule).length > 0) {
+    // Já tem schedule, converter keys para number
+    const result: Record<number, number[]> = {};
+    for (const [k, v] of Object.entries(diet.schedule)) {
+      const month = Number(k);
+      if (month >= 1 && month <= 12 && Array.isArray(v) && (v as number[]).length > 0) {
+        result[month] = v as number[];
+      }
+    }
+    return result;
+  }
+  // Migrar do formato antigo
+  const months: number[] = diet.selectedMonths || [];
+  const days: number[] = diet.selectedDays || [];
+  if (months.length === 0 && days.length === 0) return {};
+  const result: Record<number, number[]> = {};
+  if (months.length > 0 && days.length > 0) {
+    months.forEach(m => { result[m] = [...days]; });
+  } else if (months.length > 0) {
+    months.forEach(m => { result[m] = []; });
+  }
+  return result;
+}
+
 export function getSavedDiets(): SavedDiet[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return [];
-    const diets = JSON.parse(data) as SavedDiet[];
-    // Migração: garantir que dietas antigas tenham selectedDays e selectedMonths
+    const diets = JSON.parse(data) as any[];
     return diets.map(d => ({
       ...d,
-      selectedDays: d.selectedDays || [],
-      selectedMonths: d.selectedMonths || [],
+      schedule: migrateToSchedule(d),
     }));
   } catch {
     return [];
@@ -72,8 +107,7 @@ export function saveDiet(diet: Omit<SavedDiet, "id" | "createdAt" | "updatedAt">
   const now = new Date().toISOString();
   const newDiet: SavedDiet = {
     ...diet,
-    selectedDays: diet.selectedDays || [],
-    selectedMonths: diet.selectedMonths || [],
+    schedule: diet.schedule || {},
     id: generateId(),
     createdAt: now,
     updatedAt: now,
@@ -104,18 +138,18 @@ export function getDietsBySpecies(speciesId: string): SavedDiet[] {
   return getSavedDiets().filter(d => d.speciesId === speciesId);
 }
 
-function formatSelectedDays(days: number[]): string {
-  if (!days || days.length === 0) return "Nenhum dia selecionado";
-  if (days.length === 31) return "Todos os dias do mês";
-  const sorted = [...days].sort((a, b) => a - b);
-  return sorted.join(", ");
-}
-
-function formatSelectedMonths(months: number[]): string {
-  if (!months || months.length === 0) return "";
-  if (months.length === 12) return "Todos os meses";
-  const sorted = [...months].sort((a, b) => a - b);
-  return sorted.map(m => MONTH_NAMES[m - 1]).join(", ");
+function formatSchedule(schedule: Record<number, number[]>): string {
+  const entries = Object.entries(schedule)
+    .map(([m, days]) => ({ month: Number(m), days }))
+    .filter(e => e.days.length > 0)
+    .sort((a, b) => a.month - b.month);
+  if (entries.length === 0) return "Nenhum período selecionado";
+  return entries.map(e => {
+    const monthName = MONTH_NAMES[e.month - 1];
+    const daysInMonth = new Date(2026, e.month, 0).getDate();
+    const daysStr = e.days.length === daysInMonth ? "todos os dias" : `dias ${e.days.sort((a, b) => a - b).join(", ")}`;
+    return `${monthName}: ${daysStr}`;
+  }).join(" | ");
 }
 
 export function exportDietAsText(diet: SavedDiet): string {
@@ -129,16 +163,10 @@ export function exportDietAsText(diet: SavedDiet): string {
   lines.push(`Quantidade de aves: ${diet.birdCount}`);
   lines.push(`MER: ${diet.mer.toFixed(1)} kcal/dia por ave`);
 
-  // Meses de uso
-  const months = diet.selectedMonths || [];
-  if (months.length > 0) {
-    lines.push(`Meses de uso: ${formatSelectedMonths(months)}`);
-  }
-
-  // Dias de uso
-  const days = diet.selectedDays || [];
-  if (days.length > 0) {
-    lines.push(`Dias de uso: ${formatSelectedDays(days)}`);
+  // Período de uso
+  const schedule = diet.schedule || {};
+  if (Object.keys(schedule).length > 0) {
+    lines.push(`Período de uso: ${formatSchedule(schedule)}`);
   }
 
   lines.push("");
