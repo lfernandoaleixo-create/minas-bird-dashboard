@@ -29,6 +29,7 @@ export interface SavedDiet {
   totalGrams: number;
   totalKcal: number;
   selectedDays: number[]; // dias do mês (1-31) em que a dieta será usada
+  selectedMonths: number[]; // meses do ano (1-12) em que a dieta será usada
   items: {
     racao: SavedDietItem[];
     vegetais: SavedDietItem[];
@@ -41,6 +42,11 @@ export interface SavedDiet {
 
 const STORAGE_KEY = "minas-bird-saved-diets";
 
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
 }
@@ -50,10 +56,11 @@ export function getSavedDiets(): SavedDiet[] {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return [];
     const diets = JSON.parse(data) as SavedDiet[];
-    // Migração: garantir que dietas antigas tenham selectedDays
+    // Migração: garantir que dietas antigas tenham selectedDays e selectedMonths
     return diets.map(d => ({
       ...d,
       selectedDays: d.selectedDays || [],
+      selectedMonths: d.selectedMonths || [],
     }));
   } catch {
     return [];
@@ -66,6 +73,7 @@ export function saveDiet(diet: Omit<SavedDiet, "id" | "createdAt" | "updatedAt">
   const newDiet: SavedDiet = {
     ...diet,
     selectedDays: diet.selectedDays || [],
+    selectedMonths: diet.selectedMonths || [],
     id: generateId(),
     createdAt: now,
     updatedAt: now,
@@ -103,6 +111,13 @@ function formatSelectedDays(days: number[]): string {
   return sorted.join(", ");
 }
 
+function formatSelectedMonths(months: number[]): string {
+  if (!months || months.length === 0) return "";
+  if (months.length === 12) return "Todos os meses";
+  const sorted = [...months].sort((a, b) => a - b);
+  return sorted.map(m => MONTH_NAMES[m - 1]).join(", ");
+}
+
 export function exportDietAsText(diet: SavedDiet): string {
   const lines: string[] = [];
   lines.push("═══════════════════════════════════════════════════");
@@ -113,6 +128,12 @@ export function exportDietAsText(diet: SavedDiet): string {
   lines.push(`Peso: ${diet.weight}g`);
   lines.push(`Quantidade de aves: ${diet.birdCount}`);
   lines.push(`MER: ${diet.mer.toFixed(1)} kcal/dia por ave`);
+
+  // Meses de uso
+  const months = diet.selectedMonths || [];
+  if (months.length > 0) {
+    lines.push(`Meses de uso: ${formatSelectedMonths(months)}`);
+  }
 
   // Dias de uso
   const days = diet.selectedDays || [];

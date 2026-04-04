@@ -129,6 +129,11 @@ export default function FeedingModule() {
 
   // --- Dias do mês selecionados ---
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  // --- Meses do ano selecionados ---
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  // --- Mês visualizado no calendário ---
+  const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
 
   // --- Saved diets list ---
   const [savedDiets, setSavedDiets] = useState<SavedDiet[]>(() => getSavedDiets());
@@ -347,7 +352,7 @@ export default function FeedingModule() {
     setEditingDietId(diet.id);
     setDietName(diet.name);
     setSelectedDays(diet.selectedDays || []);
-    setDietMode("editing");
+    setSelectedMonths(diet.selectedMonths || []);
     setExpandedStep(null);
   }, []);
 
@@ -374,6 +379,7 @@ export default function FeedingModule() {
       totalGrams: nossaDieta.total.grams,
       totalKcal: nossaDieta.total.kcal,
       selectedDays,
+      selectedMonths,
       items: {
         racao: nossaDieta.racao.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.racao.kcal, energyKcalPerKg: i.food.energyKcal })),
         vegetais: nossaDieta.vegetais.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.vegetais.kcal / Math.max(1, selectedVegetais.length), energyKcalPerKg: i.food.energyKcal })),
@@ -417,9 +423,12 @@ export default function FeedingModule() {
       setDietName("");
       setShowSaveDialog(false);
       setSelectedDays([]);
+      setSelectedMonths([]);
+      setCalendarMonth(new Date().getMonth());
+      setCalendarYear(new Date().getFullYear());
       setDietMode("menu");
     }, 600);
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, selectedDays]);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, selectedDays, selectedMonths]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -594,98 +603,185 @@ export default function FeedingModule() {
         </div>
 
         {/* ===== LISTA DE DIETAS SALVAS NA TELA INICIAL ===== */}
-        {savedDiets.length > 0 && (
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-stone-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FolderOpen className="w-5 h-5 text-emerald-600" />
-                  <h2 className="font-bold text-stone-800">Dietas Salvas</h2>
-                  <span className="text-xs text-stone-400">({savedDiets.length})</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setSavedDiets(getSavedDiets());
-                    setDietMode("saved-list");
-                  }}
-                  className="text-xs text-emerald-600 hover:text-emerald-800 font-medium transition-colors flex items-center gap-1"
-                >
-                  Ver todas <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-            <div className="divide-y divide-stone-100">
-              {Object.entries(groupedSavedDiets).map(([speciesName, diets]) => (
-                <div key={speciesName}>
-                  <div className="px-5 py-2 bg-stone-50">
-                    <div className="flex items-center gap-2">
-                      <Bird className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">{speciesName}</span>
-                      <span className="text-[10px] text-stone-400">({diets.length} dieta{diets.length > 1 ? "s" : ""})</span>
-                    </div>
+        {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
+        {savedDiets.length > 0 && (() => {
+          const MONTH_NAMES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+          const MONTH_NAMES_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+          const DIET_COLORS = [
+            { bg: "bg-emerald-500", text: "text-emerald-800", light: "bg-emerald-100", border: "border-emerald-300" },
+            { bg: "bg-blue-500", text: "text-blue-800", light: "bg-blue-100", border: "border-blue-300" },
+            { bg: "bg-amber-500", text: "text-amber-800", light: "bg-amber-100", border: "border-amber-300" },
+            { bg: "bg-purple-500", text: "text-purple-800", light: "bg-purple-100", border: "border-purple-300" },
+            { bg: "bg-red-400", text: "text-red-800", light: "bg-red-100", border: "border-red-300" },
+            { bg: "bg-teal-500", text: "text-teal-800", light: "bg-teal-100", border: "border-teal-300" },
+          ];
+
+          return Object.entries(groupedSavedDiets).map(([speciesName, dietsForSpecies]) => {
+            // Atribuir cor única a cada dieta
+            const dietColorMap = new Map<string, typeof DIET_COLORS[0]>();
+            dietsForSpecies.forEach((d, i) => dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]));
+
+            const now = new Date();
+            const currentYear = now.getFullYear();
+
+            return (
+              <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-stone-100">
+                  <div className="flex items-center gap-2">
+                    <Bird className="w-5 h-5 text-emerald-600" />
+                    <h2 className="font-bold text-stone-800">{speciesName}</h2>
+                    <span className="text-xs text-stone-400">Registro de Alimentação {currentYear}</span>
                   </div>
-                  {diets.map(diet => (
-                    <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                  <p className="text-[11px] text-stone-500 mt-1">Calendário anual mostrando quais dietas estão programadas para cada mês e dia</p>
+                </div>
+
+                {/* Legenda das dietas */}
+                <div className="px-5 py-3 border-b border-stone-100 bg-stone-50">
+                  <div className="flex flex-wrap gap-2">
+                    {dietsForSpecies.map(diet => {
+                      const color = dietColorMap.get(diet.id)!;
+                      return (
+                        <div key={diet.id} className="flex items-center gap-1.5">
+                          <span className={cn("w-3 h-3 rounded-sm", color.bg)} />
+                          <span className="text-[11px] font-medium text-stone-700">{diet.name}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Grid de meses */}
+                <div className="p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 12 }, (_, monthIdx) => {
+                      const month = monthIdx + 1;
+                      const daysInMonth = new Date(currentYear, month, 0).getDate();
+                      const firstDayOffset = new Date(currentYear, monthIdx, 1).getDay();
+
+                      // Encontrar dietas ativas neste mês
+                      const activeDietsThisMonth = dietsForSpecies.filter(d => {
+                        const months = d.selectedMonths || [];
+                        return months.length === 0 || months.includes(month);
+                      });
+
+                      return (
+                        <div key={month} className="border border-stone-200 rounded-lg overflow-hidden">
+                          <div className="bg-stone-50 px-3 py-1.5 border-b border-stone-200">
+                            <span className="text-xs font-bold text-stone-700">{MONTH_NAMES_FULL[monthIdx]}</span>
+                          </div>
+                          <div className="p-2">
+                            {/* Dias da semana header */}
+                            <div className="grid grid-cols-7 gap-px mb-1">
+                              {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
+                                <div key={i} className="text-center text-[8px] font-semibold text-stone-400 py-0.5">{d}</div>
+                              ))}
+                            </div>
+                            {/* Grid de dias */}
+                            <div className="grid grid-cols-7 gap-px">
+                              {/* Espaços vazios */}
+                              {Array.from({ length: firstDayOffset }, (_, i) => (
+                                <div key={`e-${i}`} className="aspect-square" />
+                              ))}
+                              {/* Dias */}
+                              {Array.from({ length: daysInMonth }, (_, i) => {
+                                const day = i + 1;
+                                // Encontrar dietas ativas neste dia
+                                const activeDietsThisDay = activeDietsThisMonth.filter(d => {
+                                  const days = d.selectedDays || [];
+                                  return days.length === 0 || days.includes(day);
+                                });
+                                const isToday = day === now.getDate() && monthIdx === now.getMonth();
+                                const hasDiet = activeDietsThisDay.length > 0;
+                                const firstDiet = hasDiet ? activeDietsThisDay[0] : null;
+                                const firstColor = firstDiet ? dietColorMap.get(firstDiet.id) : null;
+
+                                return (
+                                  <div
+                                    key={day}
+                                    className={cn(
+                                      "aspect-square rounded-sm flex items-center justify-center text-[9px] font-medium relative",
+                                      hasDiet && firstColor ? `${firstColor.light} ${firstColor.text}` : "text-stone-400",
+                                      isToday && "ring-1 ring-emerald-500 font-bold",
+                                      activeDietsThisDay.length > 1 && "ring-1 ring-offset-0 ring-stone-300"
+                                    )}
+                                    title={hasDiet ? activeDietsThisDay.map(d => d.name).join(" + ") : `Dia ${day}`}
+                                  >
+                                    {day}
+                                    {activeDietsThisDay.length > 1 && (
+                                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-stone-500" />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Lista de dietas com ações */}
+                <div className="border-t border-stone-100">
+                  {dietsForSpecies.map(diet => {
+                    const color = dietColorMap.get(diet.id)!;
+                    return (
+                      <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-b-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className={cn("w-2.5 h-2.5 rounded-sm flex-shrink-0", color.bg)} />
                             <h4 className="font-medium text-stone-800 text-sm truncate">{diet.name}</h4>
                             {diet.birdCount > 1 && (
                               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
                                 <Users className="w-3 h-3" />{diet.birdCount}
                               </span>
                             )}
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
-                            <span>{diet.totalGrams.toFixed(1)}g/ave</span>
-                            <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
-                            {diet.selectedDays && diet.selectedDays.length > 0 && (
-                              <span className="flex items-center gap-0.5 text-emerald-600">
-                                <CalendarDays className="w-3 h-3" />
-                                {diet.selectedDays.length === 31 ? "Todos os dias" : `${diet.selectedDays.length} dia${diet.selectedDays.length > 1 ? "s" : ""}`}
+                            <span className="text-[11px] text-stone-400">{diet.totalGrams.toFixed(1)}g/ave</span>
+                            {diet.selectedMonths && diet.selectedMonths.length > 0 && (
+                              <span className="text-[10px] text-blue-600">
+                                {diet.selectedMonths.length === 12 ? "Ano todo" : diet.selectedMonths.map(m => MONTH_NAMES_SHORT[m - 1]).join(", ")}
                               </span>
                             )}
-                            <span>{formatDate(diet.updatedAt)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 ml-3">
+                            <button
+                              onClick={() => { setViewingDiet(diet); setSavedDiets(getSavedDiets()); setDietMode("saved-detail"); }}
+                              className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                              title="Ver detalhes"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => loadDietForEditing(diet)}
+                              className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                              title="Editar"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleExportDiet(diet)}
+                              className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                              title="Exportar"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => { handleDeleteDiet(diet.id); setSavedDiets(getSavedDiets()); }}
+                              className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 ml-3">
-                          <button
-                            onClick={() => { setViewingDiet(diet); setSavedDiets(getSavedDiets()); setDietMode("saved-detail"); }}
-                            className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                            title="Ver detalhes"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => loadDietForEditing(diet)}
-                            className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                            title="Editar"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleExportDiet(diet)}
-                            className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                            title="Exportar"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => { handleDeleteDiet(diet.id); setSavedDiets(getSavedDiets()); }}
-                            className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+            );
+          });
+        })()}
         </>
       )}
 
@@ -754,6 +850,12 @@ export default function FeedingModule() {
                             <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
                               <span>{diet.totalGrams.toFixed(1)}g/ave</span>
                               <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
+                              {diet.selectedMonths && diet.selectedMonths.length > 0 && (
+                                <span className="flex items-center gap-0.5 text-blue-600">
+                                  <CalendarDays className="w-3 h-3" />
+                                  {diet.selectedMonths.length === 12 ? "Todos os meses" : `${diet.selectedMonths.length} ${diet.selectedMonths.length === 1 ? "mês" : "meses"}`}
+                                </span>
+                              )}
                               {diet.selectedDays && diet.selectedDays.length > 0 && (
                                 <span className="flex items-center gap-0.5 text-emerald-600">
                                   <CalendarDays className="w-3 h-3" />
@@ -854,6 +956,39 @@ export default function FeedingModule() {
                 <p className="text-sm font-semibold text-emerald-700">{viewingDiet.mer.toFixed(1)} kcal/dia</p>
               </div>
             </div>
+
+            {/* Meses de uso */}
+            {viewingDiet.selectedMonths && viewingDiet.selectedMonths.length > 0 && (
+              <div className="mb-4">
+                <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <CalendarDays className="w-3.5 h-3.5 text-blue-700" />
+                    <span className="text-xs font-medium text-blue-800">
+                      Meses de uso
+                      {viewingDiet.selectedMonths.length === 12 ? " (todos)" : ` (${viewingDiet.selectedMonths.length})`}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((name, idx) => {
+                      const isActive = viewingDiet.selectedMonths.includes(idx + 1);
+                      return (
+                        <span
+                          key={idx}
+                          className={cn(
+                            "px-2 py-1 rounded-md text-[10px] font-medium border",
+                            isActive
+                              ? "bg-blue-600 text-white border-blue-700"
+                              : "bg-white/60 text-stone-300 border-stone-100"
+                          )}
+                        >
+                          {name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Dias de uso */}
             {viewingDiet.selectedDays && viewingDiet.selectedDays.length > 0 && (
@@ -1418,25 +1553,85 @@ export default function FeedingModule() {
         </div>
       )}
 
-      {/* ===== CALENDÁRIO DE DIAS DE USO ===== */}
+      {/* ===== CALENDÁRIO DE MESES E DIAS DE USO ===== */}
       {nossaDieta && (dietMode === "creating" || dietMode === "editing") && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-emerald-700" />
-                <div>
-                  <h3 className="font-bold text-stone-800">Dias de Uso no Mês</h3>
-                  <p className="text-[11px] text-stone-500">Selecione os dias em que esta dieta será utilizada</p>
+            <div className="flex items-center gap-2 mb-4">
+              <CalendarDays className="w-5 h-5 text-emerald-700" />
+              <div>
+                <h3 className="font-bold text-stone-800">Período de Uso da Dieta</h3>
+                <p className="text-[11px] text-stone-500">Selecione os meses e dias em que esta dieta será utilizada</p>
+              </div>
+            </div>
+
+            {/* ===== SELETOR DE MESES ===== */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">Meses</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMonths(selectedMonths.length === 12 ? [] : Array.from({ length: 12 }, (_, i) => i + 1))}
+                    className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
+                  >
+                    {selectedMonths.length === 12 ? "Desmarcar" : "Todos"}
+                  </button>
+                  {selectedMonths.length > 0 && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-800">
+                      {selectedMonths.length} {selectedMonths.length === 1 ? "mês" : "meses"}
+                    </span>
+                  )}
                 </div>
               </div>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((name, idx) => {
+                  const month = idx + 1;
+                  const isSelected = selectedMonths.includes(month);
+                  const now = new Date();
+                  const isCurrent = (idx === now.getMonth()) && (calendarYear === now.getFullYear());
+                  return (
+                    <button
+                      key={month}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonths(prev =>
+                          prev.includes(month)
+                            ? prev.filter(m => m !== month)
+                            : [...prev, month].sort((a, b) => a - b)
+                        );
+                      }}
+                      className={cn(
+                        "py-2 px-1 rounded-lg text-xs font-medium transition-all duration-150 border text-center",
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-700 shadow-sm hover:bg-blue-700"
+                          : "bg-stone-50 text-stone-600 border-stone-200 hover:border-blue-400 hover:bg-blue-50",
+                        isCurrent && !isSelected && "ring-2 ring-blue-300 border-blue-300 font-bold"
+                      )}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Separador */}
+            <div className="border-t border-stone-200 my-4" />
+
+            {/* ===== SELETOR DE DIAS ===== */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">Dias do Mês</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedDays(selectedDays.length === 31 ? [] : Array.from({ length: 31 }, (_, i) => i + 1))}
-                  className="text-xs font-medium text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded-md hover:bg-emerald-50 transition-colors"
+                  onClick={() => {
+                    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+                    setSelectedDays(selectedDays.length === daysInMonth ? [] : Array.from({ length: daysInMonth }, (_, i) => i + 1));
+                  }}
+                  className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors"
                 >
-                  {selectedDays.length === 31 ? "Desmarcar todos" : "Selecionar todos"}
+                  {selectedDays.length >= 28 ? "Desmarcar" : "Todos"}
                 </button>
                 {selectedDays.length > 0 && (
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
@@ -1444,6 +1639,33 @@ export default function FeedingModule() {
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* Navegação do mês no calendário */}
+            <div className="flex items-center justify-between mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(y => y - 1); }
+                  else setCalendarMonth(m => m - 1);
+                }}
+                className="p-1 rounded hover:bg-stone-100 text-stone-500 hover:text-stone-700 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-semibold text-stone-700">
+                {["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][calendarMonth]} {calendarYear}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(y => y + 1); }
+                  else setCalendarMonth(m => m + 1);
+                }}
+                className="p-1 rounded hover:bg-stone-100 text-stone-500 hover:text-stone-700 transition-colors"
+              >
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Cabeçalho dos dias da semana */}
@@ -1455,21 +1677,19 @@ export default function FeedingModule() {
               ))}
             </div>
 
-            {/* Grid do calendário — calcular offset do dia 1 do mês atual */}
+            {/* Grid do calendário */}
             {(() => {
               const now = new Date();
-              const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-              const startOffset = firstDayOfMonth.getDay(); // 0=Dom, 1=Seg...
-              const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+              const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1);
+              const startOffset = firstDayOfMonth.getDay();
+              const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
               const cells = [];
-              // Espaços vazios antes do dia 1
               for (let i = 0; i < startOffset; i++) {
                 cells.push(<div key={`empty-${i}`} />);
               }
-              // Dias do mês
               for (let day = 1; day <= daysInMonth; day++) {
                 const isSelected = selectedDays.includes(day);
-                const isToday = day === now.getDate();
+                const isToday = day === now.getDate() && calendarMonth === now.getMonth() && calendarYear === now.getFullYear();
                 cells.push(
                   <button
                     key={day}
@@ -1503,10 +1723,10 @@ export default function FeedingModule() {
 
             {/* Legenda */}
             <div className="flex items-center gap-4 mt-3 text-[10px] text-stone-400">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-600 inline-block" /> Selecionado</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-stone-50 border border-stone-200 ring-2 ring-emerald-300 inline-block" /> Hoje</span>
-              {selectedDays.length === 0 && (
-                <span className="italic ml-auto">Opcional — nenhum dia selecionado</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-600 inline-block" /> Dia selecionado</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-600 inline-block" /> Mês selecionado</span>
+              {selectedDays.length === 0 && selectedMonths.length === 0 && (
+                <span className="italic ml-auto">Opcional</span>
               )}
             </div>
           </div>
