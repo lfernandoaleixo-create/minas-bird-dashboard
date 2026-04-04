@@ -60,6 +60,7 @@ export const appRouter = router({
         phaseId: row.phaseId,
         enclosureId: row.enclosureId,
         birdCount: row.birdCount,
+        notes: row.notes ?? "",
         mer: row.merX10 / 10,
         totalGrams: row.totalGramsX10 / 10,
         totalKcal: row.totalKcalX10 / 10,
@@ -85,6 +86,7 @@ export const appRouter = router({
         phaseId: z.string(),
         enclosureId: z.string(),
         birdCount: z.number().int().min(1),
+        notes: z.string().optional(),
         mer: z.number(),
         totalGrams: z.number(),
         totalKcal: z.number(),
@@ -106,6 +108,7 @@ export const appRouter = router({
           phaseId: input.phaseId,
           enclosureId: input.enclosureId,
           birdCount: input.birdCount,
+          notes: input.notes ?? null,
           merX10: Math.round(input.mer * 10),
           totalGramsX10: Math.round(input.totalGrams * 10),
           totalKcalX10: Math.round(input.totalKcal * 10),
@@ -128,6 +131,7 @@ export const appRouter = router({
         phaseId: z.string().optional(),
         enclosureId: z.string().optional(),
         birdCount: z.number().int().min(1).optional(),
+        notes: z.string().optional(),
         mer: z.number().optional(),
         totalGrams: z.number().optional(),
         totalKcal: z.number().optional(),
@@ -145,6 +149,7 @@ export const appRouter = router({
         if (input.phaseId !== undefined) data.phaseId = input.phaseId;
         if (input.enclosureId !== undefined) data.enclosureId = input.enclosureId;
         if (input.birdCount !== undefined) data.birdCount = input.birdCount;
+        if (input.notes !== undefined) data.notes = input.notes || null;
         if (input.mer !== undefined) data.merX10 = Math.round(input.mer * 10);
         if (input.totalGrams !== undefined) data.totalGramsX10 = Math.round(input.totalGrams * 10);
         if (input.totalKcal !== undefined) data.totalKcalX10 = Math.round(input.totalKcal * 10);

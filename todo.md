@@ -5,3 +5,8 @@
 - [x] Migrar frontend de localStorage para chamadas tRPC
 - [x] Remover botões de Exportar/Importar Backup da tela inicial
 - [x] Verificar que dietas persistem corretamente no banco de dados
+- [x] Cards fixos para as 8 espécies do plantel em Dietas Salvas
+- [x] Formulário de salvamento: Espécie → Fase → Ambiente → Observações
+- [x] Calendário anual com seletor de ano
+- [x] Feriados escritos no rodapé de cada mês do calendário
+- [x] Diminuir tamanho dos 3 cards iniciais de ação

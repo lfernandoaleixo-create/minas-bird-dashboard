@@ -6,7 +6,7 @@
  *
  * O calendário de atribuição de dietas a dias é separado da dieta.
  * A dieta é apenas a "receita". A atribuição de dias é feita no
- * speciesCalendar, que mapeia espécie → { "mês-dia" → dietId }.
+ * speciesCalendar, que mapeia espécie → { "ano-mês-dia" → dietId }.
  */
 
 export interface SavedDietItem {
@@ -31,6 +31,7 @@ export interface SavedDiet {
   phaseId: string;
   enclosureId: string;
   birdCount: number;
+  notes: string;
   mer: number;
   totalGrams: number;
   totalKcal: number;
@@ -46,7 +47,7 @@ export interface SavedDiet {
 
 /**
  * SpeciesCalendar — Mapa de atribuição de dietas a dias por espécie
- * Estrutura: { speciesId: { "mês-dia": dietId } }
+ * Estrutura: { speciesId: { "ano-mês-dia": dietId } }
  */
 export type SpeciesCalendarMap = Record<string, Record<string, string>>;
 
@@ -64,6 +65,19 @@ const MONTH_NAMES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
+/**
+ * Parseia uma dayKey no formato "ano-mês-dia" (ex: "2026-1-5")
+ * Retorna { year, month, day }
+ */
+function parseDayKey(key: string): { year: number; month: number; day: number } {
+  const parts = key.split("-").map(Number);
+  if (parts.length === 3) {
+    return { year: parts[0], month: parts[1], day: parts[2] };
+  }
+  // Fallback para formato legado "mês-dia"
+  return { year: new Date().getFullYear(), month: parts[0], day: parts[1] };
+}
+
 export function exportDietAsText(diet: SavedDiet, calendarForSpecies?: Record<string, string>): string {
   const lines: string[] = [];
   lines.push("═══════════════════════════════════════════════════");
@@ -75,23 +89,34 @@ export function exportDietAsText(diet: SavedDiet, calendarForSpecies?: Record<st
   lines.push(`Quantidade de aves: ${diet.birdCount}`);
   lines.push(`MER: ${diet.mer.toFixed(1)} kcal/dia por ave`);
 
+  if (diet.notes) {
+    lines.push(`Observações: ${diet.notes}`);
+  }
+
   // Dias atribuídos no calendário
   if (calendarForSpecies) {
     const assignedDays = Object.entries(calendarForSpecies)
       .filter(([, id]) => id === diet.id)
       .map(([key]) => key);
     if (assignedDays.length > 0) {
-      const byMonth: Record<number, number[]> = {};
+      // Agrupar por ano e mês
+      const byYearMonth: Record<number, Record<number, number[]>> = {};
       assignedDays.forEach(key => {
-        const [m, d] = key.split("-").map(Number);
-        if (!byMonth[m]) byMonth[m] = [];
-        byMonth[m].push(d);
+        const { year, month, day } = parseDayKey(key);
+        if (!byYearMonth[year]) byYearMonth[year] = {};
+        if (!byYearMonth[year][month]) byYearMonth[year][month] = [];
+        byYearMonth[year][month].push(day);
       });
-      const schedule = Object.entries(byMonth)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([m, days]) => `${MONTH_NAMES[Number(m) - 1]}: dias ${days.sort((a, b) => a - b).join(", ")}`)
-        .join(" | ");
-      lines.push(`Período de uso: ${schedule}`);
+      const years = Object.keys(byYearMonth).map(Number).sort((a, b) => a - b);
+      const schedParts: string[] = [];
+      for (const year of years) {
+        const months = Object.keys(byYearMonth[year]).map(Number).sort((a, b) => a - b);
+        for (const m of months) {
+          const days = byYearMonth[year][m].sort((a, b) => a - b);
+          schedParts.push(`${MONTH_NAMES[m - 1]}/${year}: dias ${days.join(", ")}`);
+        }
+      }
+      lines.push(`Período de uso: ${schedParts.join(" | ")}`);
     }
   }
 

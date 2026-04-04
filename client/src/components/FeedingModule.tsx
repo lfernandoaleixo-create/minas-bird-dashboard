@@ -122,11 +122,13 @@ export default function FeedingModule() {
   // --- Quantidade de aves ---
   const [birdCount, setBirdCount] = useState<number>(1);
 
-  // --- Dieta salva nome ---
+  // --- Dieta salva nome e notas ---
   const [dietName, setDietName] = useState("");
+  const [dietNotes, setDietNotes] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   // --- Calendário interativo por espécie ---
+  const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
   const [expandedRegistries, setExpandedRegistries] = useState<Set<string>>(new Set());
   // Dieta ativa selecionada para "pintar" no calendário (dietId)
   const [activePaintDiet, setActivePaintDiet] = useState<string | null>(null);
@@ -317,6 +319,7 @@ export default function FeedingModule() {
     setDietMode("menu");
     setEditingDietId(null);
     setDietName("");
+    setDietNotes("");
     setShowSaveDialog(false);
 
   }, []);
@@ -345,6 +348,7 @@ export default function FeedingModule() {
 
     setEditingDietId(diet.id);
     setDietName(diet.name);
+    setDietNotes(diet.notes || "");
 
     setExpandedStep(null);
   }, []);
@@ -368,6 +372,7 @@ export default function FeedingModule() {
       phaseId,
       enclosureId,
       birdCount,
+      notes: dietNotes.trim() || undefined,
       mer,
       totalGrams: nossaDieta.total.grams,
       totalKcal: nossaDieta.total.kcal,
@@ -410,11 +415,12 @@ export default function FeedingModule() {
       setBirdCount(1);
       setEditingDietId(null);
       setDietName("");
+      setDietNotes("");
       setShowSaveDialog(false);
 
       setDietMode("menu");
     }, 600);
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId]);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, dietNotes, editingDietId]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -498,6 +504,11 @@ export default function FeedingModule() {
     return groups;
   }, [filteredSavedDiets]);
 
+  // 8 espécies ativas do plantel (sempre visíveis como cards)
+  const activeFlockSpecies = useMemo(() => {
+    return species.filter(s => s.inCurrentFlock);
+  }, []);
+
   // ============================================
   // RENDER
   // ============================================
@@ -533,19 +544,20 @@ export default function FeedingModule() {
                 setPhaseId("manutencao");
                 setEnclosureId("viveiro-voo-interno");
                 setBirdCount(1);
-                setEditingDietId(null);
-                setDietName("");
-                setShowSaveDialog(false);
-                setDietMode("creating");
+    setEditingDietId(null);
+    setDietName("");
+    setDietNotes("");
+    setShowSaveDialog(false);
+    setDietMode("creating");
               }}
-              className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
+              className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
             >
-              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                <FilePlus className="w-6 h-6 text-emerald-700" />
+              <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors flex-shrink-0">
+                <FilePlus className="w-4 h-4 text-emerald-700" />
               </div>
-              <div className="text-center">
-                <span className="font-semibold text-stone-800 block">Criar Nova Dieta</span>
-                <span className="text-xs text-stone-500 mt-1">Montar uma dieta do zero para uma espécie</span>
+              <div className="text-left">
+                <span className="font-semibold text-stone-800 block text-sm">Criar Nova Dieta</span>
+                <span className="text-[11px] text-stone-500">Montar do zero</span>
               </div>
             </button>
 
@@ -557,14 +569,14 @@ export default function FeedingModule() {
                 }
                 setDietMode("saved-list");
               }}
-              className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-100 hover:border-amber-400 transition-all group"
+              className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-100 hover:border-amber-400 transition-all group"
             >
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                <Edit3 className="w-6 h-6 text-amber-700" />
+              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors flex-shrink-0">
+                <Edit3 className="w-4 h-4 text-amber-700" />
               </div>
-              <div className="text-center">
-                <span className="font-semibold text-stone-800 block">Mudar Dieta Atual</span>
-                <span className="text-xs text-stone-500 mt-1">Ajustar a dieta de uma espécie existente</span>
+              <div className="text-left">
+                <span className="font-semibold text-stone-800 block text-sm">Mudar Dieta Atual</span>
+                <span className="text-[11px] text-stone-500">Ajustar existente</span>
               </div>
             </button>
 
@@ -572,14 +584,14 @@ export default function FeedingModule() {
               onClick={() => {
                 setDietMode("saved-list");
               }}
-              className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50/50 hover:bg-stone-100 hover:border-stone-400 transition-all group"
+              className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50/50 hover:bg-stone-100 hover:border-stone-400 transition-all group"
             >
-              <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center group-hover:bg-stone-200 transition-colors">
-                <FolderOpen className="w-6 h-6 text-stone-600" />
+              <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center group-hover:bg-stone-200 transition-colors flex-shrink-0">
+                <FolderOpen className="w-4 h-4 text-stone-600" />
               </div>
-              <div className="text-center">
-                <span className="font-semibold text-stone-800 block">Dietas Salvas</span>
-                <span className="text-xs text-stone-500 mt-1">Ver dietas salvas por espécie</span>
+              <div className="text-left">
+                <span className="font-semibold text-stone-800 block text-sm">Dietas Salvas</span>
+                <span className="text-[11px] text-stone-500">Ver por espécie</span>
               </div>
             </button>
           </div>
@@ -616,9 +628,19 @@ export default function FeedingModule() {
             dietsForSpecies.forEach((d, i) => dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]));
 
             const speciesId = dietsForSpecies[0]?.speciesId;
-            const calendarForSpecies = speciesCalendars[speciesId] || {};
+            const allCalendarForSpecies = speciesCalendars[speciesId] || {};
+            // Filtrar entradas do calendário para o ano selecionado
+            const calendarForSpecies: Record<string, string> = {};
+            for (const [key, val] of Object.entries(allCalendarForSpecies)) {
+              const parts = key.split("-").map(Number);
+              if (parts.length === 3 && parts[0] === calendarYear) {
+                calendarForSpecies[key] = val;
+              } else if (parts.length === 2) {
+                // Formato legado m-d: manter se calendarYear for o ano atual
+                calendarForSpecies[key] = val;
+              }
+            }
             const now = new Date();
-            const currentYear = now.getFullYear();
 
             const isExpanded = expandedRegistries.has(speciesName);
             const toggleExpand = () => {
@@ -643,7 +665,7 @@ export default function FeedingModule() {
                   <div className="flex items-center gap-2">
                     <Bird className="w-5 h-5 text-emerald-600" />
                     <h2 className="font-bold text-stone-800">{speciesName}</h2>
-                    <span className="text-xs text-stone-400">Registro de Alimentação {currentYear}</span>
+                    <span className="text-xs text-stone-400">Registro de Alimentação {calendarYear}</span>
                     <span className="text-[11px] text-stone-400 ml-1">({dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""})</span>
                     {totalAssigned > 0 && (
                       <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
@@ -731,7 +753,9 @@ export default function FeedingModule() {
 
                 {/* Resumo da dieta do dia clicado */}
                 {dayDetailDiet && dayDetailKey && (() => {
-                  const [mStr, dStr] = dayDetailKey.split("-");
+                  const keyParts = dayDetailKey.split("-");
+                  const mStr = keyParts.length === 3 ? keyParts[1] : keyParts[0];
+                  const dStr = keyParts.length === 3 ? keyParts[2] : keyParts[1];
                   const monthName = MONTH_NAMES_FULL[Number(mStr) - 1];
                   const dayNum = Number(dStr);
                   const color = dietColorMap.get(dayDetailDiet.id);
@@ -809,13 +833,30 @@ export default function FeedingModule() {
                   );
                 })()}
 
-                {/* Grid de meses */}
+                {/* Seletor de ano + Grid de meses */}
                 <div className="p-5">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setCalendarYear(y => y - 1)}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-700"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-180" />
+                    </button>
+                    <span className="text-sm font-bold text-stone-700 min-w-[60px] text-center">{calendarYear}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarYear(y => y + 1)}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-700"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Array.from({ length: 12 }, (_, monthIdx) => {
                       const month = monthIdx + 1;
-                      const daysInMonth = new Date(currentYear, month, 0).getDate();
-                      const firstDayOffset = new Date(currentYear, monthIdx, 1).getDay();
+                      const daysInMonth = new Date(calendarYear, month, 0).getDate();
+                      const firstDayOffset = new Date(calendarYear, monthIdx, 1).getDay();
 
                       return (
                         <div key={month} className="border border-stone-200 rounded-lg overflow-hidden">
@@ -836,11 +877,12 @@ export default function FeedingModule() {
                               ))}
                               {Array.from({ length: daysInMonth }, (_, i) => {
                                 const day = i + 1;
-                                const dayKey = `${month}-${day}`;
-                                const assignedDietId = calendarForSpecies[dayKey];
+                                const dayKey = `${calendarYear}-${month}-${day}`;
+                                const legacyKey = `${month}-${day}`;
+                                const assignedDietId = calendarForSpecies[dayKey] || calendarForSpecies[legacyKey];
                                 const assignedDiet = assignedDietId ? dietsForSpecies.find(d => d.id === assignedDietId) : null;
                                 const assignedColor = assignedDiet ? dietColorMap.get(assignedDiet.id) : null;
-                                const isToday = day === now.getDate() && monthIdx === now.getMonth() && currentYear === now.getFullYear();
+                                const isToday = day === now.getDate() && monthIdx === now.getMonth() && calendarYear === now.getFullYear();
                                 const feriadoKey = `${month}-${day}`;
                                 const feriado = FERIADOS_REG[feriadoKey];
                                 const isActivePaintTarget = activePaintDiet !== null;
@@ -897,6 +939,23 @@ export default function FeedingModule() {
                                 );
                               })}
                             </div>
+                            {/* Rodé de feriados do mês */}
+                            {(() => {
+                              const feriadosDoMes: { day: number; name: string }[] = [];
+                              for (let d = 1; d <= daysInMonth; d++) {
+                                const fKey = `${month}-${d}`;
+                                if (FERIADOS_REG[fKey]) feriadosDoMes.push({ day: d, name: FERIADOS_REG[fKey] });
+                              }
+                              return feriadosDoMes.length > 0 ? (
+                                <div className="mt-1 pt-1 border-t border-stone-100">
+                                  {feriadosDoMes.map(f => (
+                                    <p key={f.day} className="text-[8px] text-red-400 leading-tight">
+                                      <span className="font-semibold">{f.day}</span> — {f.name}
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
                         </div>
                       );
@@ -1027,85 +1086,138 @@ export default function FeedingModule() {
               </div>
             ) : (
               <div className="divide-y divide-stone-100">
-                {Object.entries(groupedSavedDiets).map(([speciesName, diets]) => (
-                  <div key={speciesName}>
-                    <div className="px-5 py-2 bg-stone-50">
-                      <div className="flex items-center gap-2">
-                        <Bird className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">{speciesName}</span>
-                        <span className="text-[10px] text-stone-400">({diets.length} dieta{diets.length > 1 ? "s" : ""})</span>
-                      </div>
-                    </div>
-                    {diets.map(diet => (
-                      <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium text-stone-800 text-sm truncate">{diet.name}</h4>
-                              {diet.birdCount > 1 && (
-                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                                  <Users className="w-3 h-3" />{diet.birdCount}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
-                              <span>{diet.totalGrams.toFixed(1)}g/ave</span>
-                              <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
-                              {(() => {
-                                const cal = speciesCalendars[diet.speciesId] || {};
-                                const assignedDays = Object.values(cal).filter(id => id === diet.id).length;
-                                return assignedDays > 0 ? (
-                                  <span className="flex items-center gap-0.5 text-emerald-600">
-                                    <CalendarDays className="w-3 h-3" />
-                                    {assignedDays} dia{assignedDays > 1 ? "s" : ""}
-                                  </span>
-                                ) : null;
-                              })()}
-                              <span>{formatDate(diet.updatedAt)}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 ml-3">
-                            <button
-                              onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                              className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                              title="Ver detalhes"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => loadDietForEditing(diet)}
-                              className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                              title="Editar"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleCopyDiet(diet)}
-                              className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                              title="Copiar"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleExportDiet(diet)}
-                              className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                              title="Exportar"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteDiet(diet.id)}
-                              className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                {activeFlockSpecies.map(sp => {
+                  const dietsForSp = savedDiets.filter(d => d.speciesId === sp.id);
+                  const filteredDietsForSp = savedDietsFilter
+                    ? dietsForSp.filter(d => d.name.toLowerCase().includes(savedDietsFilter.toLowerCase()) || d.speciesName.toLowerCase().includes(savedDietsFilter.toLowerCase()))
+                    : dietsForSp;
+                  const isExpanded = expandedRegistries.has(sp.id + "-saved");
+                  const toggleExpand = () => {
+                    setExpandedRegistries(prev => {
+                      const next = new Set(prev);
+                      const key = sp.id + "-saved";
+                      if (next.has(key)) next.delete(key);
+                      else next.add(key);
+                      return next;
+                    });
+                  };
+                  return (
+                    <div key={sp.id}>
+                      <button
+                        type="button"
+                        onClick={toggleExpand}
+                        className="w-full px-5 py-3 bg-stone-50 hover:bg-stone-100 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bird className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">{sp.commonName}</span>
+                          <span className="text-[10px] text-stone-400">({dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""})</span>
+                          {sp.currentCount > 0 && (
+                            <span className="text-[10px] text-stone-400 flex items-center gap-0.5">
+                              <Users className="w-3 h-3" />{sp.currentCount}
+                            </span>
+                          )}
+                          <span className="ml-auto">
+                            {isExpanded
+                              ? <ChevronDown className="w-4 h-4 text-stone-400" />
+                              : <ChevronRight className="w-4 h-4 text-stone-400" />}
+                          </span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
+                      </button>
+                      {isExpanded && (
+                        <div>
+                          {filteredDietsForSp.length === 0 ? (
+                            <div className="px-5 py-4 text-center">
+                              <p className="text-xs text-stone-400">Nenhuma dieta salva para {sp.commonName}</p>
+                              <button
+                                onClick={() => {
+                                  handleResetAll();
+                                  handleSelectSpecies(sp);
+                                  setDietMode("creating");
+                                }}
+                                className="mt-2 text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+                              >
+                                + Criar dieta
+                              </button>
+                            </div>
+                          ) : (
+                            filteredDietsForSp.map(diet => (
+                              <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-b-0">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-medium text-stone-800 text-sm truncate">{diet.name}</h4>
+                                      {diet.birdCount > 1 && (
+                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                                          <Users className="w-3 h-3" />{diet.birdCount}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
+                                      <span>{diet.totalGrams.toFixed(1)}g/ave</span>
+                                      <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
+                                      {(() => {
+                                        const cal = speciesCalendars[diet.speciesId] || {};
+                                        const assignedDays = Object.values(cal).filter(id => id === diet.id).length;
+                                        return assignedDays > 0 ? (
+                                          <span className="flex items-center gap-0.5 text-emerald-600">
+                                            <CalendarDays className="w-3 h-3" />
+                                            {assignedDays} dia{assignedDays > 1 ? "s" : ""}
+                                          </span>
+                                        ) : null;
+                                      })()}
+                                      <span>{formatDate(diet.updatedAt)}</span>
+                                    </div>
+                                    {diet.notes && (
+                                      <p className="text-[11px] text-stone-400 mt-0.5 italic truncate">{diet.notes}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1 ml-3">
+                                    <button
+                                      onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
+                                      className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                      title="Ver detalhes"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => loadDietForEditing(diet)}
+                                      className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                      title="Editar"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleCopyDiet(diet)}
+                                      className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                      title="Copiar"
+                                    >
+                                      <Copy className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleExportDiet(diet)}
+                                      className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                      title="Exportar"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteDiet(diet.id)}
+                                      className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1772,24 +1884,70 @@ export default function FeedingModule() {
               </div>
             </div>
 
-            {/* Save Dialog — simplificado (só nome) */}
+            {/* Save Dialog — Espécie → Fase → Ambiente → Observações */}
             <AnimatePresence>
               {showSaveDialog && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden mb-4"
                 >
-                  <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4">
-                    <label className="text-xs font-medium text-emerald-800 block mb-1">Nome da dieta</label>
-                    <input
-                      type="text"
-                      value={dietName}
-                      onChange={e => setDietName(e.target.value)}
-                      placeholder={`${selectedSpecies?.commonName || "Espécie"} — ${new Date().toLocaleDateString("pt-BR")}`}
-                      className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-md focus:outline-none focus:border-emerald-500 bg-white"
-                      autoFocus
-                    />
-                    <div className="flex items-center gap-2 mt-3">
+                  <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4 space-y-3">
+                    {/* Linha 1: Nome da ave (read-only) */}
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Ave</label>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-emerald-200">
+                        <Bird className="w-4 h-4 text-emerald-600" />
+                        <span className="text-sm font-medium text-stone-800">{selectedSpecies?.commonName || "Espécie"}</span>
+                        <span className="text-[10px] text-stone-400 italic">{selectedSpecies?.scientificName}</span>
+                      </div>
+                    </div>
+
+                    {/* Linha 2: Fase */}
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Fase</label>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-emerald-200">
+                        <Egg className="w-4 h-4 text-stone-500" />
+                        <span className="text-sm text-stone-700">{lifePeriods.find(p => p.id === phaseId)?.label || phaseId}</span>
+                        <span className="text-[10px] text-stone-400">x{lifePeriods.find(p => p.id === phaseId)?.multiplier}</span>
+                      </div>
+                    </div>
+
+                    {/* Linha 3: Ambiente */}
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Ambiente</label>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-emerald-200">
+                        <Home className="w-4 h-4 text-stone-500" />
+                        <span className="text-sm text-stone-700">{enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId}</span>
+                        <span className="text-[10px] text-stone-400">x{enclosureTypes.find(e => e.id === enclosureId)?.multiplier}</span>
+                      </div>
+                    </div>
+
+                    {/* Linha 4: Observações (editável) */}
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Observações (opcional)</label>
+                      <textarea
+                        value={dietNotes}
+                        onChange={e => setDietNotes(e.target.value)}
+                        placeholder="Ex: Ajustada para período de muda, reduzir frutas..."
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-md focus:outline-none focus:border-emerald-500 bg-white resize-none"
+                      />
+                    </div>
+
+                    {/* Separador + Nome da dieta */}
+                    <div className="pt-2 border-t border-emerald-200">
+                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Nome da dieta</label>
+                      <input
+                        type="text"
+                        value={dietName}
+                        onChange={e => setDietName(e.target.value)}
+                        placeholder={`${selectedSpecies?.commonName || "Espécie"} — ${new Date().toLocaleDateString("pt-BR")}`}
+                        className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-md focus:outline-none focus:border-emerald-500 bg-white"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={handleSaveDiet}
                         className="px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1"

@@ -15,6 +15,13 @@
       "when": 1775329731120,
       "tag": "0001_salty_barracuda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775332435425,
+      "tag": "0002_nostalgic_unicorn",
+      "breakpoints": true
     }
   ]
 }

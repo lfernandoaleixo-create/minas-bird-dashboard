@@ -44,6 +44,8 @@ export const diets = mysqlTable("diets", {
   phaseId: varchar("phaseId", { length: 64 }).notNull(),
   enclosureId: varchar("enclosureId", { length: 64 }).notNull(),
   birdCount: int("birdCount").notNull().default(1),
+  /** Observações adicionais sobre a dieta */
+  notes: text("notes"),
   /** MER calculado (kcal/dia por ave) — armazenado como inteiro * 10 */
   merX10: int("merX10").notNull(),
   /** Total de gramas por ave — armazenado como inteiro * 10 */
@@ -75,15 +77,15 @@ export type InsertDiet = typeof diets.$inferInsert;
 /**
  * Calendário de alimentação por espécie
  * Cada registro atribui uma dieta a um dia específico para uma espécie
- * dayKey no formato "mês-dia", ex: "1-5" para 5 de janeiro
+ * dayKey no formato "ano-mês-dia", ex: "2026-1-5" para 5 de janeiro de 2026
  */
 export const calendarEntries = mysqlTable("calendar_entries", {
   id: int("id").autoincrement().primaryKey(),
   /** Usuário que criou a entrada */
   userId: int("userId").notNull(),
   speciesId: varchar("speciesId", { length: 128 }).notNull(),
-  /** Chave do dia no formato "mês-dia", ex: "1-5" */
-  dayKey: varchar("dayKey", { length: 10 }).notNull(),
+  /** Chave do dia no formato "ano-mês-dia", ex: "2026-1-5" */
+  dayKey: varchar("dayKey", { length: 16 }).notNull(),
   /** ID legado da dieta (legacyId da tabela diets) */
   dietLegacyId: varchar("dietLegacyId", { length: 64 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
