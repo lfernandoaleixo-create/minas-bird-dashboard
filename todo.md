@@ -18,3 +18,4 @@
 - [x] Lista de Compras: seletor de período + espécie(s), gera lista consolidada de ingredientes
 - [x] Rotina Diária do Tratador: seletor de período + espécie(s), resumo dia a dia do que fazer
 - [x] Guia de Preparo: seletor de dia + espécie(s), organiza preparo dos alimentos
+- [x] Bug: botão de editar dieta não funciona — investigar e corrigir todos os botões de ação

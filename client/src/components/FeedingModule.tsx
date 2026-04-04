@@ -360,6 +360,7 @@ export default function FeedingModule() {
     setDietNotes(diet.notes || "");
 
     setExpandedStep(null);
+    setDietMode("editing");
   }, []);
 
   // --- Save diet ---
