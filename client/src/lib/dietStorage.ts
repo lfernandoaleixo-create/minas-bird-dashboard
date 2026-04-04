@@ -184,6 +184,70 @@ export function saveCalendarForSpecies(speciesId: string, calendar: Record<strin
   localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(all));
 }
 
+// ===== BACKUP / RESTORE =====
+
+export interface DietBackup {
+  version: number;
+  exportedAt: string;
+  diets: SavedDiet[];
+  calendar: SpeciesCalendarMap;
+}
+
+/**
+ * Exportar todos os dados (dietas + calendário) como JSON para backup
+ */
+export function exportAllData(): DietBackup {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    diets: getSavedDiets(),
+    calendar: getSpeciesCalendar(),
+  };
+}
+
+/**
+ * Importar dados de um backup JSON
+ * mode: 'replace' substitui tudo, 'merge' adiciona sem duplicar
+ */
+export function importAllData(backup: DietBackup, mode: 'replace' | 'merge' = 'replace'): { dietsImported: number; calendarEntries: number } {
+  if (!backup || !backup.diets || !backup.calendar) {
+    throw new Error('Arquivo de backup inválido');
+  }
+
+  let dietsImported = 0;
+  let calendarEntries = 0;
+
+  if (mode === 'replace') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.diets));
+    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(backup.calendar));
+    dietsImported = backup.diets.length;
+    calendarEntries = Object.values(backup.calendar).reduce((sum, cal) => sum + Object.keys(cal).length, 0);
+  } else {
+    // Merge: add diets that don't exist by id
+    const existing = getSavedDiets();
+    const existingIds = new Set(existing.map(d => d.id));
+    const newDiets = backup.diets.filter(d => !existingIds.has(d.id));
+    const merged = [...existing, ...newDiets];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    dietsImported = newDiets.length;
+
+    // Merge calendar
+    const existingCal = getSpeciesCalendar();
+    for (const [speciesId, days] of Object.entries(backup.calendar)) {
+      if (!existingCal[speciesId]) existingCal[speciesId] = {};
+      for (const [dayKey, dietId] of Object.entries(days)) {
+        if (!existingCal[speciesId][dayKey]) {
+          existingCal[speciesId][dayKey] = dietId;
+          calendarEntries++;
+        }
+      }
+    }
+    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(existingCal));
+  }
+
+  return { dietsImported, calendarEntries };
+}
+
 // ===== EXPORT =====
 
 const MONTH_NAMES = [

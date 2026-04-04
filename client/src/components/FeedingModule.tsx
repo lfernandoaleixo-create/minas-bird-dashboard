@@ -16,6 +16,7 @@ import {
   AlertCircle, CheckCircle2, BarChart3, RefreshCw,
   FilePlus, Edit3, FolderOpen, Save, Download, Trash2,
   Eye, Copy, Users, ArrowLeft, FileText, CalendarDays, Paintbrush,
+  Upload, HardDrive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { species, type Species } from "@/data/feeding";
@@ -27,7 +28,7 @@ import {
   type LifePeriod as LifePeriodType, type EnclosureType,
   feedingToPetbirdId,
 } from "@/data/petbird";
-import { getSavedDiets, saveDiet, updateDiet, deleteDiet, exportDietAsText, getCalendarForSpecies, assignDietToDay, removeDietFromDay, saveCalendarForSpecies, type SavedDiet } from "@/lib/dietStorage";
+import { getSavedDiets, saveDiet, updateDiet, deleteDiet, exportDietAsText, getCalendarForSpecies, assignDietToDay, removeDietFromDay, saveCalendarForSpecies, exportAllData, importAllData, type SavedDiet } from "@/lib/dietStorage";
 import { toast } from "sonner";
 
 const HERO_IMAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/hero-alimentacao-9qkdhc8VaTxqHLKvqK3hAv.webp";
@@ -459,6 +460,58 @@ export default function FeedingModule() {
     toast.success("Dieta exportada!");
   }, []);
 
+  // --- Backup all data ---
+  const handleBackupData = useCallback(() => {
+    try {
+      const backup = exportAllData();
+      const json = JSON.stringify(backup, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `minas-bird-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Backup exportado! ${backup.diets.length} dieta(s) salva(s).`);
+    } catch (err) {
+      console.error("Erro ao exportar backup:", err);
+      toast.error("Erro ao exportar backup.");
+    }
+  }, []);
+
+  // --- Restore data from backup ---
+  const handleRestoreData = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const backup = JSON.parse(ev.target?.result as string);
+          const result = importAllData(backup, 'replace');
+          setSavedDiets(getSavedDiets());
+          // Recarregar calendários
+          const allDiets = getSavedDiets();
+          const speciesIds = Array.from(new Set(allDiets.map(d => d.speciesId)));
+          const calendars: Record<string, Record<string, string>> = {};
+          speciesIds.forEach(sid => {
+            calendars[sid] = getCalendarForSpecies(sid);
+          });
+          setSpeciesCalendars(calendars);
+          toast.success(`Backup restaurado! ${result.dietsImported} dieta(s) e ${result.calendarEntries} dia(s) no calendário.`);
+        } catch (err) {
+          console.error("Erro ao importar backup:", err);
+          toast.error("Arquivo de backup inválido.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, []);
+
   // --- Copy diet to clipboard ---
   const handleCopyDiet = useCallback((diet: SavedDiet) => {
     const text = exportDietAsText(diet);
@@ -617,7 +670,30 @@ export default function FeedingModule() {
           </div>
         </div>
 
-        {/* ===== LISTA DE DIETAS SALVAS NA TELA INICIAL ===== */}
+        {/* ===== BACKUP / RESTAURAR ===== */}
+        <div className="flex items-center gap-3 mt-2">
+          <button
+            onClick={handleBackupData}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 text-sm font-medium transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Exportar Backup
+          </button>
+          <button
+            onClick={handleRestoreData}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 text-sm font-medium transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Importar Backup
+          </button>
+          {savedDiets.length > 0 && (
+            <span className="text-xs text-stone-400 ml-auto">
+              <HardDrive className="w-3 h-3 inline mr-1" />
+              {savedDiets.length} dieta(s) salva(s) localmente
+            </span>
+          )}
+        </div>
+
         {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
         {savedDiets.length > 0 && (() => {
           const MONTH_NAMES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
