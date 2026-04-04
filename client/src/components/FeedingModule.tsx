@@ -16,7 +16,7 @@ import {
   AlertCircle, CheckCircle2, BarChart3, RefreshCw,
   FilePlus, Edit3, FolderOpen, Save, Download, Trash2,
   Eye, Copy, Users, ArrowLeft, FileText, CalendarDays, Paintbrush,
-  Upload, HardDrive,
+
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { species, type Species } from "@/data/feeding";
@@ -429,29 +429,7 @@ export default function FeedingModule() {
     toast.success("Dieta exportada!");
   }, []);
 
-  // --- Backup all data ---
-  const handleBackupData = useCallback(() => {
-    try {
-      const backup = { diets: savedDiets, calendars: speciesCalendars, version: 2, exportedAt: new Date().toISOString() };
-      const json = JSON.stringify(backup, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `minas-bird-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`Backup exportado! ${savedDiets.length} dieta(s) salva(s).`);
-    } catch (err) {
-      console.error("Erro ao exportar backup:", err);
-      toast.error("Erro ao exportar backup.");
-    }
-  }, [savedDiets, speciesCalendars]);
 
-  // --- Restore data from backup ---
-  const handleRestoreData = useCallback(() => {
-    toast.info("Funcionalidade de importa\u00e7\u00e3o de backup ser\u00e1 implementada em breve.");
-  }, []);
 
   // --- Copy diet to clipboard ---
   const handleCopyDiet = useCallback((diet: SavedDiet) => {
@@ -607,29 +585,6 @@ export default function FeedingModule() {
           </div>
         </div>
 
-        {/* ===== BACKUP / RESTAURAR ===== */}
-        <div className="flex items-center gap-3 mt-2">
-          <button
-            onClick={handleBackupData}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 text-sm font-medium transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Exportar Backup
-          </button>
-          <button
-            onClick={handleRestoreData}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 text-sm font-medium transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            Importar Backup
-          </button>
-          {savedDiets.length > 0 && (
-            <span className="text-xs text-stone-400 ml-auto">
-              <HardDrive className="w-3 h-3 inline mr-1" />
-              {savedDiets.length} dieta(s) salva(s) localmente
-            </span>
-          )}
-        </div>
 
         {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
         {savedDiets.length > 0 && (() => {
