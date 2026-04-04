@@ -131,13 +131,25 @@ export default function FeedingModule() {
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   // --- Saved diets list ---
-  const [savedDiets, setSavedDiets] = useState<SavedDiet[]>([]);
+  const [savedDiets, setSavedDiets] = useState<SavedDiet[]>(() => getSavedDiets());
   const [savedDietsFilter, setSavedDietsFilter] = useState("");
 
-  // Load saved diets on mount and mode change
+  // Load saved diets on mount, mode change, and after any save/delete
   useEffect(() => {
-    setSavedDiets(getSavedDiets());
+    const diets = getSavedDiets();
+    setSavedDiets(diets);
   }, [dietMode]);
+
+  // Also listen for storage events (cross-tab sync)
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "minas-bird-saved-diets") {
+        setSavedDiets(getSavedDiets());
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   // --- Derived data ---
   const selectedSpecies = useMemo(() => species.find(s => s.id === selectedSpeciesId) || null, [selectedSpeciesId]);
@@ -370,22 +382,44 @@ export default function FeedingModule() {
       },
     };
 
-    if (editingDietId) {
-      updateDiet(editingDietId, dietData);
-      toast.success("Dieta atualizada com sucesso!");
-    } else {
-      const saved = saveDiet(dietData);
-      setEditingDietId(saved.id);
-      toast.success("Dieta salva com sucesso!");
+    try {
+      if (editingDietId) {
+        updateDiet(editingDietId, dietData);
+        toast.success("Dieta atualizada com sucesso!");
+      } else {
+        const saved = saveDiet(dietData);
+        setEditingDietId(saved.id);
+        toast.success("Dieta salva com sucesso!");
+      }
+    } catch (err) {
+      console.error("Erro ao salvar dieta:", err);
+      toast.error("Erro ao salvar dieta. Tente novamente.");
+      return;
     }
 
     setShowSaveDialog(false);
-    setSavedDiets(getSavedDiets());
-    // Voltar à página inicial após salvar
+    // Atualizar a lista e voltar ao menu
+    const updatedDiets = getSavedDiets();
+    setSavedDiets(updatedDiets);
+    // Resetar estado do editor sem perder as dietas salvas
     setTimeout(() => {
-      handleResetAll();
+      setSelectedSpeciesId(null);
+      setSelectedRacao(null);
+      setSelectedVegetais([]);
+      setSelectedFrutas([]);
+      setSelectedProteicos([]);
+      setCustomWeight(null);
+      setExpandedStep(null);
+      setPhaseId("manutencao");
+      setEnclosureId("viveiro-voo-interno");
+      setBirdCount(1);
+      setEditingDietId(null);
+      setDietName("");
+      setShowSaveDialog(false);
+      setSelectedDays([]);
+      setDietMode("menu");
     }, 600);
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, selectedDays, handleResetAll]);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, editingDietId, selectedDays]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -413,10 +447,15 @@ export default function FeedingModule() {
   // --- Delete diet ---
   const handleDeleteDiet = useCallback((id: string) => {
     deleteDiet(id);
-    setSavedDiets(getSavedDiets());
+    const updated = getSavedDiets();
+    setSavedDiets(updated);
     if (viewingDiet?.id === id) {
       setViewingDiet(null);
-      setDietMode("saved-list");
+      if (updated.length === 0) {
+        setDietMode("menu");
+      } else {
+        setDietMode("saved-list");
+      }
     }
     toast.success("Dieta excluída!");
   }, [viewingDiet]);
@@ -482,11 +521,28 @@ export default function FeedingModule() {
 
       {/* ===== MENU INICIAL ===== */}
       {dietMode === "menu" && (
+        <>
         <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-6">
           <h2 className="text-lg font-bold text-stone-800 mb-4">O que deseja fazer?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
-              onClick={() => { handleResetAll(); setDietMode("creating"); }}
+              onClick={() => {
+                setSelectedSpeciesId(null);
+                setSelectedRacao(null);
+                setSelectedVegetais([]);
+                setSelectedFrutas([]);
+                setSelectedProteicos([]);
+                setCustomWeight(null);
+                setExpandedStep(null);
+                setPhaseId("manutencao");
+                setEnclosureId("viveiro-voo-interno");
+                setBirdCount(1);
+                setEditingDietId(null);
+                setDietName("");
+                setShowSaveDialog(false);
+                setSelectedDays([]);
+                setDietMode("creating");
+              }}
               className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
             >
               <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
@@ -536,6 +592,101 @@ export default function FeedingModule() {
             </button>
           </div>
         </div>
+
+        {/* ===== LISTA DE DIETAS SALVAS NA TELA INICIAL ===== */}
+        {savedDiets.length > 0 && (
+          <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-stone-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="w-5 h-5 text-emerald-600" />
+                  <h2 className="font-bold text-stone-800">Dietas Salvas</h2>
+                  <span className="text-xs text-stone-400">({savedDiets.length})</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setSavedDiets(getSavedDiets());
+                    setDietMode("saved-list");
+                  }}
+                  className="text-xs text-emerald-600 hover:text-emerald-800 font-medium transition-colors flex items-center gap-1"
+                >
+                  Ver todas <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            <div className="divide-y divide-stone-100">
+              {Object.entries(groupedSavedDiets).map(([speciesName, diets]) => (
+                <div key={speciesName}>
+                  <div className="px-5 py-2 bg-stone-50">
+                    <div className="flex items-center gap-2">
+                      <Bird className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">{speciesName}</span>
+                      <span className="text-[10px] text-stone-400">({diets.length} dieta{diets.length > 1 ? "s" : ""})</span>
+                    </div>
+                  </div>
+                  {diets.map(diet => (
+                    <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-stone-800 text-sm truncate">{diet.name}</h4>
+                            {diet.birdCount > 1 && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                                <Users className="w-3 h-3" />{diet.birdCount}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
+                            <span>{diet.totalGrams.toFixed(1)}g/ave</span>
+                            <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
+                            {diet.selectedDays && diet.selectedDays.length > 0 && (
+                              <span className="flex items-center gap-0.5 text-emerald-600">
+                                <CalendarDays className="w-3 h-3" />
+                                {diet.selectedDays.length === 31 ? "Todos os dias" : `${diet.selectedDays.length} dia${diet.selectedDays.length > 1 ? "s" : ""}`}
+                              </span>
+                            )}
+                            <span>{formatDate(diet.updatedAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 ml-3">
+                          <button
+                            onClick={() => { setViewingDiet(diet); setSavedDiets(getSavedDiets()); setDietMode("saved-detail"); }}
+                            className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                            title="Ver detalhes"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => loadDietForEditing(diet)}
+                            className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                            title="Editar"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleExportDiet(diet)}
+                            className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                            title="Exportar"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => { handleDeleteDiet(diet.id); setSavedDiets(getSavedDiets()); }}
+                            className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* ===== DIETAS SALVAS — LISTA ===== */}
