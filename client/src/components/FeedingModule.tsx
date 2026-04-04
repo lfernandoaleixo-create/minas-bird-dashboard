@@ -2025,50 +2025,8 @@ export default function FeedingModule() {
                   className="overflow-hidden mb-4"
                 >
                   <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4 space-y-3">
-                    {/* Linha 1: Nome da ave (read-only) */}
+                    {/* Nome da dieta (prefixo automático + complemento) */}
                     <div>
-                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Ave</label>
-                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-emerald-200">
-                        <Bird className="w-4 h-4 text-emerald-600" />
-                        <span className="text-sm font-medium text-stone-800">{selectedSpecies?.commonName || "Espécie"}</span>
-                        <span className="text-[10px] text-stone-400 italic">{selectedSpecies?.scientificName}</span>
-                      </div>
-                    </div>
-
-                    {/* Linha 2: Fase */}
-                    <div>
-                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Fase</label>
-                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-emerald-200">
-                        <Egg className="w-4 h-4 text-stone-500" />
-                        <span className="text-sm text-stone-700">{lifePeriods.find(p => p.id === phaseId)?.label || phaseId}</span>
-                        <span className="text-[10px] text-stone-400">x{lifePeriods.find(p => p.id === phaseId)?.multiplier}</span>
-                      </div>
-                    </div>
-
-                    {/* Linha 3: Ambiente */}
-                    <div>
-                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Ambiente</label>
-                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-emerald-200">
-                        <Home className="w-4 h-4 text-stone-500" />
-                        <span className="text-sm text-stone-700">{enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId}</span>
-                        <span className="text-[10px] text-stone-400">x{enclosureTypes.find(e => e.id === enclosureId)?.multiplier}</span>
-                      </div>
-                    </div>
-
-                    {/* Linha 4: Observações (editável) */}
-                    <div>
-                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Observações (opcional)</label>
-                      <textarea
-                        value={dietNotes}
-                        onChange={e => setDietNotes(e.target.value)}
-                        placeholder="Ex: Ajustada para período de muda, reduzir frutas..."
-                        rows={2}
-                        className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-md focus:outline-none focus:border-emerald-500 bg-white resize-none"
-                      />
-                    </div>
-
-                    {/* Separador + Nome da dieta (prefixo automático + complemento) */}
-                    <div className="pt-2 border-t border-emerald-200">
                       <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Nome da dieta</label>
                       <div className="flex items-center gap-0 rounded-md border border-emerald-300 bg-white overflow-hidden">
                         <span className="px-3 py-2 text-sm font-medium text-stone-600 bg-stone-100 border-r border-emerald-200 whitespace-nowrap flex-shrink-0">
