@@ -36,3 +36,6 @@
 - [x] Destacar nome da ração e observações do usuário em todos os locais (letras maiores, outra cor)
 - [x] Card exportar calendários: toggle Todos (marcar/desmarcar todos)
 - [x] Card exportar calendários: seletor de data específica além dos períodos pré-definidos
+- [x] Bug: dias do calendário não desmarcam ao clicar (Ringneck tem dias que não saem) — corrigido legacyKey + clique direto remove
+- [x] Aumentar letras do nome da dieta — fontes maiores, ração em extrabold amber-800, obs em extrabold emerald-700
+- [x] Padronizar estética do nome da dieta no calendário — DietNameStyled usado em todos os 8 locais

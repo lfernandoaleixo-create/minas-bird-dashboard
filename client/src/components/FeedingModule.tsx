@@ -45,26 +45,26 @@ function DietNameStyled({ name, size = "sm" }: { name: string; size?: "xs" | "sm
   const obs = parts.length >= 5 ? parts.slice(4).join(" \u2014 ") : "";
 
   const sizeMap = {
-    xs: { prefix: "text-[10px]", racao: "text-[11px]", obs: "text-[11px]" },
-    sm: { prefix: "text-xs", racao: "text-sm", obs: "text-sm" },
-    md: { prefix: "text-sm", racao: "text-base", obs: "text-base" },
-    lg: { prefix: "text-base", racao: "text-lg", obs: "text-lg" },
+    xs: { prefix: "text-xs", racao: "text-sm", obs: "text-sm" },
+    sm: { prefix: "text-sm", racao: "text-base", obs: "text-base" },
+    md: { prefix: "text-base", racao: "text-lg", obs: "text-lg" },
+    lg: { prefix: "text-lg", racao: "text-xl", obs: "text-xl" },
   };
   const s = sizeMap[size];
 
   return (
-    <span className="inline">
-      <span className={cn(s.prefix, "text-stone-400 font-normal")}>{prefix}</span>
+    <span className="inline leading-relaxed">
+      <span className={cn(s.prefix, "text-stone-500 font-medium")}>{prefix}</span>
       {racao && (
         <>
-          <span className={cn(s.prefix, "text-stone-300")}> \u2014 </span>
-          <span className={cn(s.racao, "font-bold text-amber-700")}>{racao}</span>
+          <span className={cn(s.prefix, "text-stone-300 font-normal")}> — </span>
+          <span className={cn(s.racao, "font-extrabold text-amber-800 drop-shadow-sm")}>{racao}</span>
         </>
       )}
       {obs && (
         <>
-          <span className={cn(s.prefix, "text-stone-300")}> \u2014 </span>
-          <span className={cn(s.obs, "font-bold text-emerald-700")}>{obs}</span>
+          <span className={cn(s.prefix, "text-stone-300 font-normal")}> — </span>
+          <span className={cn(s.obs, "font-extrabold text-emerald-700 drop-shadow-sm")}>{obs}</span>
         </>
       )}
     </span>
@@ -829,7 +829,7 @@ export default function FeedingModule() {
                           )}
                         >
                           <span className={cn("w-3 h-3 rounded-sm", isActive ? "bg-white/40" : color.bg)} />
-                          {diet.name}
+                          <DietNameStyled name={diet.name} size="xs" />
                           {assignedCount > 0 && (
                             <span className={cn(
                               "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
@@ -977,8 +977,12 @@ export default function FeedingModule() {
                                   type="button"
                                   onClick={() => {
                                     if (allAssigned) {
-                                      // Desmarcar mês inteiro
-                                      allDaysInMonth.forEach(dk => removeDayMut.mutate({ speciesId, dayKey: dk }));
+                                      // Desmarcar mês inteiro - tentar ambos os formatos de key
+                                      allDaysInMonth.forEach(dk => {
+                                        const legKey = `${month}-${dk.split('-')[2]}`;
+                                        const realKey = calendarForSpecies[dk] ? dk : calendarForSpecies[legKey] ? legKey : dk;
+                                        removeDayMut.mutate({ speciesId, dayKey: realKey });
+                                      });
                                     } else {
                                       // Marcar mês inteiro
                                       allDaysInMonth.forEach(dk => {
@@ -1017,6 +1021,8 @@ export default function FeedingModule() {
                                 const day = i + 1;
                                 const dayKey = `${calendarYear}-${month}-${day}`;
                                 const legacyKey = `${month}-${day}`;
+                                // Determinar qual key está realmente no banco
+                                const actualKey = calendarForSpecies[dayKey] ? dayKey : calendarForSpecies[legacyKey] ? legacyKey : dayKey;
                                 const assignedDietId = calendarForSpecies[dayKey] || calendarForSpecies[legacyKey];
                                 const assignedDiet = assignedDietId ? dietsForSpecies.find(d => d.id === assignedDietId) : null;
                                 const assignedColor = assignedDiet ? dietColorMap.get(assignedDiet.id) : null;
@@ -1034,21 +1040,19 @@ export default function FeedingModule() {
                                       if (isActivePaintTarget && activePaintDiet) {
                                         // Modo pintura: atribuir ou remover dieta
                                         if (assignedDietId === activePaintDiet) {
-                                          removeDayMut.mutate({ speciesId, dayKey });
+                                          removeDayMut.mutate({ speciesId, dayKey: actualKey });
                                         } else {
+                                          // Remove a key antiga se existir, depois atribui com a nova
+                                          if (assignedDietId && actualKey !== dayKey) {
+                                            removeDayMut.mutate({ speciesId, dayKey: actualKey });
+                                          }
                                           assignDayMut.mutate({ speciesId, dayKey, dietId: activePaintDiet });
                                         }
                                       } else if (assignedDiet) {
-                                        // Dia já selecionado: toggle — clique mostra detalhes, segundo clique remove
-                                        if (isViewingThisDay) {
-                                          // Segundo clique: remover a atribuição do dia
-                                          removeDayMut.mutate({ speciesId, dayKey });
-                                          setDayDetailDiet(null);
-                                          setDayDetailKey("");
-                                        } else {
-                                          setDayDetailDiet(assignedDiet);
-                                          setDayDetailKey(dayKey);
-                                        }
+                                        // Dia já atribuído: clique direto remove (desmarcar)
+                                        removeDayMut.mutate({ speciesId, dayKey: actualKey });
+                                        setDayDetailDiet(null);
+                                        setDayDetailKey("");
                                       }
                                     }}
                                     title={(() => {
