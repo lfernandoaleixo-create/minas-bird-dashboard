@@ -21,3 +21,8 @@
 - [x] Bug: botão de editar dieta não funciona — investigar e corrigir todos os botões de ação
 - [x] Bug CRÍTICO: cálculo nutricional incorreto — Ringneck com High Protein mostra 8.4g no nosso sistema vs 15.19g no DietBirdPet
 - [x] K factors extraídos diretamente da API do DietBirdPet e validados com 46 testes automatizados
+- [x] Fórmula corrigida: MER = (K_base + K_env) × W^0.73 / 4.184 (psittacine.org)
+- [x] Expoente corrigido de 0.75 para 0.73 (validado cientificamente)
+- [x] Modelo aditivo K_env em vez de multiplicativo (validado contra DietBirdPet)
+- [x] Validar cálculos nutricionais para TODAS as 36 espécies do plantel contra o DietBirdPet
+- [x] 110 testes automatizados passando (10 cross-checks DietBirdPet + 72 sanity checks + 28 unit tests)

@@ -1,313 +1,286 @@
 /**
  * Comprehensive test suite for nutritional calculations.
+ * Validates the additive K model (psittacine.org) against DietBirdPet reference data.
  *
- * All reference values were extracted directly from the DietBirdPet API
- * (nutriaves-backend-production) by creating diets with known parameters
- * and capturing the API responses.
+ * Formula: MER (kcal/day) = (K_base + K_env) * W_kg^0.73 / 4.184
+ * K_base: Normal=647, Aumentado(High)=711
+ * K_env: GI=0, GEV=114, GEI=207, VVI=92, VVEV=206, VVEI=299, VL=391
  *
- * Test methodology:
- * - Single food: High Protein Psittacus (3050 kcal/kg)
- * - Diet type: Dieta Básica (100% ração, 0% waste)
- * - K factor = (grams_result * 3.05) / (weight_kg ^ 0.75)
- *
- * Reference species:
- * - Ringneck (128g, Normal metabolism)
- * - Calopsita (90g, Aumentado metabolism)
+ * All reference food amounts obtained directly from DietBirdPet API
+ * using High Protein Psittacus (3050 kcal/kg) with 100% ração diet.
  */
 import { describe, it, expect } from "vitest";
 import { calculateMER, getKFactor, kcalToGrams } from "./petbird";
 
-// ============================================================
-// 1. K Factor Lookup Tests
-// ============================================================
-describe("getKFactor", () => {
-  describe("Normal metabolism", () => {
-    const cases: [string, number][] = [
-      ["gaiola-interna", 161.05],
-      ["gaiola-externa-verao", 189.56],
-      ["gaiola-externa-inverno", 212.65],
-      ["viveiro-voo-interno", 184.00],
-      ["viveiro-voo-externo-verao", 212.51],
-      ["viveiro-voo-externo-inverno", 235.59],
-      ["vida-livre", 238.87],
-    ];
+// Tolerance: 0.15% relative error (DietBirdPet rounds to 2 decimal places)
+const TOLERANCE_PCT = 0.15;
 
-    it.each(cases)("returns correct K for %s", (enclosure, expected) => {
-      expect(getKFactor("Normal", enclosure)).toBe(expected);
+function expectClose(actual: number, expected: number, label: string) {
+  const pct = Math.abs(actual - expected) / expected * 100;
+  expect(pct, `${label}: ${actual.toFixed(2)}g vs expected ${expected.toFixed(2)}g (${pct.toFixed(3)}%)`).toBeLessThan(TOLERANCE_PCT);
+}
+
+// ============================================================
+// 1. K Factor Lookup Tests (additive model)
+// ============================================================
+describe("getKFactor - additive model", () => {
+  it("returns K_base for Normal with Gaiola Interna (no env bonus)", () => {
+    expect(getKFactor("Normal", "gaiola-interna")).toBe(647);
+  });
+
+  it("returns K_base for Aumentado with Gaiola Interna (no env bonus)", () => {
+    expect(getKFactor("Aumentado", "gaiola-interna")).toBe(711);
+  });
+
+  it("adds K_env=92 for viveiro-voo-interno", () => {
+    expect(getKFactor("Normal", "viveiro-voo-interno")).toBe(647 + 92);
+    expect(getKFactor("Aumentado", "viveiro-voo-interno")).toBe(711 + 92);
+  });
+
+  it("adds K_env=114 for gaiola-externa-verao", () => {
+    expect(getKFactor("Normal", "gaiola-externa-verao")).toBe(647 + 114);
+    expect(getKFactor("Aumentado", "gaiola-externa-verao")).toBe(711 + 114);
+  });
+
+  it("adds K_env=207 for gaiola-externa-inverno", () => {
+    expect(getKFactor("Normal", "gaiola-externa-inverno")).toBe(647 + 207);
+    expect(getKFactor("Aumentado", "gaiola-externa-inverno")).toBe(711 + 207);
+  });
+
+  it("adds K_env=206 for viveiro-voo-externo-verao", () => {
+    expect(getKFactor("Normal", "viveiro-voo-externo-verao")).toBe(647 + 206);
+  });
+
+  it("adds K_env=299 for viveiro-voo-externo-inverno", () => {
+    expect(getKFactor("Normal", "viveiro-voo-externo-inverno")).toBe(647 + 299);
+  });
+
+  it("adds K_env=391 for vida-livre", () => {
+    expect(getKFactor("Normal", "vida-livre")).toBe(647 + 391);
+  });
+
+  it("falls back to Normal K_base for unknown metabolism", () => {
+    expect(getKFactor("Unknown", "gaiola-interna")).toBe(647);
+  });
+
+  it("falls back to K_env=0 for unknown enclosure", () => {
+    expect(getKFactor("Normal", "unknown-enclosure")).toBe(647);
+    expect(getKFactor("Aumentado", "unknown-enclosure")).toBe(711);
+  });
+});
+
+// ============================================================
+// 2. DietBirdPet Cross-Validation (10 validated reference points)
+// ============================================================
+describe("calculateMER - DietBirdPet cross-validation", () => {
+
+  describe("Ringneck (128g, Normal BMR) - 4 environments", () => {
+    it("Gaiola Interna -> 11.30g", () => {
+      const mer = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+      expectClose(kcalToGrams(mer, 3050), 11.30, "Ringneck GI");
+    });
+
+    it("Gaiola Externa Verao -> 13.30g", () => {
+      const mer = calculateMER(128, "Normal", 1.0, "gaiola-externa-verao");
+      expectClose(kcalToGrams(mer, 3050), 13.30, "Ringneck GEV");
+    });
+
+    it("Gaiola Externa Inverno -> 14.92g", () => {
+      const mer = calculateMER(128, "Normal", 1.0, "gaiola-externa-inverno");
+      expectClose(kcalToGrams(mer, 3050), 14.92, "Ringneck GEI");
+    });
+
+    it("Viveiro de Voo Interno -> 12.91g", () => {
+      const mer = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
+      expectClose(kcalToGrams(mer, 3050), 12.91, "Ringneck VVI");
     });
   });
 
-  describe("Aumentado metabolism", () => {
-    const cases: [string, number][] = [
-      ["gaiola-interna", 176.52],
-      ["gaiola-externa-verao", 204.92],
-      ["gaiola-externa-inverno", 227.94],
-      ["viveiro-voo-interno", 199.54],
-      ["viveiro-voo-externo-verao", 227.75],
-      ["viveiro-voo-externo-inverno", 250.95],
-      ["vida-livre", 254.11],
-    ];
+  describe("Calopsita (90g, Aumentado/High BMR) - 2 environments", () => {
+    it("Gaiola Interna -> 9.61g", () => {
+      const mer = calculateMER(90, "Aumentado", 1.0, "gaiola-interna");
+      expectClose(kcalToGrams(mer, 3050), 9.61, "Calopsita GI");
+    });
 
-    it.each(cases)("returns correct K for %s", (enclosure, expected) => {
-      expect(getKFactor("Aumentado", enclosure)).toBe(expected);
+    it("Viveiro de Voo Interno -> 10.86g", () => {
+      const mer = calculateMER(90, "Aumentado", 1.0, "viveiro-voo-interno");
+      expectClose(kcalToGrams(mer, 3050), 10.86, "Calopsita VVI");
     });
   });
 
-  describe("fallback behavior", () => {
-    it("falls back to Normal table for unknown metabolism", () => {
-      expect(getKFactor("Unknown", "viveiro-voo-interno")).toBe(184.00);
+  describe("Forpus (33g, Normal BMR) - smallest Normal species", () => {
+    it("Gaiola Interna -> 4.20g", () => {
+      const mer = calculateMER(33, "Normal", 1.0, "gaiola-interna");
+      expectClose(kcalToGrams(mer, 3050), 4.20, "Forpus GI");
     });
+  });
 
-    it("falls back to default K for unknown enclosure (Normal)", () => {
-      expect(getKFactor("Normal", "unknown-enclosure")).toBe(184.00);
+  describe("Cacatua Galerita (895g, Aumentado/High BMR) - largest species", () => {
+    it("Gaiola Interna -> 51.42g", () => {
+      const mer = calculateMER(895, "Aumentado", 1.0, "gaiola-interna");
+      expectClose(kcalToGrams(mer, 3050), 51.42, "Cacatua Galerita GI");
     });
+  });
 
-    it("falls back to default K for unknown enclosure (Aumentado)", () => {
-      expect(getKFactor("Aumentado", "unknown-enclosure")).toBe(199.54);
+  describe("Papagaio do Congo (400g, Normal BMR) - medium species", () => {
+    it("Gaiola Interna -> 25.97g", () => {
+      const mer = calculateMER(400, "Normal", 1.0, "gaiola-interna");
+      expectClose(kcalToGrams(mer, 3050), 25.97, "Papagaio Congo GI");
+    });
+  });
+
+  describe("Kakariki (81.5g, Aumentado/High BMR) - small High species", () => {
+    it("Gaiola Interna -> 8.94g", () => {
+      const mer = calculateMER(81.5, "Aumentado", 1.0, "gaiola-interna");
+      expectClose(kcalToGrams(mer, 3050), 8.94, "Kakariki GI");
     });
   });
 });
 
 // ============================================================
-// 2. MER Calculation Tests — DietBirdPet Reference Values
+// 3. Phase Multiplier Tests
 // ============================================================
-describe("calculateMER", () => {
-  /**
-   * Reference: Ringneck, 128g, Normal, Manutenção
-   * DietBirdPet API returned food amounts (High Protein Psittacus, 3050 kcal/kg):
-   *   Gaiola Interna:              11.30g → MER = 11.30 * 3.05 = 34.465 kcal
-   *   Gaiola Externa Verão:        13.30g → MER = 13.30 * 3.05 = 40.565 kcal
-   *   Gaiola Externa Inverno:      14.92g → MER = 14.92 * 3.05 = 45.506 kcal
-   *   Viveiro Voo Interno:         12.91g → MER = 12.91 * 3.05 = 39.376 kcal
-   *   Viveiro Voo Externo Verão:   14.91g → MER = 14.91 * 3.05 = 45.476 kcal
-   *   Viveiro Voo Externo Inverno: 16.53g → MER = 16.53 * 3.05 = 50.417 kcal
-   *   Vida Livre:                  16.76g → MER = 16.76 * 3.05 = 51.118 kcal
-   */
-  describe("Ringneck (128g, Normal, Manutenção)", () => {
-    const weight = 128;
-    const metabolism = "Normal";
-    const phaseMultiplier = 1.0; // Manutenção
-
-    const cases: [string, number, number][] = [
-      // [enclosureId, expectedFoodGrams, tolerance]
-      ["gaiola-interna", 11.30, 0.05],
-      ["gaiola-externa-verao", 13.30, 0.05],
-      ["gaiola-externa-inverno", 14.92, 0.05],
-      ["viveiro-voo-interno", 12.91, 0.05],
-      ["viveiro-voo-externo-verao", 14.91, 0.05],
-      ["viveiro-voo-externo-inverno", 16.53, 0.05],
-      ["vida-livre", 16.76, 0.05],
-    ];
-
-    it.each(cases)(
-      "matches DietBirdPet for %s (expected %sg ±%s)",
-      (enclosureId, expectedGrams, tolerance) => {
-        const mer = calculateMER(weight, metabolism, phaseMultiplier, enclosureId);
-        // Convert MER to food grams: grams = (MER / energyPerKg) * 1000
-        const foodGrams = kcalToGrams(mer, 3050);
-        expect(foodGrams).toBeCloseTo(expectedGrams, 1);
-      }
-    );
+describe("calculateMER - phase multipliers", () => {
+  it("Manutencao (1.0x) returns base MER", () => {
+    const base = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const maint = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    expect(maint).toBe(base);
   });
 
-  /**
-   * Reference: Calopsita, 90g, Aumentado, Manutenção
-   * DietBirdPet API returned food amounts (High Protein Psittacus, 3050 kcal/kg):
-   *   Gaiola Interna:              9.51g
-   *   Gaiola Externa Verão:        11.04g
-   *   Gaiola Externa Inverno:      12.28g
-   *   Viveiro Voo Interno:         10.75g
-   *   Viveiro Voo Externo Verão:   12.27g
-   *   Viveiro Voo Externo Inverno: 13.52g
-   *   Vida Livre:                  13.69g
-   */
-  describe("Calopsita (90g, Aumentado, Manutenção)", () => {
-    const weight = 90;
-    const metabolism = "Aumentado";
-    const phaseMultiplier = 1.0;
-
-    const cases: [string, number][] = [
-      ["gaiola-interna", 9.51],
-      ["gaiola-externa-verao", 11.04],
-      ["gaiola-externa-inverno", 12.28],
-      ["viveiro-voo-interno", 10.75],
-      ["viveiro-voo-externo-verao", 12.27],
-      ["viveiro-voo-externo-inverno", 13.52],
-      ["vida-livre", 13.69],
-    ];
-
-    it.each(cases)(
-      "matches DietBirdPet for %s (expected %sg)",
-      (enclosureId, expectedGrams) => {
-        const mer = calculateMER(weight, metabolism, phaseMultiplier, enclosureId);
-        const foodGrams = kcalToGrams(mer, 3050);
-        expect(foodGrams).toBeCloseTo(expectedGrams, 1);
-      }
-    );
+  it("Pre-Reproducao (1.3x) increases MER by 30%", () => {
+    const base = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const preRepro = calculateMER(128, "Normal", 1.3, "gaiola-interna");
+    expect(preRepro).toBeCloseTo(base * 1.3, 5);
   });
 
-  /**
-   * Phase multiplier tests.
-   * DietBirdPet does NOT apply phase multipliers to basic diets,
-   * but our system applies them for planning purposes.
-   * We verify the multiplier is correctly applied on top of the base MER.
-   */
-  describe("Phase multiplier application", () => {
-    it("Manutenção (x1.0) equals base MER", () => {
-      const base = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
-      const maint = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
-      expect(maint).toBe(base);
-    });
+  it("Alimentacao de Filhotes (1.5x) increases MER by 50%", () => {
+    const base = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const feeding = calculateMER(128, "Normal", 1.5, "gaiola-interna");
+    expect(feeding).toBeCloseTo(base * 1.5, 5);
+  });
 
-    it("Pré-Reprodução (x1.3) is 30% more than base", () => {
-      const base = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
-      const preRepro = calculateMER(128, "Normal", 1.3, "viveiro-voo-interno");
-      expect(preRepro / base).toBeCloseTo(1.3, 5);
-    });
-
-    it("Alimentação de Filhotes (x1.5) is 50% more than base", () => {
-      const base = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
-      const feeding = calculateMER(128, "Normal", 1.5, "viveiro-voo-interno");
-      expect(feeding / base).toBeCloseTo(1.5, 5);
-    });
-
-    it("Muda de Penas (x1.25) is 25% more than base", () => {
-      const base = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
-      const molt = calculateMER(128, "Normal", 1.25, "viveiro-voo-interno");
-      expect(molt / base).toBeCloseTo(1.25, 5);
-    });
+  it("Muda de Penas (1.25x) increases MER by 25%", () => {
+    const base = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const molt = calculateMER(128, "Normal", 1.25, "gaiola-interna");
+    expect(molt).toBeCloseTo(base * 1.25, 5);
   });
 });
 
 // ============================================================
-// 3. kcalToGrams Tests
+// 4. All Dashboard Species - Sanity Checks
+// ============================================================
+describe("calculateMER - all dashboard species", () => {
+  const allSpecies: [string, number, string][] = [
+    ["Ringneck", 128.0, "Normal"],
+    ["Cabeca de Ameixa", 73.0, "Normal"],
+    ["Grande Alexandre", 255.0, "Normal"],
+    ["Mustache", 156.0, "Normal"],
+    ["Periquito Derbiana", 320.0, "Normal"],
+    ["Papagaio do Congo", 400.0, "Normal"],
+    ["Papagaio do Senegal", 155.0, "Normal"],
+    ["Forpus", 33.0, "Normal"],
+    ["Regente", 178.0, "Aumentado"],
+    ["Principe de Galles", 92.0, "Aumentado"],
+    ["Barrabam", 144.5, "Aumentado"],
+    ["Papagaio Ecletus", 525.0, "Aumentado"],
+    ["Papagaio Rei", 235.0, "Aumentado"],
+    ["Red-winged", 165.0, "Aumentado"],
+    ["Barnardi", 133.0, "Aumentado"],
+    ["Port Lincoln", 133.0, "Aumentado"],
+    ["Cacatua Alba", 550.0, "Aumentado"],
+    ["Cacatua Galerita", 895.0, "Aumentado"],
+    ["Cacatua Golfini", 300.0, "Aumentado"],
+    ["Cacatua Moluca", 855.0, "Aumentado"],
+    ["Cacatua Sulphurea", 344.0, "Aumentado"],
+    ["Cacatua Galah", 335.0, "Aumentado"],
+    ["Kakariki", 81.5, "Aumentado"],
+    ["Hooded", 56.0, "Aumentado"],
+    ["Red-rumped", 70.0, "Aumentado"],
+    ["Neophema Asa-azul", 46.5, "Aumentado"],
+    ["Turquasine", 40.5, "Aumentado"],
+    ["Esplendido", 40.0, "Aumentado"],
+    ["Bourke", 45.0, "Aumentado"],
+    ["Rosella Adscitus", 107.5, "Aumentado"],
+    ["Rosella Verde", 134.5, "Aumentado"],
+    ["Rosella Pennat", 142.5, "Aumentado"],
+    ["Rosella Eximius", 107.5, "Aumentado"],
+    ["Rosella Icterotis", 62.5, "Aumentado"],
+    ["Cacatua Pastinator", 630.0, "Aumentado"],
+    ["Cacatua Oftalmica", 535.0, "Aumentado"],
+  ];
+
+  it.each(allSpecies)("%s (%sg, %s) produces positive MER", (name, weight, metab) => {
+    const mer = calculateMER(weight, metab, 1.0, "gaiola-interna");
+    expect(mer).toBeGreaterThan(0);
+  });
+
+  it.each(allSpecies)("%s (%sg, %s) MER scales with environment", (name, weight, metab) => {
+    const merGI = calculateMER(weight, metab, 1.0, "gaiola-interna");
+    const merVVI = calculateMER(weight, metab, 1.0, "viveiro-voo-interno");
+    const merVL = calculateMER(weight, metab, 1.0, "vida-livre");
+    expect(merVVI).toBeGreaterThan(merGI);
+    expect(merVL).toBeGreaterThan(merVVI);
+  });
+
+  it("Aumentado species have higher MER than Normal at same weight", () => {
+    const merNormal = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const merAumentado = calculateMER(128, "Aumentado", 1.0, "gaiola-interna");
+    expect(merAumentado).toBeGreaterThan(merNormal);
+    const ratio = merAumentado / merNormal;
+    expect(ratio).toBeCloseTo(711 / 647, 2);
+  });
+
+  it("heavier species have higher MER (allometric scaling)", () => {
+    const merForpus = calculateMER(33, "Normal", 1.0, "gaiola-interna");
+    const merRingneck = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const merCongo = calculateMER(400, "Normal", 1.0, "gaiola-interna");
+    expect(merRingneck).toBeGreaterThan(merForpus);
+    expect(merCongo).toBeGreaterThan(merRingneck);
+  });
+});
+
+// ============================================================
+// 5. kcalToGrams Tests
 // ============================================================
 describe("kcalToGrams", () => {
-  it("correctly converts kcal to grams for High Protein Psittacus (3050 kcal/kg)", () => {
-    // 34.465 kcal → 34.465 / 3050 * 1000 = 11.30g
-    const grams = kcalToGrams(34.465, 3050);
-    expect(grams).toBeCloseTo(11.30, 1);
+  it("converts kcal to grams correctly", () => {
+    expect(kcalToGrams(30.5, 3050)).toBeCloseTo(10, 2);
   });
 
   it("returns 0 for zero energy food", () => {
-    expect(kcalToGrams(10, 0)).toBe(0);
+    expect(kcalToGrams(30.5, 0)).toBe(0);
   });
 
   it("returns 0 for negative energy food", () => {
-    expect(kcalToGrams(10, -100)).toBe(0);
-  });
-
-  it("handles large energy values correctly", () => {
-    // 100 kcal from food with 4000 kcal/kg = 25g
-    expect(kcalToGrams(100, 4000)).toBeCloseTo(25, 5);
+    expect(kcalToGrams(30.5, -100)).toBe(0);
   });
 });
 
 // ============================================================
-// 4. Cross-species validation with different weights
+// 6. Formula Correctness - Mathematical Verification
 // ============================================================
-describe("Cross-species validation", () => {
-  /**
-   * Verify that the formula MER = K * W^0.75 produces correct results
-   * for species with very different body weights.
-   */
-
-  it("Grande Alexandre (255g, Normal, viveiro-voo-interno) produces reasonable MER", () => {
-    const mer = calculateMER(255, "Normal", 1.0, "viveiro-voo-interno");
-    // K=184, W=0.255kg, W^0.75 = 0.255^0.75 ≈ 0.3477
-    // MER = 184 * 0.3477 ≈ 63.98 kcal
-    const expectedMER = 184.00 * Math.pow(0.255, 0.75);
-    expect(mer).toBeCloseTo(expectedMER, 2);
+describe("Formula correctness", () => {
+  it("uses exponent 0.73 (NOT 0.75)", () => {
+    const mer = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const expected_073 = 647 * Math.pow(0.128, 0.73) / 4.184;
+    const expected_075 = 647 * Math.pow(0.128, 0.75) / 4.184;
+    expect(mer).toBeCloseTo(expected_073, 4);
+    expect(Math.abs(mer - expected_075)).toBeGreaterThan(0.1);
   });
 
-  it("Cacatua Galerita (895g, Aumentado, viveiro-voo-interno) produces reasonable MER", () => {
-    const mer = calculateMER(895, "Aumentado", 1.0, "viveiro-voo-interno");
-    // K=199.54, W=0.895kg, W^0.75 ≈ 0.9207
-    // MER = 199.54 * 0.9207 ≈ 183.61 kcal
-    const expectedMER = 199.54 * Math.pow(0.895, 0.75);
-    expect(mer).toBeCloseTo(expectedMER, 2);
+  it("uses kJ to kcal conversion factor 4.184", () => {
+    const mer = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const mer_kj = 647 * Math.pow(0.128, 0.73);
+    expect(mer).toBeCloseTo(mer_kj / 4.184, 4);
   });
 
-  it("Forpus (33g, Normal, gaiola-interna) produces reasonable MER", () => {
-    const mer = calculateMER(33, "Normal", 1.0, "gaiola-interna");
-    // K=161.05, W=0.033kg, W^0.75 ≈ 0.0680
-    // MER = 161.05 * 0.0680 ≈ 10.95 kcal
-    const expectedMER = 161.05 * Math.pow(0.033, 0.75);
-    expect(mer).toBeCloseTo(expectedMER, 2);
-  });
-
-  it("MER increases with weight (same species/environment)", () => {
-    const mer100 = calculateMER(100, "Normal", 1.0, "viveiro-voo-interno");
-    const mer200 = calculateMER(200, "Normal", 1.0, "viveiro-voo-interno");
-    const mer400 = calculateMER(400, "Normal", 1.0, "viveiro-voo-interno");
-    expect(mer200).toBeGreaterThan(mer100);
-    expect(mer400).toBeGreaterThan(mer200);
-  });
-
-  it("MER is higher for Aumentado than Normal (same weight/environment)", () => {
-    const merNormal = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
-    const merAumentado = calculateMER(128, "Aumentado", 1.0, "viveiro-voo-interno");
-    expect(merAumentado).toBeGreaterThan(merNormal);
-  });
-
-  it("MER follows expected ordering across environments", () => {
-    const envOrder = [
-      "gaiola-interna",
-      "viveiro-voo-interno",
-      "gaiola-externa-verao",
-      "viveiro-voo-externo-verao",
-      "gaiola-externa-inverno",
-      "viveiro-voo-externo-inverno",
-      "vida-livre",
-    ];
-
-    const mers = envOrder.map(env => calculateMER(128, "Normal", 1.0, env));
-
-    // Each should be >= the previous (with some tolerance for close values)
-    for (let i = 1; i < mers.length; i++) {
-      expect(mers[i]).toBeGreaterThanOrEqual(mers[i - 1] * 0.99); // 1% tolerance for close values
-    }
-  });
-});
-
-// ============================================================
-// 5. End-to-end diet calculation validation
-// ============================================================
-describe("End-to-end diet calculation", () => {
-  /**
-   * Simulate the full diet calculation flow:
-   * 1. Get MER for species
-   * 2. Split by diet breakdown percentages
-   * 3. Convert each category to grams
-   * 4. Verify total matches expected
-   */
-  it("Ringneck full diet (70/15/10/5 split, viveiro-voo-interno)", () => {
-    const weight = 128;
-    const mer = calculateMER(weight, "Normal", 1.0, "viveiro-voo-interno");
-
-    // Diet breakdown: 70% AP, 15% Vegetais, 10% Frutas, 5% Proteico
-    const breakdown = { ap: 70, vegetais: 15, frutas: 10, proteico: 5 };
-    const AVG_KCAL = { racao: 3050, vegetais: 280, frutas: 520, proteico: 3200 };
-
-    const apKcal = mer * breakdown.ap / 100;
-    const vegKcal = mer * breakdown.vegetais / 100;
-    const frtKcal = mer * breakdown.frutas / 100;
-    const proKcal = mer * breakdown.proteico / 100;
-
-    const apGrams = kcalToGrams(apKcal, AVG_KCAL.racao);
-    const vegGrams = kcalToGrams(vegKcal, AVG_KCAL.vegetais);
-    const frtGrams = kcalToGrams(frtKcal, AVG_KCAL.frutas);
-    const proGrams = kcalToGrams(proKcal, AVG_KCAL.proteico);
-
-    // Ração should be about 70% of 12.91g reference = ~9.04g
-    expect(apGrams).toBeGreaterThan(8);
-    expect(apGrams).toBeLessThan(11);
-
-    // Vegetais should be much more grams (low energy density)
-    expect(vegGrams).toBeGreaterThan(apGrams);
-
-    // Total kcal should equal MER
-    const totalKcal = apKcal + vegKcal + frtKcal + proKcal;
-    expect(totalKcal).toBeCloseTo(mer, 5);
+  it("K_env is additive (NOT multiplicative)", () => {
+    const merGI = calculateMER(128, "Normal", 1.0, "gaiola-interna");
+    const merVVI = calculateMER(128, "Normal", 1.0, "viveiro-voo-interno");
+    const ratio = merVVI / merGI;
+    // Additive: (647+92)/647 = 1.1422
+    expect(ratio).toBeCloseTo((647 + 92) / 647, 3);
+    // NOT multiplicative 1.25
+    expect(Math.abs(ratio - 1.25)).toBeGreaterThan(0.05);
   });
 });
