@@ -354,8 +354,8 @@ export default function FeedingModule() {
     setEditingDietId(diet.id);
     // Extrair apenas o complemento do nome (remover prefixo "Ave — Fase — Ambiente — ")
     const nameParts = diet.name.split(" — ");
-    // Se tem 4+ partes, o complemento é tudo após as 3 primeiras
-    const complement = nameParts.length >= 4 ? nameParts.slice(3).join(" — ") : (nameParts.length <= 2 ? diet.name : "");
+    // Se tem 5+ partes, o complemento é tudo após as 4 primeiras (Ave — Fase — Ambiente — Ração — ...)
+    const complement = nameParts.length >= 5 ? nameParts.slice(4).join(" — ") : (nameParts.length <= 3 ? diet.name : "");
     setDietName(complement);
     setDietNotes(diet.notes || "");
 
@@ -369,7 +369,8 @@ export default function FeedingModule() {
 
     const phaseLabel = lifePeriods.find(p => p.id === phaseId)?.label || phaseId;
     const enclosureLabel = enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId;
-    const prefix = `${selectedSpecies.commonName} — ${phaseLabel} — ${enclosureLabel}`;
+    const racaoLabel = selectedRacao.name;
+    const prefix = `${selectedSpecies.commonName} — ${phaseLabel} — ${enclosureLabel} — ${racaoLabel}`;
     const suffix = dietName.trim();
     const name = suffix ? `${prefix} — ${suffix}` : prefix;
 
@@ -2040,7 +2041,7 @@ export default function FeedingModule() {
                       <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Nome da dieta</label>
                       <div className="flex items-center gap-0 rounded-md border border-emerald-300 bg-white overflow-hidden">
                         <span className="px-3 py-2 text-sm font-medium text-stone-600 bg-stone-100 border-r border-emerald-200 whitespace-nowrap flex-shrink-0">
-                          {selectedSpecies?.commonName || "Espécie"} — {lifePeriods.find(p => p.id === phaseId)?.label || phaseId} — {enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId}
+                          {selectedSpecies?.commonName || "Espécie"} — {lifePeriods.find(p => p.id === phaseId)?.label || phaseId} — {enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId} — {selectedRacao?.name || "Ração"}
                         </span>
                         <input
                           type="text"
@@ -2051,7 +2052,7 @@ export default function FeedingModule() {
                           autoFocus
                         />
                       </div>
-                      <p className="text-[10px] text-stone-400 mt-1">O nome será salvo como: <span className="font-medium text-stone-600">{selectedSpecies?.commonName} — {lifePeriods.find(p => p.id === phaseId)?.label} — {enclosureTypes.find(e => e.id === enclosureId)?.label}{dietName.trim() ? ` — ${dietName.trim()}` : ""}</span></p>
+                      <p className="text-[10px] text-stone-400 mt-1">O nome será salvo como: <span className="font-medium text-stone-600">{selectedSpecies?.commonName} — {lifePeriods.find(p => p.id === phaseId)?.label} — {enclosureTypes.find(e => e.id === enclosureId)?.label} — {selectedRacao?.name || "Ração"}{dietName.trim() ? ` — ${dietName.trim()}` : ""}</span></p>
                     </div>
 
                     <div className="flex items-center gap-2 pt-1">

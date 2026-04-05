@@ -26,3 +26,4 @@
 - [x] Modelo aditivo K_env em vez de multiplicativo (validado contra DietBirdPet)
 - [x] Validar cálculos nutricionais para TODAS as 36 espécies do plantel contra o DietBirdPet
 - [x] 110 testes automatizados passando (10 cross-checks DietBirdPet + 72 sanity checks + 28 unit tests)
+- [x] Adicionar nome da ração ao prefixo automático do nome da dieta: "Ave — Fase — Ambiente — Ração" + observações
