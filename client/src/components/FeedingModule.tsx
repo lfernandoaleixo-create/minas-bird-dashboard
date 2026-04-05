@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { species, type Species } from "@/data/feeding";
+import { species, type Species, toxicFoods, groupFoodRecommendations } from "@/data/feeding";
 import {
   racoes, vegetais, frutas, proteicos,
   petbirdMapping, lifePeriods, enclosureTypes,
@@ -111,7 +111,7 @@ const BAR_COLORS = {
 // HELPERS
 // ============================================
 function sortFoods(items: FoodItem[]): FoodItem[] {
-  const order: Record<string, number> = { "Melhores": 0, "Bons": 1, "Boas": 1, "Pobres": 2 };
+  const order: Record<string, number> = { "Melhores": 0, "Bons": 1, "Boas": 1, "Pobres": 2, "Inadequado": 3 };
   return [...items].sort((a, b) => {
     const oa = order[a.classification] ?? 1;
     const ob = order[b.classification] ?? 1;
@@ -124,6 +124,7 @@ function classificationBadge(c: string) {
   if (c === "Melhores") return <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800">Melhor</span>;
   if (c === "Bons" || c === "Boas") return <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-800">Bom</span>;
   if (c === "Pobres") return <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-orange-100 text-orange-800">Pobre</span>;
+  if (c === "Inadequado") return <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-100 text-red-800">⚠️ Inadequado</span>;
   if (c && c !== "-") return <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-stone-100 text-stone-600">{c}</span>;
   return null;
 }
@@ -2116,6 +2117,66 @@ export default function FeedingModule() {
                   </AnimatePresence>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {/* ===== RECOMENDAÇÕES POR ESPÉCIE (Vol.5) ===== */}
+          {selectedSpecies && (() => {
+            const rec = groupFoodRecommendations.find(r => r.groupId === selectedSpecies.group.toLowerCase().replace(/[\s\/]+/g, "_"));
+            if (!rec) return null;
+            return (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-3">
+                <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Leaf className="w-4 h-4 text-emerald-700" />
+                    <h4 className="font-bold text-emerald-800 text-sm">Recomendações para {rec.groupName} (Vol.5)</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {rec.specialNotes.map((note, i) => (
+                      <p key={i} className={cn("text-xs leading-relaxed", note.startsWith("⚠️") ? "text-red-700 font-bold" : "text-emerald-700")}>
+                        {note}
+                      </p>
+                    ))}
+                  </div>
+                  {rec.avoidFoods.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-emerald-200">
+                      <p className="text-[11px] font-bold text-red-700 mb-1">⚠️ Evitar para este grupo:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {rec.avoidFoods.map((f, i) => (
+                          <span key={i} className="px-2 py-0.5 text-[10px] font-bold rounded bg-red-100 text-red-800">{f}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })()}
+
+          {/* ===== ALIMENTOS TÓXICOS (sempre visível quando espécie selecionada) ===== */}
+          {selectedSpeciesId && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-3">
+              <details className="bg-red-50 rounded-lg border border-red-200">
+                <summary className="p-3 cursor-pointer flex items-center gap-2 text-sm font-bold text-red-800 hover:bg-red-100 rounded-lg transition-colors">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  ⚠️ Alimentos Tóxicos e Proibidos ({toxicFoods.filter(f => f.severity === "Fatal").length} fatais)
+                </summary>
+                <div className="px-3 pb-3 space-y-1">
+                  {["Fatal", "Grave", "Inadequado"].map(sev => (
+                    <div key={sev}>
+                      <p className={cn("text-[11px] font-bold mt-2 mb-1", sev === "Fatal" ? "text-red-800" : sev === "Grave" ? "text-orange-800" : "text-yellow-800")}>
+                        {sev === "Fatal" ? "💀 FATAIS" : sev === "Grave" ? "⚠️ GRAVES" : "🚫 INADEQUADOS"}
+                      </p>
+                      {toxicFoods.filter(f => f.severity === sev).map((f, i) => (
+                        <div key={i} className="flex items-start gap-2 py-0.5">
+                          <span className={cn("text-[11px] font-semibold min-w-[140px]", sev === "Fatal" ? "text-red-700" : sev === "Grave" ? "text-orange-700" : "text-yellow-700")}>{f.name}</span>
+                          <span className="text-[10px] text-stone-500">{f.substance} — {f.effect}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </details>
             </motion.div>
           )}
         </div>

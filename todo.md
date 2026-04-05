@@ -49,3 +49,14 @@
 - [x] Calendário: dias do mês com cor mais escura para melhor visualização
 - [x] Calendário: aumentar fonte dos feriados
 - [x] PDFs exportados: identidade visual com nome e símbolo do criatório, data de publicação, estética profissional
+- [x] AUDITORIA CRÍTICA: Revisar TODOS os alimentos cruzando com 5 volumes dos livros + DietBirdPet
+- [x] Rebaixar Alface Romana e Lisa para "Inadequado" no petbird.ts
+- [x] Corrigir Beterraba para recommended:false (classificada como "Pobre" Vol.3)
+- [x] Expandir lista de vegetais: +16 novos (agrião, mostarda, chicória, acelga, salsa, coentro, vagem, etc.)
+- [x] Expandir lista de frutas: +11 novas (kiwi, morango, laranja, abacaxi, maracujá, amora, etc.)
+- [x] Expandir lista de proteínas: +9 novas (amêndoa, nozes, castanha-do-pará, macadâmia, quinoa, ovo, etc.)
+- [x] Adicionar lista de 17 alimentos tóxicos/proibidos com substância e efeito (7 fatais, 5 graves, 5 inadequados)
+- [x] Adicionar recomendações específicas por grupo de espécie (Vol.5) — 8 grupos com alimentos prioritários e a evitar
+- [x] Interface: painel verde de recomendações por espécie visível ao selecionar espécie na calculadora
+- [x] Interface: seção colapsável de alimentos tóxicos com categorias Fatal/Grave/Inadequado
+- [x] Notas de segurança em alimentos críticos (maçã: remover sementes, girassol: nunca como base, etc.)

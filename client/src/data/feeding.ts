@@ -784,21 +784,57 @@ export const foods: FoodItem[] = [
   { id: "batata-doce", name: "Batata Doce", category: "Vegetal", energyKcal: 860, vitaminA: "Alta", calcium: "Médio", recommended: true, notes: "Substituto recomendado para o jiló. Cozinhar levemente." },
   { id: "abobora", name: "Abóbora", category: "Vegetal", energyKcal: 260, vitaminA: "Alta", calcium: "Médio", recommended: true, notes: "Substituto recomendado para o jiló. Pode servir crua ou cozida." },
   { id: "brocolis", name: "Brócolis", category: "Vegetal", energyKcal: 340, vitaminA: "Alta", calcium: "Alto", recommended: true, notes: "Rico em cálcio e vitaminas. Servir cru ou levemente cozido." },
-  { id: "beterraba", name: "Beterraba", category: "Vegetal", energyKcal: 430, vitaminA: "Média", calcium: "Médio", recommended: true, notes: "Boa fonte de ferro. Pode manchar penas claras temporariamente." },
+  { id: "beterraba", name: "Beterraba", category: "Vegetal", energyKcal: 430, vitaminA: "Média", calcium: "Médio", recommended: false, notes: "Classificada como 'Pobre' (Vol.3). Baixo valor nutricional para aves. Pode manchar penas claras." },
+  { id: "agriao", name: "Agrião", category: "Vegetal", energyKcal: 110, vitaminA: "Alta", calcium: "Alto", recommended: true, notes: "Classificado como 'Bom' (Vol.3). Excelente Ca:P 2:1. Recomendado para Congo (Vol.5)." },
+  { id: "mostarda", name: "Mostarda (Folha)", category: "Vegetal", energyKcal: 270, vitaminA: "Alta", calcium: "Alto", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em cálcio e vitamina C. Recomendada para Congo (Vol.5)." },
+  { id: "chicoria", name: "Chicória", category: "Vegetal", energyKcal: 230, vitaminA: "Alta", calcium: "Alto", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em fibra e vitamina A." },
+  { id: "acelga", name: "Acelga Suíça", category: "Vegetal", energyKcal: 190, vitaminA: "Alta", calcium: "Alto", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em cálcio e vitamina C." },
+  { id: "salsa", name: "Salsa", category: "Vegetal", energyKcal: 360, vitaminA: "Alta", calcium: "Alto", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Maior teor de vitamina C entre vegetais." },
+  { id: "coentro", name: "Coentro", category: "Vegetal", energyKcal: 230, vitaminA: "Alta", calcium: "Médio", recommended: true, notes: "Classificado como 'Melhores' (Vol.3). Rico em vitamina A e C." },
+  { id: "vagem", name: "Vagem", category: "Vegetal", energyKcal: 310, vitaminA: "Média", calcium: "Médio", recommended: true, notes: "Classificada como 'Bom' (Vol.3). Recomendada para Ringneck (Vol.5)." },
+  { id: "ervilha-verde", name: "Ervilha Verde", category: "Vegetal", energyKcal: 810, vitaminA: "Média", calcium: "Médio", recommended: true, notes: "Classificada como 'Bom' (Vol.3). Boa fonte de proteína vegetal." },
+  { id: "pimentao", name: "Pimentão", category: "Vegetal", energyKcal: 200, vitaminA: "Média", calcium: "Baixo", recommended: true, notes: "Classificado como 'Bom' (Vol.3). Rico em vitamina C. Todas as cores são seguras." },
+  { id: "couve-flor", name: "Couve-flor", category: "Vegetal", energyKcal: 250, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Bom' (Vol.3). Boa fonte de vitamina C." },
+  { id: "abobrinha", name: "Abobrinha", category: "Vegetal", energyKcal: 210, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Classificada como 'Bom' (Vol.3). Leve e hidratante." },
+  { id: "milho-verde", name: "Milho Verde", category: "Vegetal", energyKcal: 860, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Classificado como 'Bom' (Vol.3). Oferecer na espiga como enriquecimento." },
+  { id: "nabo", name: "Nabo", category: "Vegetal", energyKcal: 280, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificado como 'Bom' (Vol.3). Boa fonte de vitamina C." },
+  { id: "quiabo", name: "Quiabo", category: "Vegetal", energyKcal: 330, vitaminA: "Média", calcium: "Alto", recommended: true, notes: "Classificado como 'Bom' (Vol.3). Rico em cálcio e fibra." },
+  { id: "repolho", name: "Repolho", category: "Vegetal", energyKcal: 250, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificado como 'Bom' (Vol.3). Boa fonte de vitamina C." },
 
   // Frutas
   { id: "mamao", name: "Mamão", category: "Fruta", energyKcal: 390, vitaminA: "Alta", calcium: "Médio", recommended: true, notes: "Excelente para Ecletus. Rico em enzimas digestivas." },
   { id: "manga", name: "Manga", category: "Fruta", energyKcal: 600, vitaminA: "Alta", calcium: "Baixo", recommended: true, notes: "Rica em vitamina A. Oferecer madura." },
-  { id: "banana", name: "Banana", category: "Fruta", energyKcal: 890, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Boa fonte de potássio. Moderar quantidade (alta em açúcar)." },
-  { id: "maca", name: "Maçã", category: "Fruta", energyKcal: 520, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Retirar sementes (contêm cianeto). Servir com casca." },
-  { id: "uva", name: "Uva", category: "Fruta", energyKcal: 690, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Oferecer sem sementes. Rica em antioxidantes." },
-  { id: "goiaba", name: "Goiaba", category: "Fruta", energyKcal: 680, vitaminA: "Alta", calcium: "Médio", recommended: true, notes: "Excelente fonte de vitamina C. Pode ser oferecida inteira." },
+  { id: "banana", name: "Banana", category: "Fruta", energyKcal: 890, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Classificada como 'Pobre' (Vol.3). Usar com moderação. Recomendada para Caiques e Tuins (Vol.5)." },
+  { id: "maca", name: "Maçã", category: "Fruta", energyKcal: 520, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "⚠️ SEMPRE remover sementes (contêm amigdalina/cianeto — RISCO DE MORTE). Servir com casca." },
+  { id: "uva", name: "Uva", category: "Fruta", energyKcal: 690, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Classificada como 'Pobre' (Vol.3). Usar com moderação. Oferecer sem sementes." },
+  { id: "goiaba", name: "Goiaba", category: "Fruta", energyKcal: 680, vitaminA: "Alta", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Excelente fonte de vitamina C. Pode ser oferecida inteira." },
+  { id: "kiwi", name: "Kiwi", category: "Fruta", energyKcal: 610, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificado como 'Melhores' (Vol.3). Rico em vitamina C e E." },
+  { id: "morango", name: "Morango", category: "Fruta", energyKcal: 320, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Classificado como 'Melhores' (Vol.3). Rico em vitamina C." },
+  { id: "laranja", name: "Laranja", category: "Fruta", energyKcal: 470, vitaminA: "Média", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em vitamina C. Oferecer em gomos." },
+  { id: "abacaxi", name: "Abacaxi", category: "Fruta", energyKcal: 500, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Classificado como 'Melhores' (Vol.3). Rico em vitamina C. Oferecer fresco." },
+  { id: "maracuja", name: "Maracujá", category: "Fruta", energyKcal: 970, vitaminA: "Alta", calcium: "Médio", recommended: true, notes: "Classificado como 'Melhores' (Vol.3). Rico em vitamina A e fibra." },
+  { id: "amora", name: "Amora", category: "Fruta", energyKcal: 430, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em vitamina E e antioxidantes." },
+  { id: "toranja", name: "Toranja Vermelha", category: "Fruta", energyKcal: 420, vitaminA: "Alta", calcium: "Baixo", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em vitamina A e C." },
+  { id: "tangerina", name: "Tangerina", category: "Fruta", energyKcal: 530, vitaminA: "Média", calcium: "Médio", recommended: true, notes: "Classificada como 'Boa' (Vol.3). Boa fonte de vitamina C." },
+  { id: "melancia", name: "Melancia", category: "Fruta", energyKcal: 300, vitaminA: "Média", calcium: "Baixo", recommended: true, notes: "Classificada como 'Boa' (Vol.3). Hidratante. Usar com moderação (muita água)." },
+  { id: "framboesa", name: "Framboesa", category: "Fruta", energyKcal: 520, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Boa' (Vol.3). Rica em fibra e vitamina E." },
 
   // Sementes
-  { id: "girassol", name: "Semente de Girassol", category: "Semente", energyKcal: 5840, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Alta em gordura. Limitar para Galahs. Preferir alto oleico." },
+  { id: "girassol", name: "Semente de Girassol", category: "Semente", energyKcal: 5840, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "⚠️ NUNCA usar como base da dieta (Vol.5). Alto teor de gordura, baixo Ca:P. Causa obesidade e deficiências. Usar apenas como complemento." },
   { id: "painco", name: "Painço", category: "Semente", energyKcal: 3780, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Base do mix de sementes. Boa fonte de energia." },
   { id: "aveia", name: "Aveia", category: "Semente", energyKcal: 3890, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Boa fonte de fibra e energia." },
   { id: "linhaca", name: "Linhaça", category: "Semente", energyKcal: 5340, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Rica em ômega-3. Presente na ração de alta proteína." },
+
+  // Proteínas e Nozes
+  { id: "amendoa", name: "Amêndoa", category: "Proteína", energyKcal: 5900, vitaminA: "Baixa", calcium: "Alto", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). PRIORIDADE para Congo — rica em vitamina E (Vol.5)." },
+  { id: "nozes", name: "Nozes", category: "Proteína", energyKcal: 6180, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em proteína e ômega-3." },
+  { id: "castanha-para", name: "Castanha-do-pará", category: "Proteína", energyKcal: 6740, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em selênio. 1 unidade/semana para grandes." },
+  { id: "macadamia", name: "Macadâmia", category: "Proteína", energyKcal: 7520, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). PRIORIDADE para Araras Azuis (Vol.5)." },
+  { id: "quinoa", name: "Quinoa Cozida", category: "Proteína", energyKcal: 1200, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Proteína completa. Excelente para todas as espécies." },
+  { id: "ovo-cozido", name: "Ovo Cozido", category: "Proteína", energyKcal: 1550, vitaminA: "Média", calcium: "Médio", recommended: true, notes: "Obrigatório para Cacatuas 2-3x/semana (Vol.5). Fonte de proteína animal." },
+  { id: "lentilha-broto", name: "Lentilha (Broto)", category: "Proteína", energyKcal: 1060, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em proteína e ferro." },
+  { id: "ervilha-broto", name: "Ervilha (Broto)", category: "Proteína", energyKcal: 1240, vitaminA: "Baixa", calcium: "Médio", recommended: true, notes: "Classificada como 'Melhores' (Vol.3). Rica em proteína. Recomendada para Cacatuas (Vol.5)." },
+  { id: "coco", name: "Coco (Polpa)", category: "Proteína", energyKcal: 3540, vitaminA: "Baixa", calcium: "Baixo", recommended: true, notes: "Classificado como 'Melhores' (Vol.3). Rico em gordura saudável. Bom para Araras." },
 
   // Ração
   { id: "racao-hp", name: "Ração Alta Proteína", category: "Ração", energyKcal: 3200, vitaminA: "Alta", calcium: "Alto", recommended: true, notes: "Para Psittaculas. 8% gordura. 15g/ave/dia." },
@@ -810,6 +846,148 @@ export const foods: FoodItem[] = [
   { id: "supl-mineral", name: "Suplemento Mineral (Pote 6)", category: "Suplemento", energyKcal: 0, vitaminA: "Baixa", calcium: "Alto", recommended: true, notes: "Colher pequena. Apenas Quarta-feira." },
   { id: "bloco-mineral", name: "Bloco Mineral", category: "Suplemento", energyKcal: 0, vitaminA: "Baixa", calcium: "Alto", recommended: true, notes: "Fixo na gaiola. Trocar semanalmente." },
   { id: "osso-siba", name: "Osso de Síba", category: "Suplemento", energyKcal: 0, vitaminA: "Baixa", calcium: "Alto", recommended: true, notes: "Fonte de cálcio natural. Repor quando gasto." },
+];
+
+// ============================================
+// ALIMENTOS TÓXICOS E PROIBIDOS (Vol.5 — RISCO DE MORTE)
+// ============================================
+
+export interface ToxicFood {
+  name: string;
+  substance: string;
+  effect: string;
+  severity: "Fatal" | "Grave" | "Inadequado";
+}
+
+export const toxicFoods: ToxicFood[] = [
+  // FATAIS — Risco de morte
+  { name: "Abacate (todas as partes)", substance: "Persina", effect: "Cardiotoxicidade, edema pulmonar, morte", severity: "Fatal" },
+  { name: "Chocolate e cacau", substance: "Teobromina, cafeína", effect: "Arritmia cardíaca, convulsões, morte", severity: "Fatal" },
+  { name: "Café e bebidas cafeinadas", substance: "Cafeína", effect: "Taquicardia, arritmia, morte", severity: "Fatal" },
+  { name: "Cebola (crua ou cozida)", substance: "Compostos sulfurados", effect: "Destruição de hemácias, anemia hemolítica", severity: "Fatal" },
+  { name: "Alho (cru ou cozido)", substance: "Alicina", effect: "Anemia hemolítica", severity: "Fatal" },
+  { name: "Sementes de maçã, pêra, cereja", substance: "Amigdalina (cianeto)", effect: "Envenenamento por cianeto", severity: "Fatal" },
+  { name: "Álcool", substance: "Etanol", effect: "Depressão do SNC, morte", severity: "Fatal" },
+  // GRAVES — Risco significativo
+  { name: "Sal e alimentos salgados", substance: "Sódio em excesso", effect: "Intoxicação por sódio, desidratação", severity: "Grave" },
+  { name: "Amendoim com casca", substance: "Aflatoxinas (mofo)", effect: "Dano hepático e renal", severity: "Grave" },
+  { name: "Alimentos mofados", substance: "Micotoxinas", effect: "Dano hepático e renal", severity: "Grave" },
+  { name: "Tomate (folhas e caule)", substance: "Solanina", effect: "Intoxicação (polpa madura é segura em pequena qtd)", severity: "Grave" },
+  { name: "Batata crua (partes verdes)", substance: "Solanina", effect: "Intoxicação (batata cozida é segura)", severity: "Grave" },
+  // INADEQUADOS — Evitar
+  { name: "Alface (todas as variedades)", substance: "Baixo valor nutricional", effect: "Pode causar diarreia, não nutre adequadamente", severity: "Inadequado" },
+  { name: "Leite e derivados", substance: "Lactose", effect: "Aves não possuem lactase, causa diarreia", severity: "Inadequado" },
+  { name: "Alimentos ultraprocessados", substance: "Conservantes, açúcares, sódio", effect: "Deficiências nutricionais, obesidade", severity: "Inadequado" },
+  { name: "Sementes de girassol como BASE", substance: "Alto teor de gordura", effect: "Obesidade, deficiência de cálcio, doenças hepáticas", severity: "Inadequado" },
+];
+
+// ============================================
+// RECOMENDAÇÕES ESPECÍFICAS POR GRUPO (Vol.5)
+// ============================================
+
+export interface GroupFoodRecommendation {
+  groupId: string;
+  groupName: string;
+  priorityFoods: string[]; // IDs dos alimentos prioritários
+  avoidFoods: string[]; // Alimentos a evitar para este grupo
+  specialNotes: string[];
+}
+
+export const groupFoodRecommendations: GroupFoodRecommendation[] = [
+  {
+    groupId: "psittacula",
+    groupName: "Ringneck e Psittacula",
+    priorityFoods: ["cenoura", "brocolis", "couve", "pimentao", "vagem", "mamao", "manga", "goiaba", "maca", "quinoa"],
+    avoidFoods: ["girassol como base", "excesso de nozes"],
+    specialNotes: [
+      "Estratégia: Granívoro — 70% ração, 15% vegetais, 10% frutas, 5% proteíco",
+      "Sementes germinadas são excelentes como complemento",
+      "Maçã: SEMPRE remover sementes (cianeto)",
+      "Romã é bem aceita e rica em antioxidantes"
+    ]
+  },
+  {
+    groupId: "cacatua",
+    groupName: "Cacatuas",
+    priorityFoods: ["cenoura", "batata-doce", "brocolis", "couve", "ovo-cozido", "ervilha-broto", "lentilha-broto", "quinoa", "mamao", "goiaba"],
+    avoidFoods: ["girassol como base (MUITO inadequado para Galah)", "nozes em excesso", "dieta exclusiva de sementes"],
+    specialNotes: [
+      "Estratégia: Onívoro — 70% ração, 15% vegetais, 5% frutas, 10% proteíco",
+      "Ovo cozido OBRIGATÓRIO 2-3x/semana",
+      "Galah: NUNCA girassol como base (obesidade)",
+      "Leguminosas germinadas são essenciais"
+    ]
+  },
+  {
+    groupId: "frugivoro",
+    groupName: "Ecletus e Frugívoros",
+    priorityFoods: ["cenoura", "batata-doce", "abobora", "brocolis", "couve", "pimentao", "mamao", "manga", "goiaba", "maracuja", "kiwi"],
+    avoidFoods: ["ração com corantes (MUITO inadequado)", "suplementos sintéticos de vitamina A (PERIGOSO)", "sementes oleaginosas em excesso"],
+    specialNotes: [
+      "Estratégia: Frugívoro — 40% ração, 35% vegetais, 20% frutas, 5% proteíco",
+      "⚠️ NUNCA usar ração com corantes para Ecletus",
+      "⚠️ NUNCA suplementar vitamina A sintética (hipervitaminose)",
+      "Maior proporção de frutas e vegetais entre todos os grupos"
+    ]
+  },
+  {
+    groupId: "africano_grande",
+    groupName: "Papagaio do Congo",
+    priorityFoods: ["couve", "mostarda", "agriao", "brocolis", "cenoura", "batata-doce", "amendoa", "nozes", "castanha-para"],
+    avoidFoods: ["dieta exclusiva de sementes", "excesso de gordura sem cálcio"],
+    specialNotes: [
+      "Estratégia: Granívoro Ara — 65% ração, 15% vegetais, 10% frutas, 10% nozes",
+      "Amêndoa é PRIORIDADE — rica em vitamina E (prevenção de deficiência)",
+      "Couve tem Ca:P 7,7:1 — essencial para Congo",
+      "Castanha-do-pará: 1 unidade/semana (selênio)"
+    ]
+  },
+  {
+    groupId: "australiano_pequeno",
+    groupName: "Calopsitas e Australianos Pequenos",
+    priorityFoods: ["cenoura", "brocolis", "couve", "painco", "mamao", "maca"],
+    avoidFoods: ["girassol como base (MUITO inadequado)", "dieta exclusiva de sementes", "nozes (muito calóricas)"],
+    specialNotes: [
+      "Estratégia: Granívoro — 80% ração, 10% vegetais, 5% frutas, 5% sementes",
+      "Painço em cacho como enriquecimento",
+      "Sementes germinadas são excelentes",
+      "Maçã: SEMPRE remover sementes (cianeto)"
+    ]
+  },
+  {
+    groupId: "agapornis",
+    groupName: "Agapornis",
+    priorityFoods: ["cenoura", "brocolis", "couve", "mamao", "maca", "painco"],
+    avoidFoods: ["sementes como base", "nozes (muito calóricas para porte pequeno)"],
+    specialNotes: [
+      "Estratégia: Granívoro Florívoro — 70% ração, 20% vegetais, 10% frutas",
+      "Painço em cacho como enriquecimento",
+      "Sementes germinadas são excelentes",
+      "Maçã: SEMPRE remover sementes (cianeto)"
+    ]
+  },
+  {
+    groupId: "rosella",
+    groupName: "Rosellas e Barnardius",
+    priorityFoods: ["cenoura", "brocolis", "couve", "pimenta", "mamao", "goiaba"],
+    avoidFoods: ["girassol como base", "excesso de nozes"],
+    specialNotes: [
+      "Estratégia: Granívoro — 70% ração, 15% vegetais, 10% frutas, 5% sementes",
+      "Pimenta é bem aceita (aves não sentem capsaicina)",
+      "Sementes germinadas como complemento"
+    ]
+  },
+  {
+    groupId: "neophema",
+    groupName: "Neophemas e Bourke",
+    priorityFoods: ["cenoura", "brocolis", "couve", "painco", "mamao"],
+    avoidFoods: ["girassol como base", "nozes (muito calóricas)"],
+    specialNotes: [
+      "Estratégia: Granívoro — 80% ração, 10% vegetais, 5% frutas, 5% sementes",
+      "Espécies pequenas — porções proporcionais ao peso",
+      "Painço em cacho como enriquecimento"
+    ]
+  },
 ];
 
 // ============================================
