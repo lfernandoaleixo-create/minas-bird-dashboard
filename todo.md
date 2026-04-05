@@ -44,3 +44,8 @@
 - [x] Cards operacionais: aumentar fontes, nada de letras pequenas e apagadas
 - [x] Cards operacionais: padronizar casas decimais dos pesos — sem abreviações, regra única
 - [x] Cards operacionais: melhorar estética geral para fácil visualização
+- [x] Pesos: acima de 1000g usar somente kg com 3 casas decimais; gramas sem casas decimais
+- [x] Tooltips nos ícones de ação ao abrir uma dieta salva (legendas ao passar o mouse)
+- [x] Calendário: dias do mês com cor mais escura para melhor visualização
+- [x] Calendário: aumentar fonte dos feriados
+- [x] PDFs exportados: identidade visual com nome e símbolo do criatório, data de publicação, estética profissional

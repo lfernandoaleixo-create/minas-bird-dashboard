@@ -19,6 +19,7 @@ import {
   FileDown, CopyPlus, Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { species, type Species } from "@/data/feeding";
 import {
   racoes, vegetais, frutas, proteicos,
@@ -35,6 +36,15 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 const HERO_IMAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/hero-alimentacao-9qkdhc8VaTxqHLKvqK3hAv.webp";
+
+
+/** Formata peso: >=1000g → kg com 3 decimais (ex: "1,190 kg"); <1000g → gramas sem decimais (ex: "156 g") */
+function fmtG(g: number): string {
+  if (g >= 1000) {
+    return (g / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + " kg";
+  }
+  return Math.round(g) + " g";
+}
 
 /** Renderiza o nome da dieta com destaque na ração e observações do usuário */
 function DietNameStyled({ name, size = "sm" }: { name: string; size?: "xs" | "sm" | "md" | "lg" }) {
@@ -302,13 +312,13 @@ export default function FeedingModule() {
 
     let comment = "";
     if (!hasVeg && !hasFrt && !hasPro) {
-      comment = `Dieta 100% ração. Forneça ${racaoGrams.toFixed(1)}g de ${selectedRacao.name} para suprir ${mer.toFixed(1)} kcal/dia. Adicione vegetais para começar a balancear.`;
+      comment = `Dieta 100% ração. Forneça ${fmtG(racaoGrams)} de ${selectedRacao.name} para suprir ${mer.toFixed(1)} kcal/dia. Adicione vegetais para começar a balancear.`;
     } else if (hasVeg && !hasFrt && !hasPro) {
       comment = `Ração (${racaoPctKcal.toFixed(0)}% kcal) + Vegetais (${vegPctKcal.toFixed(0)}% kcal). A ração cobre a base energética e os vegetais adicionam fibras e vitaminas. Adicione frutas para mais diversidade.`;
     } else if (hasVeg && hasFrt && !hasPro) {
       comment = `Ração + Vegetais + Frutas. Boa diversidade! Adicione sementes/proteicos para completar com aminoácidos essenciais.`;
     } else if (hasVeg && hasFrt && hasPro) {
-      comment = `Dieta completa! ${totalGrams.toFixed(1)}g/dia (${mer.toFixed(1)} kcal) em ${1 + selectedVegetais.length + selectedFrutas.length + selectedProteicos.length} alimentos. Proporção energética próxima do ideal.`;
+      comment = `Dieta completa! ${fmtG(totalGrams)}/dia (${mer.toFixed(1)} kcal) em ${1 + selectedVegetais.length + selectedFrutas.length + selectedProteicos.length} alimentos. Proporção energética próxima do ideal.`;
     } else {
       comment = `Dieta parcial. Continue adicionando grupos para aproximar da composição ideal.`;
     }
@@ -886,14 +896,14 @@ export default function FeedingModule() {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-white rounded-lg p-2 border border-blue-100">
                           <span className="text-[10px] text-stone-400 uppercase">Total/ave</span>
-                          <p className="text-sm font-bold text-stone-800">{dayDetailDiet.totalGrams.toFixed(1)}g</p>
+                          <p className="text-sm font-bold text-stone-800">{fmtG(dayDetailDiet.totalGrams)}</p>
                           <p className="text-[10px] text-stone-500">{dayDetailDiet.totalKcal.toFixed(1)} kcal</p>
                         </div>
                         {dayDetailDiet.items.racao.length > 0 && (
                           <div className="bg-white rounded-lg p-2 border border-amber-100">
                             <span className="text-[10px] text-amber-600 uppercase font-semibold">Ração</span>
                             {dayDetailDiet.items.racao.map(item => (
-                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
                             ))}
                           </div>
                         )}
@@ -901,7 +911,7 @@ export default function FeedingModule() {
                           <div className="bg-white rounded-lg p-2 border border-green-100">
                             <span className="text-[10px] text-green-600 uppercase font-semibold">Vegetais</span>
                             {dayDetailDiet.items.vegetais.map(item => (
-                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
                             ))}
                           </div>
                         )}
@@ -909,7 +919,7 @@ export default function FeedingModule() {
                           <div className="bg-white rounded-lg p-2 border border-red-100">
                             <span className="text-[10px] text-red-600 uppercase font-semibold">Frutas</span>
                             {dayDetailDiet.items.frutas.map(item => (
-                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
                             ))}
                           </div>
                         )}
@@ -917,7 +927,7 @@ export default function FeedingModule() {
                           <div className="bg-white rounded-lg p-2 border border-yellow-100">
                             <span className="text-[10px] text-yellow-700 uppercase font-semibold">Proteícos</span>
                             {dayDetailDiet.items.proteicos.map(item => (
-                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {item.grams.toFixed(1)}g</p>
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
                             ))}
                           </div>
                         )}
@@ -1009,7 +1019,7 @@ export default function FeedingModule() {
                             {/* Dias da semana header */}
                             <div className="grid grid-cols-7 gap-px mb-1">
                               {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
-                                <div key={i} className="text-center text-[8px] font-semibold text-stone-400 py-0.5">{d}</div>
+                                <div key={i} className="text-center text-[9px] font-bold text-stone-500 py-0.5">{d}</div>
                               ))}
                             </div>
                             {/* Grid de dias */}
@@ -1062,15 +1072,15 @@ export default function FeedingModule() {
                                       return parts.length > 0 ? parts.join(" | ") : undefined;
                                     })()}
                                     className={cn(
-                                      "aspect-square rounded-sm flex items-center justify-center text-[9px] font-medium relative transition-all",
+                                      "aspect-square rounded-sm flex items-center justify-center text-[10px] font-semibold relative transition-all",
                                       assignedColor
                                         ? `${assignedColor.light} ${assignedColor.text} hover:opacity-80`
-                                        : "text-stone-400 hover:bg-stone-100",
+                                        : "text-stone-600 hover:bg-stone-100",
                                       isToday && "ring-1 ring-emerald-500 font-bold",
                                       isActivePaintTarget && !assignedDietId && "hover:bg-emerald-50 cursor-crosshair",
                                       isActivePaintTarget && assignedDietId && "cursor-crosshair",
                                       isViewingThisDay && "ring-2 ring-blue-500",
-                                      feriado && !assignedColor && "text-red-400"
+                                      feriado && !assignedColor && "text-red-500 font-bold"
                                     )}
                                   >
                                     {day}
@@ -1091,8 +1101,8 @@ export default function FeedingModule() {
                               return feriadosDoMes.length > 0 ? (
                                 <div className="mt-1 pt-1 border-t border-stone-100">
                                   {feriadosDoMes.map(f => (
-                                    <p key={f.day} className="text-[8px] text-red-400 leading-tight">
-                                      <span className="font-semibold">{f.day}</span> — {f.name}
+                                    <p key={f.day} className="text-[10px] text-red-600 leading-snug font-medium">
+                                      <span className="font-bold">{f.day}</span> — {f.name}
                                     </p>
                                   ))}
                                 </div>
@@ -1155,7 +1165,7 @@ export default function FeedingModule() {
                               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
                                 <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}
                               </span>
-                              <span className="text-xs text-stone-500 font-medium">{diet.totalGrams.toFixed(1)}g/ave</span>
+                              <span className="text-xs text-stone-500 font-medium">{fmtG(diet.totalGrams)}/ave</span>
                               {assignedCount > 0 && (
                                 <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
                                   {assignedCount} dia{assignedCount > 1 ? "s" : ""}
@@ -1164,41 +1174,61 @@ export default function FeedingModule() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1 ml-3">
-                            <button
-                              onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                              className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                              title="Ver detalhes"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => loadDietForEditing(diet)}
-                              className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                              title="Editar"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDuplicateDiet(diet)}
-                              className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
-                              title="Duplicar"
-                            >
-                              <CopyPlus className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleExportDiet(diet)}
-                              className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                              title="Exportar"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => { handleDeleteDiet(diet.id); }}
-                              className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
+                                  className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Ver detalhes</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => loadDietForEditing(diet)}
+                                  className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Editar dieta</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleDuplicateDiet(diet)}
+                                  className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                                >
+                                  <CopyPlus className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Duplicar dieta</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleExportDiet(diet)}
+                                  className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Exportar dieta</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => { handleDeleteDiet(diet.id); }}
+                                  className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Excluir dieta</TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
                       </div>
@@ -1556,7 +1586,7 @@ export default function FeedingModule() {
                                       <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 font-medium text-[10px]">
                                         {lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId}
                                       </span>
-                                      <span className="font-medium text-stone-500">{diet.totalGrams.toFixed(1)}g/ave</span>
+                                      <span className="font-medium text-stone-500">{fmtG(diet.totalGrams)}/ave</span>
                                       <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
                                       {(() => {
                                         const cal = speciesCalendars[diet.speciesId] || {};
@@ -1767,32 +1797,32 @@ export default function FeedingModule() {
                 {viewingDiet.items.racao.map(item => (
                   <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-amber-50 rounded text-sm">
                     <span className="text-stone-700">{item.foodName}</span>
-                    <span className="font-semibold text-amber-700">{item.grams.toFixed(1)}g</span>
+                    <span className="font-semibold text-amber-700">{fmtG(item.grams)}</span>
                   </div>
                 ))}
                 {viewingDiet.items.vegetais.map(item => (
                   <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-green-50 rounded text-sm">
                     <span className="text-stone-700">{item.foodName}</span>
-                    <span className="font-semibold text-green-700">{item.grams.toFixed(1)}g</span>
+                    <span className="font-semibold text-green-700">{fmtG(item.grams)}</span>
                   </div>
                 ))}
                 {viewingDiet.items.frutas.map(item => (
                   <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded text-sm">
                     <span className="text-stone-700">{item.foodName}</span>
-                    <span className="font-semibold text-red-600">{item.grams.toFixed(1)}g</span>
+                    <span className="font-semibold text-red-600">{fmtG(item.grams)}</span>
                   </div>
                 ))}
                 {viewingDiet.items.proteicos.map(item => (
                   <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-yellow-50 rounded text-sm">
                     <span className="text-stone-700">{item.foodName}</span>
-                    <span className="font-semibold text-yellow-700">{item.grams.toFixed(1)}g</span>
+                    <span className="font-semibold text-yellow-700">{fmtG(item.grams)}</span>
                   </div>
                 ))}
               </div>
               <div className="flex items-center justify-between px-4 py-3 bg-emerald-50 rounded-lg border border-emerald-200 mt-2">
                 <span className="text-sm font-bold text-emerald-800">Total por ave</span>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-emerald-800">{viewingDiet.totalGrams.toFixed(1)}g</span>
+                  <span className="text-lg font-bold text-emerald-800">{fmtG(viewingDiet.totalGrams)}</span>
                   <span className="text-xs text-emerald-600 ml-2">{viewingDiet.totalKcal.toFixed(1)} kcal</span>
                 </div>
               </div>
@@ -1808,25 +1838,25 @@ export default function FeedingModule() {
                   {viewingDiet.items.racao.map(item => (
                     <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-amber-50/60 rounded text-sm">
                       <span className="text-stone-700">{item.foodName}</span>
-                      <span className="font-semibold text-amber-700">{(item.grams * viewingDiet.birdCount).toFixed(1)}g</span>
+                      <span className="font-semibold text-amber-700">{fmtG((item.grams * viewingDiet.birdCount))}</span>
                     </div>
                   ))}
                   {viewingDiet.items.vegetais.map(item => (
                     <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-green-50/60 rounded text-sm">
                       <span className="text-stone-700">{item.foodName}</span>
-                      <span className="font-semibold text-green-700">{(item.grams * viewingDiet.birdCount).toFixed(1)}g</span>
+                      <span className="font-semibold text-green-700">{fmtG((item.grams * viewingDiet.birdCount))}</span>
                     </div>
                   ))}
                   {viewingDiet.items.frutas.map(item => (
                     <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-red-50/60 rounded text-sm">
                       <span className="text-stone-700">{item.foodName}</span>
-                      <span className="font-semibold text-red-600">{(item.grams * viewingDiet.birdCount).toFixed(1)}g</span>
+                      <span className="font-semibold text-red-600">{fmtG((item.grams * viewingDiet.birdCount))}</span>
                     </div>
                   ))}
                   {viewingDiet.items.proteicos.map(item => (
                     <div key={item.foodId} className="flex items-center justify-between px-3 py-1.5 bg-yellow-50/60 rounded text-sm">
                       <span className="text-stone-700">{item.foodName}</span>
-                      <span className="font-semibold text-yellow-700">{(item.grams * viewingDiet.birdCount).toFixed(1)}g</span>
+                      <span className="font-semibold text-yellow-700">{fmtG((item.grams * viewingDiet.birdCount))}</span>
                     </div>
                   ))}
                 </div>
@@ -1836,7 +1866,7 @@ export default function FeedingModule() {
                     <span className="text-sm font-bold text-blue-800">Total para {viewingDiet.birdCount} aves</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-blue-800">{(viewingDiet.totalGrams * viewingDiet.birdCount).toFixed(1)}g</span>
+                    <span className="text-lg font-bold text-blue-800">{fmtG((viewingDiet.totalGrams * viewingDiet.birdCount))}</span>
                     <span className="text-xs text-blue-600 ml-2">{(viewingDiet.totalKcal * viewingDiet.birdCount).toFixed(1)} kcal</span>
                   </div>
                 </div>
@@ -2100,7 +2130,7 @@ export default function FeedingModule() {
                   <Star className="w-4 h-4 text-stone-400" />
                   <span className="text-xs font-semibold text-stone-600 uppercase tracking-wider">Composição Ideal</span>
                 </div>
-                <span className="text-xs text-stone-500 font-medium">{idealDiet.totalKcal.toFixed(1)} kcal | {idealDiet.totalGrams.toFixed(1)}g</span>
+                <span className="text-xs text-stone-500 font-medium">{idealDiet.totalKcal.toFixed(1)} kcal | {fmtG(idealDiet.totalGrams)}</span>
               </div>
               <div className="flex h-8 rounded-lg overflow-hidden border border-stone-200">
                 <div className="bg-amber-500 flex items-center justify-center relative group" style={{ width: `${idealDiet.racao.pctKcal}%` }}>
@@ -2125,10 +2155,10 @@ export default function FeedingModule() {
                 </div>
               </div>
               <div className="flex items-center gap-4 mt-1.5 text-[10px] text-stone-500 flex-wrap">
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />Ração {idealDiet.racao.pctKcal}% ({idealDiet.racao.grams.toFixed(1)}g)</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />Vegetais {idealDiet.vegetais.pctKcal}% ({idealDiet.vegetais.grams.toFixed(1)}g)</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-400" />Frutas {idealDiet.frutas.pctKcal}% ({idealDiet.frutas.grams.toFixed(1)}g)</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-500" />Proteico {idealDiet.proteicos.pctKcal}% ({idealDiet.proteicos.grams.toFixed(1)}g)</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />Ração {idealDiet.racao.pctKcal}% ({fmtG(idealDiet.racao.grams)})</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />Vegetais {idealDiet.vegetais.pctKcal}% ({fmtG(idealDiet.vegetais.grams)})</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-400" />Frutas {idealDiet.frutas.pctKcal}% ({fmtG(idealDiet.frutas.grams)})</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-500" />Proteico {idealDiet.proteicos.pctKcal}% ({fmtG(idealDiet.proteicos.grams)})</span>
               </div>
             </div>
 
@@ -2139,7 +2169,7 @@ export default function FeedingModule() {
                   <BarChart3 className="w-4 h-4 text-emerald-600" />
                   <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Nossa Dieta</span>
                 </div>
-                <span className="text-xs text-emerald-600 font-medium">{nossaDieta.total.kcal.toFixed(1)} kcal | {nossaDieta.total.grams.toFixed(1)}g</span>
+                <span className="text-xs text-emerald-600 font-medium">{nossaDieta.total.kcal.toFixed(1)} kcal | {fmtG(nossaDieta.total.grams)}</span>
               </div>
               <div className="flex h-8 rounded-lg overflow-hidden border border-emerald-300 bg-stone-100">
                 {nossaDieta.racao.pctKcal > 0 && (
@@ -2190,16 +2220,16 @@ export default function FeedingModule() {
               {/* Legend with grams */}
               <div className="flex items-center gap-4 mt-1.5 text-[10px] text-stone-500 flex-wrap">
                 {nossaDieta.racao.pctKcal > 0 && (
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />Ração {nossaDieta.racao.pctKcal.toFixed(0)}% ({nossaDieta.racao.grams.toFixed(1)}g)</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />Ração {nossaDieta.racao.pctKcal.toFixed(0)}% ({fmtG(nossaDieta.racao.grams)})</span>
                 )}
                 {nossaDieta.vegetais.pctKcal > 0 && (
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />Vegetais {nossaDieta.vegetais.pctKcal.toFixed(0)}% ({nossaDieta.vegetais.grams.toFixed(1)}g)</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />Vegetais {nossaDieta.vegetais.pctKcal.toFixed(0)}% ({fmtG(nossaDieta.vegetais.grams)})</span>
                 )}
                 {nossaDieta.frutas.pctKcal > 0 && (
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-400" />Frutas {nossaDieta.frutas.pctKcal.toFixed(0)}% ({nossaDieta.frutas.grams.toFixed(1)}g)</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-400" />Frutas {nossaDieta.frutas.pctKcal.toFixed(0)}% ({fmtG(nossaDieta.frutas.grams)})</span>
                 )}
                 {nossaDieta.proteicos.pctKcal > 0 && (
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-500" />Proteico {nossaDieta.proteicos.pctKcal.toFixed(0)}% ({nossaDieta.proteicos.grams.toFixed(1)}g)</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-500" />Proteico {nossaDieta.proteicos.pctKcal.toFixed(0)}% ({fmtG(nossaDieta.proteicos.grams)})</span>
                 )}
               </div>
               {/* Comment */}
@@ -2376,7 +2406,7 @@ export default function FeedingModule() {
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-lg font-bold text-emerald-800">{nossaDieta.total.grams.toFixed(1)}g</span>
+                <span className="text-lg font-bold text-emerald-800">{fmtG(nossaDieta.total.grams)}</span>
                 <span className="text-xs text-emerald-600 ml-2">{nossaDieta.total.kcal.toFixed(1)} kcal</span>
               </div>
             </div>
@@ -2389,7 +2419,7 @@ export default function FeedingModule() {
                   <span className="text-sm font-bold text-blue-800">Total para {birdCount} aves</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-blue-800">{(nossaDieta.total.grams * birdCount).toFixed(1)}g</span>
+                  <span className="text-lg font-bold text-blue-800">{fmtG((nossaDieta.total.grams * birdCount))}</span>
                   <span className="text-xs text-blue-600 ml-2">{(nossaDieta.total.kcal * birdCount).toFixed(1)} kcal</span>
                 </div>
               </div>
@@ -2404,8 +2434,8 @@ export default function FeedingModule() {
                 <div key={item.food.id} className="flex items-center justify-between px-3 py-1.5 bg-amber-50 rounded text-sm">
                   <span className="text-stone-700">{item.food.name}</span>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-amber-700">{item.grams.toFixed(1)}g</span>
-                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({(item.grams * birdCount).toFixed(1)}g total)</span>}
+                    <span className="font-semibold text-amber-700">{fmtG(item.grams)}</span>
+                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({fmtG((item.grams * birdCount))} total)</span>}
                   </div>
                 </div>
               ))}
@@ -2413,8 +2443,8 @@ export default function FeedingModule() {
                 <div key={item.food.id} className="flex items-center justify-between px-3 py-1.5 bg-green-50 rounded text-sm">
                   <span className="text-stone-700">{item.food.name}</span>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-green-700">{item.grams.toFixed(1)}g</span>
-                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({(item.grams * birdCount).toFixed(1)}g total)</span>}
+                    <span className="font-semibold text-green-700">{fmtG(item.grams)}</span>
+                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({fmtG((item.grams * birdCount))} total)</span>}
                   </div>
                 </div>
               ))}
@@ -2422,8 +2452,8 @@ export default function FeedingModule() {
                 <div key={item.food.id} className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded text-sm">
                   <span className="text-stone-700">{item.food.name}</span>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-red-600">{item.grams.toFixed(1)}g</span>
-                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({(item.grams * birdCount).toFixed(1)}g total)</span>}
+                    <span className="font-semibold text-red-600">{fmtG(item.grams)}</span>
+                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({fmtG((item.grams * birdCount))} total)</span>}
                   </div>
                 </div>
               ))}
@@ -2431,8 +2461,8 @@ export default function FeedingModule() {
                 <div key={item.food.id} className="flex items-center justify-between px-3 py-1.5 bg-yellow-50 rounded text-sm">
                   <span className="text-stone-700">{item.food.name}</span>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-yellow-700">{item.grams.toFixed(1)}g</span>
-                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({(item.grams * birdCount).toFixed(1)}g total)</span>}
+                    <span className="font-semibold text-yellow-700">{fmtG(item.grams)}</span>
+                    {birdCount > 1 && <span className="text-[10px] text-stone-400">({fmtG((item.grams * birdCount))} total)</span>}
                   </div>
                 </div>
               ))}
@@ -2522,7 +2552,7 @@ function FoodStepCard({
               )}
             </div>
             {selectedCount > 0 && totalGroupGrams > 0 && (
-              <p className="text-[11px] text-stone-500 mt-0.5">{totalGroupGrams.toFixed(1)}g na nossa dieta</p>
+              <p className="text-[11px] text-stone-500 mt-0.5">{fmtG(totalGroupGrams)} na nossa dieta</p>
             )}
             {selectedCount === 0 && unlocked && (
               <p className="text-[11px] text-stone-400 mt-0.5 italic">
@@ -2592,7 +2622,7 @@ function FoodStepCard({
                             step === "vegetais" ? "text-green-700" :
                             step === "frutas" ? "text-red-600" :
                             "text-yellow-700"
-                          )}>{item.grams.toFixed(1)}g</span>
+                          )}>{fmtG(item.grams)}</span>
                         </div>
                       </div>
                     ))}
@@ -2623,7 +2653,7 @@ function FoodStepCard({
                       {classificationBadge(selectedSingle.classification)}
                     </div>
                     <div className="text-right">
-                      <span className="font-bold text-amber-700">{totalGroupGrams.toFixed(1)}g</span>
+                      <span className="font-bold text-amber-700">{fmtG(totalGroupGrams)}</span>
                       <span className="text-[10px] text-stone-500 ml-1">({selectedSingle.energyKcal} kcal/kg)</span>
                     </div>
                   </div>
@@ -2717,7 +2747,7 @@ function SummaryCard({ label, grams, kcal, pctKcal, color, textColor, count, ide
         <span className="text-xs font-medium text-stone-600">{label}</span>
         <span className="text-[10px] text-stone-400">{count} item{count !== 1 ? "s" : ""}</span>
       </div>
-      <div className={cn("text-lg font-bold", textColor)}>{grams.toFixed(1)}g</div>
+      <div className={cn("text-lg font-bold", textColor)}>{fmtG(grams)}</div>
       <div className="text-[10px] text-stone-500">{kcal.toFixed(1)} kcal ({pctKcal.toFixed(0)}%)</div>
       {idealPctKcal !== undefined && count > 0 && diffAbs > 1 && (
         <div className={cn("text-[10px] mt-1 font-medium", diff > 0 ? "text-amber-600" : "text-blue-600")}>

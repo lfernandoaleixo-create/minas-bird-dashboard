@@ -13,6 +13,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { jsPDF } from "jspdf";
 import { species, type Species } from "@/data/feeding";
 import { lifePeriods, enclosureTypes } from "@/data/petbird";
 import type { SavedDiet, SavedDietItem } from "@/lib/dietStorage";
@@ -65,26 +66,24 @@ function getDaysInRange(start: Date, end: Date): Date[] {
 
 /**
  * Formata peso de forma padronizada:
- * - Sempre em gramas com 1 casa decimal: "12,5 gramas"
- * - Acima de 1000g, mostra também em kg: "1.250,0 gramas (1,25 kg)"
+ * - Acima de 1000g: somente kg com 3 casas decimais (ex: "1,190 kg")
+ * - Abaixo de 1000g: gramas sem casas decimais (ex: "156 gramas")
  */
 function formatWeight(g: number): string {
-  const formatted = g.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   if (g >= 1000) {
-    const kg = (g / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return `${formatted} gramas (${kg} kg)`;
+    const kg = (g / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    return `${kg} kg`;
   }
-  return `${formatted} gramas`;
+  return `${Math.round(g)} gramas`;
 }
 
-/** Formato curto para tabelas: "12,5 g" ou "1.250,0 g (1,25 kg)" */
+/** Formato curto para tabelas: "156 g" ou "1,190 kg" */
 function formatWeightShort(g: number): string {
-  const formatted = g.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   if (g >= 1000) {
-    const kg = (g / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return `${formatted} g (${kg} kg)`;
+    const kg = (g / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    return `${kg} kg`;
   }
-  return `${formatted} g`;
+  return `${Math.round(g)} g`;
 }
 
 const CATEGORY_CONFIG = {
@@ -339,127 +338,325 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
   }, [singleDate, effectiveSpeciesIds, speciesCalendars, savedDiets]);
 
   // ============================================
-  // EXPORT TEXT
+  // PDF EXPORT HELPERS
   // ============================================
-  const exportShoppingListText = () => {
+  const BRAND = {
+    primary: [16, 185, 129] as [number, number, number],
+    dark: [6, 78, 59] as [number, number, number],
+    medium: [5, 150, 105] as [number, number, number],
+    light: [209, 250, 229] as [number, number, number],
+    bg: [240, 253, 244] as [number, number, number],
+    text: [41, 37, 36] as [number, number, number],
+    muted: [120, 113, 108] as [number, number, number],
+  };
+
+  const CAT_COLORS: Record<FoodCategory, { r: number; g: number; b: number; bgR: number; bgG: number; bgB: number }> = {
+    racao:     { r: 180, g: 83, b: 9,   bgR: 255, bgG: 251, bgB: 235 },
+    vegetais:  { r: 5, g: 150, b: 105,  bgR: 236, bgG: 253, bgB: 245 },
+    frutas:    { r: 220, g: 38, b: 38,  bgR: 254, bgG: 242, bgB: 242 },
+    proteicos: { r: 126, g: 34, b: 206, bgR: 250, bgG: 245, bgB: 255 },
+  };
+
+  function pdfHeader(doc: jsPDF, pageW: number, title: string, subtitle: string): number {
+    doc.setFillColor(...BRAND.dark);
+    doc.rect(0, 0, pageW, 3, "F");
+    doc.setFillColor(...BRAND.bg);
+    doc.rect(0, 3, pageW, 18, "F");
+    doc.setDrawColor(...BRAND.primary);
+    doc.setLineWidth(0.3);
+    doc.line(0, 21, pageW, 21);
+    // Logo circle
+    doc.setFillColor(...BRAND.primary);
+    doc.circle(14, 11, 4, "F");
+    doc.setFillColor(255, 255, 255);
+    doc.circle(15.5, 10, 1.2, "F");
+    doc.setFillColor(...BRAND.dark);
+    doc.circle(15.5, 10, 0.5, "F");
+    doc.setFillColor(...BRAND.medium);
+    doc.triangle(18, 11, 20, 10.5, 18, 12, "F");
+    // Name
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.dark);
+    doc.text("Criatório Minas Bird", 24, 10);
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.muted);
+    doc.text("Manual Operacional de Alimentação", 24, 14);
+    // Title right
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.text);
+    doc.text(title, pageW - 10, 10, { align: "right" });
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.muted);
+    doc.text(subtitle, pageW - 10, 14, { align: "right" });
+    return 24;
+  }
+
+  function pdfFooter(doc: jsPDF, pageW: number, pageH: number, pageNum?: number, totalPages?: number): void {
+    const fy = pageH - 6;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.2);
+    doc.line(8, fy - 2, pageW - 8, fy - 2);
+    const now = new Date();
+    const ds = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()}`;
+    const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.muted);
+    doc.text(`Publicado em ${ds} às ${ts}`, 8, fy);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.medium);
+    doc.text("Criatório Minas Bird", pageW / 2, fy, { align: "center" });
+    if (pageNum !== undefined && totalPages !== undefined) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND.muted);
+      doc.text(`Página ${pageNum} de ${totalPages}`, pageW - 8, fy, { align: "right" });
+    }
+  }
+
+  // ============================================
+  // EXPORT PDF
+  // ============================================
+  const exportShoppingListPdf = () => {
     if (!shoppingList) return;
-    const lines: string[] = [];
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push("  LISTA DE COMPRAS — CRIATÓRIO MINAS BIRD");
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push("");
-    lines.push(`Período: ${formatDateBR(fromInputDate(startDate))} a ${formatDateBR(fromInputDate(endDate))} (${shoppingList.totalDays} dias)`);
-    lines.push(`Espécies: ${selectedSpeciesIds.length === activeFlockSpecies.length ? "Todas (plantel)" : effectiveSpeciesIds.map(id => species.find(s => s.id === id)?.commonName).filter(Boolean).join(", ")}`);
-    lines.push("");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const periodStr = `${formatDateBR(fromInputDate(startDate))} a ${formatDateBR(fromInputDate(endDate))} (${shoppingList.totalDays} dias)`;
+    const speciesStr = selectedSpeciesIds.length === activeFlockSpecies.length ? "Todas as espécies do plantel" : effectiveSpeciesIds.map(id => species.find(s => s.id === id)?.commonName).filter(Boolean).join(", ");
+
+    let y = pdfHeader(doc, pageW, "Lista de Compras", periodStr);
+
+    // Info box
+    doc.setFillColor(250, 250, 249);
+    doc.roundedRect(10, y, pageW - 20, 10, 1.5, 1.5, "F");
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.text);
+    doc.text(`Período: ${periodStr}`, 14, y + 4);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.muted);
+    doc.text(`Espécies: ${speciesStr}`, 14, y + 8);
+    y += 14;
 
     const categories: FoodCategory[] = ["racao", "vegetais", "frutas", "proteicos"];
     for (const cat of categories) {
       const items = shoppingList.grouped[cat];
       if (items.length === 0) continue;
-      lines.push(`───── ${CATEGORY_CONFIG[cat].label.toUpperCase()} ─────`);
-      for (const item of items) {
-        lines.push(`  • ${item.name}: ${formatWeight(item.totalGrams)}`);
+      const cc = CAT_COLORS[cat];
+
+      // Category header
+      doc.setFillColor(cc.r, cc.g, cc.b);
+      doc.roundedRect(10, y, pageW - 20, 7, 1, 1, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(CATEGORY_CONFIG[cat].label.toUpperCase(), 14, y + 5);
+      doc.text(`${items.length} itens`, pageW - 14, y + 5, { align: "right" });
+      y += 9;
+
+      // Items
+      for (let i = 0; i < items.length; i++) {
+        if (y > pageH - 20) {
+          pdfFooter(doc, pageW, pageH);
+          doc.addPage();
+          y = pdfHeader(doc, pageW, "Lista de Compras (cont.)", periodStr);
+        }
+        const item = items[i];
+        const isEven = i % 2 === 0;
+        if (isEven) {
+          doc.setFillColor(cc.bgR, cc.bgG, cc.bgB);
+          doc.rect(10, y - 1, pageW - 20, 6, "F");
+        }
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...BRAND.text);
+        doc.text(item.name, 14, y + 3);
+        doc.setFont("helvetica", "bold");
+        doc.text(formatWeight(item.totalGrams), pageW - 14, y + 3, { align: "right" });
+        y += 6;
       }
-      lines.push("");
+      y += 4;
     }
 
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push(`Gerado em ${formatDateBR(new Date())}`);
-
-    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `lista-compras-${startDate}-a-${endDate}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    pdfFooter(doc, pageW, pageH);
+    doc.save(`Lista_Compras_${startDate}_a_${endDate}.pdf`);
   };
 
-  const exportRoutineText = () => {
+  const exportRoutinePdf = () => {
     if (!dailyRoutine) return;
-    const lines: string[] = [];
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push("  ROTINA DIÁRIA DO TRATADOR — CRIATÓRIO MINAS BIRD");
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push("");
-    lines.push(`Período: ${formatDateBR(fromInputDate(startDate))} a ${formatDateBR(fromInputDate(endDate))}`);
-    lines.push("");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const periodStr = `${formatDateBR(fromInputDate(startDate))} a ${formatDateBR(fromInputDate(endDate))}`;
+    let pageNum = 1;
+    const totalPages = Math.max(1, Math.ceil(dailyRoutine.length / 3));
 
-    for (const { date, speciesRoutines } of dailyRoutine) {
+    let y = pdfHeader(doc, pageW, "Rotina do Tratador", periodStr);
+
+    for (let di = 0; di < dailyRoutine.length; di++) {
+      const { date, speciesRoutines } = dailyRoutine[di];
       const dayName = DAY_NAMES[date.getDay()];
-      lines.push(`━━━ ${dayName}, ${formatDateBR(date)} ━━━`);
-      lines.push("");
+
+      // Check space
+      const neededH = 12 + speciesRoutines.length * 20;
+      if (y + neededH > pageH - 15) {
+        pdfFooter(doc, pageW, pageH, pageNum, totalPages);
+        doc.addPage();
+        pageNum++;
+        y = pdfHeader(doc, pageW, "Rotina do Tratador (cont.)", periodStr);
+      }
+
+      // Day header
+      doc.setFillColor(...BRAND.dark);
+      doc.roundedRect(10, y, pageW - 20, 8, 1.5, 1.5, "F");
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(`${dayName}, ${formatDateBR(date)}`, 14, y + 5.5);
+      y += 10;
 
       for (const { species: sp, diet } of speciesRoutines) {
-        lines.push(`  ${sp.commonName} (${diet.birdCount} aves)`);
-        lines.push(`     Dieta: ${diet.name}`);
+        if (y + 18 > pageH - 15) {
+          pdfFooter(doc, pageW, pageH, pageNum, totalPages);
+          doc.addPage();
+          pageNum++;
+          y = pdfHeader(doc, pageW, "Rotina do Tratador (cont.)", periodStr);
+        }
+
+        // Species card
+        doc.setFillColor(...BRAND.bg);
+        doc.roundedRect(12, y, pageW - 24, 5, 1, 1, "F");
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...BRAND.dark);
+        doc.text(`${sp.commonName} — ${diet.birdCount} ave${diet.birdCount > 1 ? "s" : ""}`, 15, y + 3.5);
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...BRAND.muted);
+        doc.text(`Dieta: ${diet.name}`, pageW - 15, y + 3.5, { align: "right" });
+        y += 7;
+
         const categories: FoodCategory[] = ["racao", "vegetais", "frutas", "proteicos"];
         for (const cat of categories) {
           if (diet.items[cat].length > 0) {
-            const catItems = diet.items[cat].map(i => `${i.foodName} ${formatWeightShort(i.grams * diet.birdCount)}`).join(", ");
-            lines.push(`     ${CATEGORY_CONFIG[cat].label}: ${catItems}`);
+            const cc = CAT_COLORS[cat];
+            doc.setFillColor(cc.r, cc.g, cc.b);
+            doc.circle(15, y + 1.5, 1, "F");
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(cc.r, cc.g, cc.b);
+            doc.text(CATEGORY_CONFIG[cat].label + ":", 18, y + 2.5);
+            const catItems = diet.items[cat].map(i => `${i.foodName} ${formatWeightShort(i.grams * diet.birdCount)}`).join("  |  ");
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(...BRAND.text);
+            doc.text(catItems, 18 + doc.getTextWidth(CATEGORY_CONFIG[cat].label + ": ") + 1, y + 2.5);
+            y += 4;
           }
         }
-        lines.push("");
+        y += 3;
       }
+      y += 2;
     }
 
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push(`Gerado em ${formatDateBR(new Date())}`);
-
-    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rotina-tratador-${startDate}-a-${endDate}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    pdfFooter(doc, pageW, pageH, pageNum, totalPages);
+    doc.save(`Rotina_Tratador_${startDate}_a_${endDate}.pdf`);
   };
 
-  const exportPrepGuideText = () => {
+  const exportPrepGuidePdf = () => {
     if (!prepGuide || prepGuide.speciesPreps.length === 0) return;
-    const lines: string[] = [];
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
     const dayName = DAY_NAMES[prepGuide.date.getDay()];
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push("  GUIA DE PREPARO — CRIATÓRIO MINAS BIRD");
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push("");
-    lines.push(`Data: ${dayName}, ${formatDateBR(prepGuide.date)}`);
-    lines.push("");
+    const dateStr = `${dayName}, ${formatDateBR(prepGuide.date)}`;
 
-    lines.push("───── INGREDIENTES TOTAIS ─────");
+    let y = pdfHeader(doc, pageW, "Guia de Preparo", dateStr);
+
+    // Consolidated ingredients
+    doc.setFillColor(...BRAND.dark);
+    doc.roundedRect(10, y, pageW - 20, 7, 1.5, 1.5, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("INGREDIENTES TOTAIS", 14, y + 5);
+    y += 9;
+
     const sortedItems = Object.entries(prepGuide.consolidated).sort((a, b) => b[1].totalGrams - a[1].totalGrams);
-    for (const [name, data] of sortedItems) {
-      lines.push(`  • ${name}: ${formatWeight(data.totalGrams)}`);
+    for (let i = 0; i < sortedItems.length; i++) {
+      const [name, data] = sortedItems[i];
+      if (i % 2 === 0) {
+        doc.setFillColor(250, 250, 249);
+        doc.rect(10, y - 1, pageW - 20, 5.5, "F");
+      }
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND.text);
+      doc.text(name, 14, y + 3);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatWeight(data.totalGrams), pageW - 14, y + 3, { align: "right" });
+      y += 5.5;
     }
-    lines.push("");
+    y += 5;
 
-    lines.push("───── PREPARO POR ESPÉCIE ─────");
+    // Per species
+    doc.setFillColor(...BRAND.medium);
+    doc.roundedRect(10, y, pageW - 20, 7, 1.5, 1.5, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("PREPARO POR ESPÉCIE", 14, y + 5);
+    y += 9;
+
     for (const { species: sp, diet } of prepGuide.speciesPreps) {
-      lines.push("");
-      lines.push(`  ${sp.commonName} — ${diet.birdCount} aves`);
+      if (y + 20 > pageH - 15) {
+        pdfFooter(doc, pageW, pageH);
+        doc.addPage();
+        y = pdfHeader(doc, pageW, "Guia de Preparo (cont.)", dateStr);
+      }
+
+      doc.setFillColor(...BRAND.bg);
+      doc.roundedRect(12, y, pageW - 24, 6, 1, 1, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BRAND.dark);
+      doc.text(`${sp.commonName} — ${diet.birdCount} ave${diet.birdCount > 1 ? "s" : ""}`, 15, y + 4);
+      y += 8;
+
       const categories: FoodCategory[] = ["racao", "vegetais", "frutas", "proteicos"];
       for (const cat of categories) {
         if (diet.items[cat].length > 0) {
-          lines.push(`     ${CATEGORY_CONFIG[cat].label}:`);
+          const cc = CAT_COLORS[cat];
+          doc.setFontSize(7.5);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(cc.r, cc.g, cc.b);
+          doc.text(CATEGORY_CONFIG[cat].label, 15, y + 2.5);
+          y += 4;
+
           for (const item of diet.items[cat]) {
-            lines.push(`       • ${item.foodName}: ${formatWeightShort(item.grams)} por ave — ${formatWeightShort(item.grams * diet.birdCount)} total`);
+            if (y + 5 > pageH - 15) {
+              pdfFooter(doc, pageW, pageH);
+              doc.addPage();
+              y = pdfHeader(doc, pageW, "Guia de Preparo (cont.)", dateStr);
+            }
+            doc.setFontSize(7.5);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(...BRAND.text);
+            doc.text(`• ${item.foodName}`, 18, y + 2.5);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${formatWeightShort(item.grams)}/ave — ${formatWeightShort(item.grams * diet.birdCount)} total`, pageW - 14, y + 2.5, { align: "right" });
+            y += 4.5;
           }
         }
       }
+      y += 4;
     }
 
-    lines.push("");
-    lines.push("═══════════════════════════════════════════════════");
-    lines.push(`Gerado em ${formatDateBR(new Date())}`);
-
-    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `guia-preparo-${singleDate}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    pdfFooter(doc, pageW, pageH);
+    doc.save(`Guia_Preparo_${singleDate}.pdf`);
   };
 
   // ============================================
@@ -642,11 +839,11 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
                     </span>
                   </div>
                   <button
-                    onClick={exportShoppingListText}
+                    onClick={exportShoppingListPdf}
                     className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Exportar
+                    Exportar PDF
                   </button>
                 </div>
 
@@ -709,11 +906,11 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
                     </span>
                   </div>
                   <button
-                    onClick={exportRoutineText}
+                    onClick={exportRoutinePdf}
                     className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Exportar
+                    Exportar PDF
                   </button>
                 </div>
 
@@ -800,11 +997,11 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
                     </span>
                   </div>
                   <button
-                    onClick={exportPrepGuideText}
+                    onClick={exportPrepGuidePdf}
                     className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Exportar
+                    Exportar PDF
                   </button>
                 </div>
 
