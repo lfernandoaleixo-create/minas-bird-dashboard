@@ -39,3 +39,8 @@
 - [x] Bug: dias do calendário não desmarcam ao clicar (Ringneck tem dias que não saem) — corrigido legacyKey + clique direto remove
 - [x] Aumentar letras do nome da dieta — fontes maiores, ração em extrabold amber-800, obs em extrabold emerald-700
 - [x] Padronizar estética do nome da dieta no calendário — DietNameStyled usado em todos os 8 locais
+- [x] Cards operacionais: copiar seletores de espécie, período e datas do card Exportar (mesma estética)
+- [x] Cards operacionais: remover símbolo de ticket/checkbox do card Lista de Compras
+- [x] Cards operacionais: aumentar fontes, nada de letras pequenas e apagadas
+- [x] Cards operacionais: padronizar casas decimais dos pesos — sem abreviações, regra única
+- [x] Cards operacionais: melhorar estética geral para fácil visualização
