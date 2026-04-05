@@ -347,19 +347,74 @@ export const feedingToPetbirdId: Record<string, string> = {
 export type LifePeriodId = typeof lifePeriods[number]["id"];
 export type EnclosureTypeId = typeof enclosureTypes[number]["id"];
 
-// K factor based on metabolism
-const K_FACTORS: Record<string, number> = {
-  "Passeriforme": 130,
-  "Normal": 110,
-  "Baixo": 100,
+/**
+ * K factor lookup table extracted from DietBirdPet (nutriaves-backend).
+ * K factors are indexed by [metabolism][enclosureId].
+ * Formula: MER = K * (weight_kg)^0.75
+ *
+ * These values were reverse-engineered from the DietBirdPet API by:
+ * 1. Creating diets for species with known metabolism types
+ * 2. Using a single food (High Protein Psittacus, 3050 kcal/kg) with 0% waste
+ * 3. Computing K = (food_grams * energy_per_gram) / (weight_kg^0.75)
+ *
+ * Normal metabolism: validated with Ringneck (128g)
+ * Aumentado metabolism: validated with Calopsita (90g)
+ */
+const K_FACTOR_TABLE: Record<string, Record<string, number>> = {
+  "Normal": {
+    "gaiola-interna":              161.05,
+    "gaiola-externa-verao":        189.56,
+    "gaiola-externa-inverno":      212.65,
+    "viveiro-voo-interno":         184.00,
+    "viveiro-voo-externo-verao":   212.51,
+    "viveiro-voo-externo-inverno": 235.59,
+    "vida-livre":                  238.87,
+  },
+  "Aumentado": {
+    "gaiola-interna":              176.52,
+    "gaiola-externa-verao":        204.92,
+    "gaiola-externa-inverno":      227.94,
+    "viveiro-voo-interno":         199.54,
+    "viveiro-voo-externo-verao":   227.75,
+    "viveiro-voo-externo-inverno": 250.95,
+    "vida-livre":                  254.11,
+  },
 };
 
-// Calculate MER (Maintenance Energy Requirement) in kcal/day
-export function calculateMER(weightG: number, metabolism: string, phaseMultiplier: number, enclosureMultiplier: number): number {
+// Default K factor for viveiro-voo-interno (most common enclosure) as fallback
+const DEFAULT_K_NORMAL = 184.00;
+const DEFAULT_K_AUMENTADO = 199.54;
+
+/**
+ * Get the K factor for a given metabolism type and enclosure.
+ * Returns the exact K value from the DietBirdPet lookup table.
+ */
+export function getKFactor(metabolism: string, enclosureId: string): number {
+  const metabolismTable = K_FACTOR_TABLE[metabolism];
+  if (!metabolismTable) {
+    // Fallback: use Normal table if metabolism unknown
+    const fallbackTable = K_FACTOR_TABLE["Normal"];
+    return fallbackTable[enclosureId] ?? DEFAULT_K_NORMAL;
+  }
+  return metabolismTable[enclosureId] ?? (metabolism === "Aumentado" ? DEFAULT_K_AUMENTADO : DEFAULT_K_NORMAL);
+}
+
+/**
+ * Calculate MER (Maintenance Energy Requirement) in kcal/day.
+ *
+ * Uses the DietBirdPet K factor lookup table for base MER calculation.
+ * Phase multiplier is applied on top for non-maintenance periods.
+ *
+ * @param weightG - Bird weight in grams
+ * @param metabolism - Metabolism type ("Normal" or "Aumentado")
+ * @param phaseMultiplier - Life period multiplier (1.0 for maintenance)
+ * @param enclosureId - Enclosure type ID (e.g., "viveiro-voo-interno")
+ */
+export function calculateMER(weightG: number, metabolism: string, phaseMultiplier: number, enclosureId: string): number {
   const weightKg = weightG / 1000;
-  const k = K_FACTORS[metabolism] || 110;
+  const k = getKFactor(metabolism, enclosureId);
   const baseMER = k * Math.pow(weightKg, 0.75);
-  return baseMER * phaseMultiplier * enclosureMultiplier;
+  return baseMER * phaseMultiplier;
 }
 
 // Calculate grams needed for a food to provide targetKcal

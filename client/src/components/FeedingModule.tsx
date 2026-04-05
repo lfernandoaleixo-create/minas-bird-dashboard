@@ -166,7 +166,7 @@ export default function FeedingModule() {
 
   const mer = useMemo(() => {
     if (!birdData || weight <= 0) return 0;
-    return calculateMER(weight, birdData.metabolism, phase.multiplier, enclosure.multiplier);
+    return calculateMER(weight, birdData.metabolism, phase.multiplier, enclosure.id);
   }, [birdData, weight, phase, enclosure]);
 
   const breakdown = useMemo(() => birdData?.dietBreakdown || { ap: 70, vegetais: 15, frutas: 10, proteico: 5 }, [birdData]);

@@ -19,3 +19,5 @@
 - [x] Rotina Diária do Tratador: seletor de período + espécie(s), resumo dia a dia do que fazer
 - [x] Guia de Preparo: seletor de dia + espécie(s), organiza preparo dos alimentos
 - [x] Bug: botão de editar dieta não funciona — investigar e corrigir todos os botões de ação
+- [x] Bug CRÍTICO: cálculo nutricional incorreto — Ringneck com High Protein mostra 8.4g no nosso sistema vs 15.19g no DietBirdPet
+- [x] K factors extraídos diretamente da API do DietBirdPet e validados com 46 testes automatizados
