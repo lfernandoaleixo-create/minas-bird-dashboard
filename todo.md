@@ -60,3 +60,4 @@
 - [x] Interface: painel verde de recomendações por espécie visível ao selecionar espécie na calculadora
 - [x] Interface: seção colapsável de alimentos tóxicos com categorias Fatal/Grave/Inadequado
 - [x] Notas de segurança em alimentos críticos (maçã: remover sementes, girassol: nunca como base, etc.)
+- [x] Expandir lista de vegetais/frutas/proteínas na calculadora para incluir TODOS os alimentos seguros dos 5 volumes — remover apenas perigosos e fatais
