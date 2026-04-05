@@ -27,3 +27,12 @@
 - [x] Validar cálculos nutricionais para TODAS as 36 espécies do plantel contra o DietBirdPet
 - [x] 110 testes automatizados passando (10 cross-checks DietBirdPet + 72 sanity checks + 28 unit tests)
 - [x] Adicionar nome da ração ao prefixo automático do nome da dieta: "Ave — Fase — Ambiente — Ração" + observações
+- [x] Card Dietas Salvas: aumentar letras, mostrar qtd de dietas e aves
+- [x] Nomes de dieta na aba principal: letras maiores e ênfase na parte escrita pelo usuário
+- [x] Card Exportar Calendários: filtro por espécie e período (mês atual, etc.)
+- [x] Bug: um dos cards/botões de salvar dieta não está funcionando (investigado — botão funciona quando dieta está completa)
+- [x] Calendário: toggle de dias (clicar em dia selecionado desmarca)
+- [x] Calendário: opção de selecionar mês inteiro em cada mês
+- [x] Destacar nome da ração e observações do usuário em todos os locais (letras maiores, outra cor)
+- [x] Card exportar calendários: toggle Todos (marcar/desmarcar todos)
+- [x] Card exportar calendários: seletor de data específica além dos períodos pré-definidos

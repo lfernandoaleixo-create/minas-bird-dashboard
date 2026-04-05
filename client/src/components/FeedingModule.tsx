@@ -36,6 +36,41 @@ import { toast } from "sonner";
 
 const HERO_IMAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/hero-alimentacao-9qkdhc8VaTxqHLKvqK3hAv.webp";
 
+/** Renderiza o nome da dieta com destaque na ração e observações do usuário */
+function DietNameStyled({ name, size = "sm" }: { name: string; size?: "xs" | "sm" | "md" | "lg" }) {
+  const parts = name.split(" \u2014 ");
+  // Formato: Ave — Fase — Ambiente — Ração — observações
+  const prefix = parts.slice(0, 3).join(" \u2014 "); // Ave — Fase — Ambiente
+  const racao = parts[3] || "";
+  const obs = parts.length >= 5 ? parts.slice(4).join(" \u2014 ") : "";
+
+  const sizeMap = {
+    xs: { prefix: "text-[10px]", racao: "text-[11px]", obs: "text-[11px]" },
+    sm: { prefix: "text-xs", racao: "text-sm", obs: "text-sm" },
+    md: { prefix: "text-sm", racao: "text-base", obs: "text-base" },
+    lg: { prefix: "text-base", racao: "text-lg", obs: "text-lg" },
+  };
+  const s = sizeMap[size];
+
+  return (
+    <span className="inline">
+      <span className={cn(s.prefix, "text-stone-400 font-normal")}>{prefix}</span>
+      {racao && (
+        <>
+          <span className={cn(s.prefix, "text-stone-300")}> \u2014 </span>
+          <span className={cn(s.racao, "font-bold text-amber-700")}>{racao}</span>
+        </>
+      )}
+      {obs && (
+        <>
+          <span className={cn(s.prefix, "text-stone-300")}> \u2014 </span>
+          <span className={cn(s.obs, "font-bold text-emerald-700")}>{obs}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 // ============================================
 // TYPES & CONSTANTS
 // ============================================
@@ -144,6 +179,11 @@ export default function FeedingModule() {
 
   // --- Saved diets list (from server via tRPC) ---
   const [savedDietsFilter, setSavedDietsFilter] = useState("");
+  const [exportSpeciesIds, setExportSpeciesIds] = useState<string[]>([]);
+  const [exportPeriod, setExportPeriod] = useState("full-year");
+  const [exportCustomMonths, setExportCustomMonths] = useState<number[]>([]);
+  const [exportDateFrom, setExportDateFrom] = useState("");
+  const [exportDateTo, setExportDateTo] = useState("");
   const dietsQuery = trpc.diet.list.useQuery();
   const calendarQuery = trpc.calendar.getAll.useQuery();
   const savedDiets: SavedDiet[] = dietsQuery.data ?? [];
@@ -631,14 +671,20 @@ export default function FeedingModule() {
               onClick={() => {
                 setDietMode("saved-list");
               }}
-              className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50/50 hover:bg-stone-100 hover:border-stone-400 transition-all group"
+              className="flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50/50 hover:bg-stone-100 hover:border-stone-400 transition-all group"
             >
-              <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center group-hover:bg-stone-200 transition-colors flex-shrink-0">
-                <FolderOpen className="w-4 h-4 text-stone-600" />
+              <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center group-hover:bg-stone-200 transition-colors flex-shrink-0">
+                <FolderOpen className="w-5 h-5 text-stone-600" />
               </div>
-              <div className="text-left">
-                <span className="font-semibold text-stone-800 block text-sm">Dietas Salvas</span>
-                <span className="text-[11px] text-stone-500">Ver por espécie</span>
+              <div className="text-left flex-1">
+                <span className="font-bold text-stone-800 block text-base">Dietas Salvas</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-stone-500 font-medium">{savedDiets.length} dieta{savedDiets.length !== 1 ? "s" : ""}</span>
+                  <span className="text-stone-300">·</span>
+                  <span className="text-xs text-blue-600 font-medium flex items-center gap-0.5">
+                    <Users className="w-3 h-3" />{savedDiets.reduce((s, d) => s + d.birdCount, 0)} ave{savedDiets.reduce((s, d) => s + d.birdCount, 0) !== 1 ? "s" : ""}
+                  </span>
+                </div>
               </div>
             </button>
           </div>
@@ -709,30 +755,44 @@ export default function FeedingModule() {
                   onClick={toggleExpand}
                   className="w-full p-5 border-b border-stone-100 text-left hover:bg-stone-50 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
-                    <Bird className="w-5 h-5 text-emerald-600" />
-                    <h2 className="font-bold text-stone-800">{speciesName}</h2>
-                    <span className="text-xs text-stone-400">Registro de Alimentação {calendarYear}</span>
-                    <span className="text-[11px] text-stone-400 ml-1">({dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""})</span>
-                    {totalAssigned > 0 && (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
-                        {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
-                      </span>
-                    )}
-                    <span className="ml-auto">
+                  <div className="flex items-center gap-3">
+                    <Bird className="w-6 h-6 text-emerald-600" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-lg font-bold text-stone-800">{speciesName}</h2>
+                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">
+                          {dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""}
+                        </span>
+                        {(() => {
+                          const totalBirds = dietsForSpecies.reduce((sum, d) => sum + d.birdCount, 0);
+                          return (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                              <Users className="w-3 h-3" />{totalBirds} ave{totalBirds > 1 ? "s" : ""}
+                            </span>
+                          );
+                        })()}
+                        {totalAssigned > 0 && (
+                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
+                            {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-stone-400 mt-0.5 block">Registro de Alimentação {calendarYear}</span>
+                    </div>
+                    <span className="ml-auto flex-shrink-0">
                       {isExpanded
                         ? <ChevronDown className="w-5 h-5 text-stone-400" />
                         : <ChevronRight className="w-5 h-5 text-stone-400" />}
                     </span>
                   </div>
                   {!isExpanded && (
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {dietsForSpecies.map(diet => {
                         const color = dietColorMap.get(diet.id)!;
                         return (
-                          <span key={diet.id} className="flex items-center gap-1">
-                            <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
-                            <span className="text-[11px] text-stone-600">{diet.name}</span>
+                          <span key={diet.id} className="flex items-center gap-1.5 bg-stone-50 px-2 py-1 rounded-md">
+                            <span className={cn("w-3 h-3 rounded-sm", color.bg)} />
+                            <DietNameStyled name={diet.name} size="xs" />
                           </span>
                         );
                       })}
@@ -813,7 +873,7 @@ export default function FeedingModule() {
                           <CalendarDays className="w-4 h-4 text-blue-600" />
                           <span className="text-sm font-bold text-stone-800">{dayNum} de {monthName}</span>
                           {color && <span className={cn("w-3 h-3 rounded-sm", color.bg)} />}
-                          <span className="text-sm font-medium text-blue-700">{dayDetailDiet.name}</span>
+                          <DietNameStyled name={dayDetailDiet.name} size="sm" />
                         </div>
                         <button
                           type="button"
@@ -907,8 +967,39 @@ export default function FeedingModule() {
 
                       return (
                         <div key={month} className="border border-stone-200 rounded-lg overflow-hidden">
-                          <div className="bg-stone-50 px-3 py-1.5 border-b border-stone-200">
+                          <div className="bg-stone-50 px-3 py-1.5 border-b border-stone-200 flex items-center justify-between">
                             <span className="text-xs font-bold text-stone-700">{MONTH_NAMES_FULL[monthIdx]}</span>
+                            {activePaintDiet && (() => {
+                              const allDaysInMonth = Array.from({ length: daysInMonth }, (_, i) => `${calendarYear}-${month}-${i + 1}`);
+                              const allAssigned = allDaysInMonth.every(dk => (calendarForSpecies[dk] || calendarForSpecies[`${month}-${dk.split('-')[2]}`]) === activePaintDiet);
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (allAssigned) {
+                                      // Desmarcar mês inteiro
+                                      allDaysInMonth.forEach(dk => removeDayMut.mutate({ speciesId, dayKey: dk }));
+                                    } else {
+                                      // Marcar mês inteiro
+                                      allDaysInMonth.forEach(dk => {
+                                        const existing = calendarForSpecies[dk] || calendarForSpecies[`${month}-${dk.split('-')[2]}`];
+                                        if (existing !== activePaintDiet) {
+                                          assignDayMut.mutate({ speciesId, dayKey: dk, dietId: activePaintDiet });
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  className={cn(
+                                    "text-[10px] font-semibold px-2 py-0.5 rounded transition-colors",
+                                    allAssigned
+                                      ? "bg-red-100 text-red-700 hover:bg-red-200"
+                                      : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                  )}
+                                >
+                                  {allAssigned ? "Limpar mês" : "Mês inteiro"}
+                                </button>
+                              );
+                            })()}
                           </div>
                           <div className="p-2">
                             {/* Dias da semana header */}
@@ -943,15 +1034,15 @@ export default function FeedingModule() {
                                       if (isActivePaintTarget && activePaintDiet) {
                                         // Modo pintura: atribuir ou remover dieta
                                         if (assignedDietId === activePaintDiet) {
-                                          // Remover
                                           removeDayMut.mutate({ speciesId, dayKey });
                                         } else {
-                                          // Atribuir
                                           assignDayMut.mutate({ speciesId, dayKey, dietId: activePaintDiet });
                                         }
                                       } else if (assignedDiet) {
-                                        // Modo visualização: mostrar resumo da dieta
+                                        // Dia já selecionado: toggle — clique mostra detalhes, segundo clique remove
                                         if (isViewingThisDay) {
+                                          // Segundo clique: remover a atribuição do dia
+                                          removeDayMut.mutate({ speciesId, dayKey });
                                           setDayDetailDiet(null);
                                           setDayDetailKey("");
                                         } else {
@@ -1017,7 +1108,7 @@ export default function FeedingModule() {
                     return (
                       <span key={diet.id} className="flex items-center gap-1">
                         <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
-                        {diet.name}
+                        <DietNameStyled name={diet.name} size="xs" />
                       </span>
                     );
                   })}
@@ -1047,22 +1138,26 @@ export default function FeedingModule() {
                     const color = dietColorMap.get(diet.id)!;
                     const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;
                     return (
-                      <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-b-0">
+                      <div key={diet.id} className="px-5 py-3.5 hover:bg-stone-50 transition-colors border-b border-stone-100 last:border-b-0">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className={cn("w-2.5 h-2.5 rounded-sm flex-shrink-0", color.bg)} />
-                            <h4 className="font-medium text-stone-800 text-sm truncate">{diet.name}</h4>
-                            {diet.birdCount > 1 && (
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", color.bg)} />
+                              <h4 className="text-base font-semibold truncate">
+                                <DietNameStyled name={diet.name} size="md" />
+                              </h4>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 ml-5">
                               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                                <Users className="w-3 h-3" />{diet.birdCount}
+                                <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}
                               </span>
-                            )}
-                            <span className="text-[11px] text-stone-400">{diet.totalGrams.toFixed(1)}g/ave</span>
-                            {assignedCount > 0 && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
-                                {assignedCount} dia{assignedCount > 1 ? "s" : ""}
-                              </span>
-                            )}
+                              <span className="text-xs text-stone-500 font-medium">{diet.totalGrams.toFixed(1)}g/ave</span>
+                              {assignedCount > 0 && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
+                                  {assignedCount} dia{assignedCount > 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-1 ml-3">
                             <button
@@ -1113,26 +1208,210 @@ export default function FeedingModule() {
           });
         })()}
 
-        {/* Botão de exportar todos os calendários em PDF */}
-        {savedDiets.length > 0 && (
-          <div className="flex justify-center">
-            <button
-              onClick={() => {
-                exportAllCalendarsPdf(
-                  calendarYear,
-                  activeFlockSpecies.map(sp => ({ id: sp.id, commonName: sp.commonName })),
-                  savedDiets,
-                  speciesCalendars,
-                );
-                toast.success("PDF completo exportado com sucesso!");
-              }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
-            >
-              <FileDown className="w-4 h-4" />
-              Exportar Todos os Calendários em PDF ({calendarYear})
-            </button>
-          </div>
-        )}
+        {/* Card de exportar calendários em PDF com filtros */}
+        {savedDiets.length > 0 && (() => {
+          const speciesWithDiets = activeFlockSpecies.filter(sp =>
+            savedDiets.some(d => d.speciesId === sp.id) || Object.keys(speciesCalendars[sp.id] || {}).length > 0
+          );
+          const now = new Date();
+          const currentMonth = now.getMonth() + 1;
+          return (
+            <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <FileDown className="w-4 h-4 text-indigo-700" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-stone-800">Exportar Calendários em PDF</h3>
+                  <p className="text-xs text-stone-500">Escolha espécies e período para exportar</p>
+                </div>
+              </div>
+
+              {/* Seletor de espécie */}
+              <div className="mb-3">
+                <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Espécies</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => {
+                      // Toggle: se todas selecionadas, desmarcar todas; senão, marcar todas
+                      if (exportSpeciesIds.length === speciesWithDiets.length) {
+                        setExportSpeciesIds([]);
+                      } else {
+                        setExportSpeciesIds(speciesWithDiets.map(s => s.id));
+                      }
+                    }}
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
+                      exportSpeciesIds.length === speciesWithDiets.length
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white text-stone-600 border-stone-200 hover:border-indigo-300"
+                    )}
+                  >
+                    {exportSpeciesIds.length === speciesWithDiets.length ? "✓ Todas" : "Todas"} ({speciesWithDiets.length})
+                  </button>
+                  {speciesWithDiets.map(sp => {
+                    const isSelected = exportSpeciesIds.includes(sp.id);
+                    return (
+                      <button
+                        key={sp.id}
+                        onClick={() => {
+                          setExportSpeciesIds(prev =>
+                            isSelected ? prev.filter(id => id !== sp.id) : [...prev, sp.id]
+                          );
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
+                          isSelected
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-white text-stone-600 border-stone-200 hover:border-emerald-300"
+                        )}
+                      >
+                        {isSelected ? "✓ " : ""}{sp.commonName}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Seletor de período */}
+              <div className="mb-3">
+                <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Período Predefinido</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "Ano Inteiro", value: "full-year" },
+                    { label: "Mês Atual", value: "current-month" },
+                    { label: "Próx. 3 Meses", value: "next-3" },
+                    { label: "Próx. 6 Meses", value: "next-6" },
+                    { label: "1º Semestre", value: "sem-1" },
+                    { label: "2º Semestre", value: "sem-2" },
+                    { label: "Personalizado", value: "custom" },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setExportPeriod(opt.value)}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
+                        exportPeriod === opt.value
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-stone-600 border-stone-200 hover:border-indigo-300"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seletor de meses específicos (quando Personalizado) */}
+              {exportPeriod === "custom" && (
+                <div className="mb-3 p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Selecione os meses</label>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                    {["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"].map((m, i) => {
+                      const monthNum = i + 1;
+                      const isSelected = (exportCustomMonths || []).includes(monthNum);
+                      return (
+                        <button
+                          key={monthNum}
+                          onClick={() => {
+                            setExportCustomMonths(prev => {
+                              const current = prev || [];
+                              return isSelected ? current.filter(n => n !== monthNum) : [...current, monthNum].sort((a,b) => a-b);
+                            });
+                          }}
+                          className={cn(
+                            "px-2 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                            isSelected
+                              ? "bg-indigo-600 text-white border-indigo-600"
+                              : "bg-white text-stone-600 border-stone-200 hover:border-indigo-300"
+                          )}
+                        >
+                          {m}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Seletor de data específica (range) */}
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Ou selecione datas específicas</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={exportDateFrom || ""}
+                    onChange={(e) => {
+                      setExportDateFrom(e.target.value);
+                      if (e.target.value) setExportPeriod("date-range");
+                    }}
+                    className="px-2.5 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                  <span className="text-xs text-stone-400">até</span>
+                  <input
+                    type="date"
+                    value={exportDateTo || ""}
+                    onChange={(e) => {
+                      setExportDateTo(e.target.value);
+                      if (e.target.value) setExportPeriod("date-range");
+                    }}
+                    className="px-2.5 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                  {exportPeriod === "date-range" && (
+                    <button
+                      onClick={() => { setExportDateFrom(""); setExportDateTo(""); setExportPeriod("full-year"); }}
+                      className="text-[10px] text-red-500 hover:text-red-700 font-medium"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Botão de exportar */}
+              <button
+                disabled={exportSpeciesIds.length === 0}
+                onClick={() => {
+                  let months: number[];
+                  switch (exportPeriod) {
+                    case "current-month": months = [currentMonth]; break;
+                    case "next-3": months = Array.from({ length: 3 }, (_, i) => ((currentMonth - 1 + i) % 12) + 1); break;
+                    case "next-6": months = Array.from({ length: 6 }, (_, i) => ((currentMonth - 1 + i) % 12) + 1); break;
+                    case "sem-1": months = [1, 2, 3, 4, 5, 6]; break;
+                    case "sem-2": months = [7, 8, 9, 10, 11, 12]; break;
+                    case "custom": months = exportCustomMonths.length > 0 ? exportCustomMonths : Array.from({ length: 12 }, (_, i) => i + 1); break;
+                    case "date-range": {
+                      // Extrair meses do range de datas
+                      if (exportDateFrom && exportDateTo) {
+                        const fromMonth = parseInt(exportDateFrom.split("-")[1]);
+                        const toMonth = parseInt(exportDateTo.split("-")[1]);
+                        months = [];
+                        for (let m = fromMonth; m <= toMonth; m++) months.push(m);
+                      } else {
+                        months = Array.from({ length: 12 }, (_, i) => i + 1);
+                      }
+                      break;
+                    }
+                    default: months = Array.from({ length: 12 }, (_, i) => i + 1);
+                  }
+                  const filteredSpecies = speciesWithDiets.filter(sp => exportSpeciesIds.includes(sp.id));
+                  exportAllCalendarsPdf(
+                    calendarYear,
+                    filteredSpecies.map(sp => ({ id: sp.id, commonName: sp.commonName })),
+                    savedDiets,
+                    speciesCalendars,
+                    months,
+                  );
+                  toast.success(`PDF exportado com ${filteredSpecies.length} espécie${filteredSpecies.length > 1 ? "s" : ""}!`);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                <FileDown className="w-4 h-4" />
+                Exportar PDF {exportSpeciesIds.length > 0 ? `(${exportSpeciesIds.length} espécie${exportSpeciesIds.length > 1 ? "s" : ""})` : ""}
+              </button>
+            </div>
+          );
+        })()}
 
         {/* ===== FERRAMENTAS OPERACIONAIS ===== */}
         {savedDiets.length > 0 && (
@@ -1149,14 +1428,17 @@ export default function FeedingModule() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-stone-100">
-              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <button onClick={() => setDietMode("menu")} className="text-stone-400 hover:text-stone-600 transition-colors">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <FolderOpen className="w-5 h-5 text-stone-600" />
-                  <h2 className="font-bold text-stone-800">Dietas Salvas</h2>
-                  <span className="text-xs text-stone-400">({savedDiets.length})</span>
+                  <h2 className="text-lg font-bold text-stone-800">Dietas Salvas</h2>
+                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">{savedDiets.length} dieta{savedDiets.length !== 1 ? "s" : ""}</span>
+                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                    <Users className="w-3 h-3" />{savedDiets.reduce((s, d) => s + d.birdCount, 0)} ave{savedDiets.reduce((s, d) => s + d.birdCount, 0) !== 1 ? "s" : ""}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1224,14 +1506,12 @@ export default function FeedingModule() {
                         className="w-full px-5 py-3 bg-stone-50 hover:bg-stone-100 transition-colors text-left"
                       >
                         <div className="flex items-center gap-2">
-                          <Bird className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">{sp.commonName}</span>
-                          <span className="text-[10px] text-stone-400">({dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""})</span>
-                          {sp.currentCount > 0 && (
-                            <span className="text-[10px] text-stone-400 flex items-center gap-0.5">
-                              <Users className="w-3 h-3" />{sp.currentCount}
-                            </span>
-                          )}
+                          <Bird className="w-4 h-4 text-emerald-600" />
+                          <span className="text-sm font-bold text-stone-700">{sp.commonName}</span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-stone-200 text-stone-600">{dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""}</span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                            <Users className="w-3 h-3" />{dietsForSp.reduce((s, d) => s + d.birdCount, 0)} ave{dietsForSp.reduce((s, d) => s + d.birdCount, 0) !== 1 ? "s" : ""}
+                          </span>
                           <span className="ml-auto">
                             {isExpanded
                               ? <ChevronDown className="w-4 h-4 text-stone-400" />
@@ -1261,18 +1541,18 @@ export default function FeedingModule() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <h4 className="font-medium text-stone-800 text-sm truncate">{diet.name}</h4>
-                                      {diet.birdCount > 1 && (
-                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                                          <Users className="w-3 h-3" />{diet.birdCount}
-                                        </span>
-                                      )}
+                                      <h4 className="text-sm font-semibold truncate">
+                                        <DietNameStyled name={diet.name} size="sm" />
+                                      </h4>
                                     </div>
                                     <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
+                                      <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-0.5">
+                                        <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}
+                                      </span>
                                       <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 font-medium text-[10px]">
                                         {lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId}
                                       </span>
-                                      <span>{diet.totalGrams.toFixed(1)}g/ave</span>
+                                      <span className="font-medium text-stone-500">{diet.totalGrams.toFixed(1)}g/ave</span>
                                       <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
                                       {(() => {
                                         const cal = speciesCalendars[diet.speciesId] || {};
@@ -1358,7 +1638,7 @@ export default function FeedingModule() {
                 <button onClick={() => setDietMode("saved-list")} className="text-stone-400 hover:text-stone-600 transition-colors">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
-                <h2 className="font-bold text-stone-800">{viewingDiet.name}</h2>
+                <h2 className="font-bold"><DietNameStyled name={viewingDiet.name} size="lg" /></h2>
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => loadDietForEditing(viewingDiet)} className="px-3 py-1.5 text-xs bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors flex items-center gap-1">

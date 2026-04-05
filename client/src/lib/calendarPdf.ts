@@ -200,7 +200,9 @@ export function exportAllCalendarsPdf(
   speciesList: { id: string; commonName: string }[],
   allDiets: SavedDiet[],
   allCalendars: Record<string, Record<string, string>>,
+  months?: number[],
 ): void {
+  const activeMonths = months && months.length > 0 ? months : Array.from({ length: 12 }, (_, i) => i + 1);
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -243,16 +245,18 @@ export function exportAllCalendarsPdf(
     doc.text(`Criatório Minas Bird — Gerado em ${new Date().toLocaleDateString("pt-BR")}`, pageW / 2, 19, { align: "center" });
     doc.setTextColor(0, 0, 0);
 
-    const cols = 4;
-    const rows = 3;
+    const monthCount = activeMonths.length;
+    const cols = monthCount <= 1 ? 1 : monthCount <= 4 ? 2 : monthCount <= 6 ? 3 : 4;
+    const rows = Math.ceil(monthCount / cols);
     const marginX = 8;
     const marginY = 22;
     const cellW = (pageW - marginX * 2) / cols;
-    const cellH = (pageH - marginY - 8) / rows;
+    const cellH = (pageH - marginY - 8) / Math.max(rows, 1);
 
-    for (let month = 1; month <= 12; month++) {
-      const col = (month - 1) % cols;
-      const row = Math.floor((month - 1) / cols);
+    for (let mi = 0; mi < activeMonths.length; mi++) {
+      const month = activeMonths[mi];
+      const col = mi % cols;
+      const row = Math.floor(mi / cols);
       const x = marginX + col * cellW;
       const y = marginY + row * cellH;
 
