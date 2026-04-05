@@ -32,6 +32,7 @@ import {
 import { exportDietAsText, generateDietId, type SavedDiet } from "@/lib/dietStorage";
 import { exportCalendarPdf, exportAllCalendarsPdf } from "@/lib/calendarPdf";
 import OperationalTools from "@/components/OperationalTools";
+import ToxicPoster from "@/components/ToxicPoster";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -110,9 +111,28 @@ const BAR_COLORS = {
 // ============================================
 // HELPERS
 // ============================================
-function sortFoods(items: FoodItem[]): FoodItem[] {
+/** Retorna nomes de alimentos prioritários para a espécie selecionada (Vol.5) */
+function getRecommendedFoodNames(speciesGroup: string | undefined): string[] {
+  if (!speciesGroup) return [];
+  const groupId = speciesGroup.toLowerCase().replace(/[\s\/]+/g, "_");
+  const rec = groupFoodRecommendations.find(r => r.groupId === groupId);
+  return rec?.priorityFoods || [];
+}
+
+/** Verifica se um alimento é recomendado para a espécie (match parcial no nome) */
+function isFoodRecommended(food: FoodItem, recommendedNames: string[]): boolean {
+  if (recommendedNames.length === 0) return false;
+  const foodLower = food.name.toLowerCase();
+  return recommendedNames.some(rec => foodLower.includes(rec.toLowerCase()));
+}
+
+function sortFoods(items: FoodItem[], recommendedNames: string[] = []): FoodItem[] {
   const order: Record<string, number> = { "Melhores": 0, "Bons": 1, "Boas": 1, "Pobres": 2, "Inadequado": 3 };
   return [...items].sort((a, b) => {
+    // Recomendados primeiro
+    const aRec = isFoodRecommended(a, recommendedNames) ? 0 : 1;
+    const bRec = isFoodRecommended(b, recommendedNames) ? 0 : 1;
+    if (aRec !== bRec) return aRec - bRec;
     const oa = order[a.classification] ?? 1;
     const ob = order[b.classification] ?? 1;
     if (oa !== ob) return oa - ob;
@@ -1455,6 +1475,9 @@ export default function FeedingModule() {
             speciesCalendars={speciesCalendars}
           />
         )}
+
+        {/* ===== CARTAZ DE ALIMENTOS TÓXICOS ===== */}
+        <ToxicPoster />
         </>
       )}
 
@@ -2314,13 +2337,14 @@ export default function FeedingModule() {
               unlocked={unlockedSteps.has("racao")}
               expanded={expandedStep === "racao"}
               onToggle={() => setExpandedStep(expandedStep === "racao" ? null : "racao")}
-              foods={sortFoods(filteredRacoes)}
+              foods={sortFoods(filteredRacoes, getRecommendedFoodNames(selectedSpecies?.group))}
               search={racaoSearch} onSearchChange={setRacaoSearch}
               selectedSingle={selectedRacao}
               onSelectSingle={(food) => { setSelectedRacao(food); setExpandedStep("vegetais"); }}
               nossaDieta={nossaDieta}
               idealDiet={idealDiet}
               groupKey="ap"
+              recommendedNames={getRecommendedFoodNames(selectedSpecies?.group)}
             />
           </div>
 
@@ -2331,7 +2355,7 @@ export default function FeedingModule() {
               unlocked={unlockedSteps.has("vegetais")}
               expanded={expandedStep === "vegetais"}
               onToggle={() => setExpandedStep(expandedStep === "vegetais" ? null : "vegetais")}
-              foods={sortFoods(vegetais)}
+              foods={sortFoods(vegetais, getRecommendedFoodNames(selectedSpecies?.group))}
               search={vegetaisSearch} onSearchChange={setVegetaisSearch}
               selectedMultiple={selectedVegetais}
               onToggleMultiple={(food) => toggleFood(setSelectedVegetais, food)}
@@ -2340,6 +2364,7 @@ export default function FeedingModule() {
               groupKey="vegetais"
               nextStepLabel="Frutas"
               onAdvance={() => setExpandedStep("frutas")}
+              recommendedNames={getRecommendedFoodNames(selectedSpecies?.group)}
             />
           </div>
 
@@ -2350,7 +2375,7 @@ export default function FeedingModule() {
               unlocked={unlockedSteps.has("frutas")}
               expanded={expandedStep === "frutas"}
               onToggle={() => setExpandedStep(expandedStep === "frutas" ? null : "frutas")}
-              foods={sortFoods(frutas)}
+              foods={sortFoods(frutas, getRecommendedFoodNames(selectedSpecies?.group))}
               search={frutasSearch} onSearchChange={setFrutasSearch}
               selectedMultiple={selectedFrutas}
               onToggleMultiple={(food) => toggleFood(setSelectedFrutas, food)}
@@ -2359,6 +2384,7 @@ export default function FeedingModule() {
               groupKey="frutas"
               nextStepLabel="Proteicos"
               onAdvance={() => setExpandedStep("proteicos")}
+              recommendedNames={getRecommendedFoodNames(selectedSpecies?.group)}
             />
           </div>
 
@@ -2369,13 +2395,14 @@ export default function FeedingModule() {
               unlocked={unlockedSteps.has("proteicos")}
               expanded={expandedStep === "proteicos"}
               onToggle={() => setExpandedStep(expandedStep === "proteicos" ? null : "proteicos")}
-              foods={sortFoods(proteicos)}
+              foods={sortFoods(proteicos, getRecommendedFoodNames(selectedSpecies?.group))}
               search={proteicosSearch} onSearchChange={setProteicosSearch}
               selectedMultiple={selectedProteicos}
               onToggleMultiple={(food) => toggleFood(setSelectedProteicos, food)}
               nossaDieta={nossaDieta}
               idealDiet={idealDiet}
               groupKey="proteico"
+              recommendedNames={getRecommendedFoodNames(selectedSpecies?.group)}
             />
           </div>
         </div>
@@ -2556,6 +2583,7 @@ interface FoodStepCardProps {
   groupKey: string;
   nextStepLabel?: string;
   onAdvance?: () => void;
+  recommendedNames?: string[];
 }
 
 function FoodStepCard({
@@ -2565,6 +2593,7 @@ function FoodStepCard({
   selectedMultiple, onToggleMultiple,
   nossaDieta, idealDiet, groupKey,
   nextStepLabel, onAdvance,
+  recommendedNames = [],
 }: FoodStepCardProps) {
   const config = STEP_CONFIG[step];
   const Icon = config.icon;
@@ -2743,10 +2772,14 @@ function FoodStepCard({
                 step === "frutas" ? "border-red-200" :
                 "border-yellow-200"
               )}>
-                {filteredFoods.map(food => {
+                {filteredFoods.map((food, idx) => {
                   const isSelected = isMulti
                     ? selectedMultiple?.some(s => s.id === food.id)
                     : selectedSingle?.id === food.id;
+                  const isRecommended = isFoodRecommended(food, recommendedNames);
+                  const prevFood = idx > 0 ? filteredFoods[idx - 1] : null;
+                  const prevIsRecommended = prevFood ? isFoodRecommended(prevFood, recommendedNames) : false;
+                  const showDivider = idx > 0 && !isRecommended && prevIsRecommended;
 
                   const selectedBg = step === "racao" ? "bg-amber-50 border-l-amber-500" :
                     step === "vegetais" ? "bg-green-50 border-l-green-500" :
@@ -2759,29 +2792,42 @@ function FoodStepCard({
                     "text-yellow-600";
 
                   return (
-                    <button
-                      key={food.id}
-                      onClick={() => isMulti ? onToggleMultiple?.(food) : onSelectSingle?.(food)}
-                      className={cn(
-                        "w-full flex items-center justify-between px-3 py-2.5 text-left transition-all text-sm border-l-3",
-                        isSelected ? selectedBg : "hover:bg-stone-50 border-l-transparent"
+                    <div key={food.id}>
+                      {showDivider && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-50 border-y border-stone-200">
+                          <div className="h-px flex-1 bg-stone-200" />
+                          <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Outros alimentos</span>
+                          <div className="h-px flex-1 bg-stone-200" />
+                        </div>
                       )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isSelected ? (
-                          <Check className={cn("w-4 h-4 flex-shrink-0", selectedIconColor)} />
-                        ) : (
-                          <Plus className="w-4 h-4 text-stone-300 flex-shrink-0" />
+                      <button
+                        onClick={() => isMulti ? onToggleMultiple?.(food) : onSelectSingle?.(food)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3 py-2.5 text-left transition-all text-sm border-l-3",
+                          isSelected ? selectedBg :
+                          isRecommended ? "bg-emerald-50/60 border-l-emerald-400 hover:bg-emerald-50" :
+                          "hover:bg-stone-50 border-l-transparent"
                         )}
-                        <span className={cn("truncate", isSelected ? "font-semibold text-stone-800" : "text-stone-600")}>{food.name}</span>
-                        {classificationBadge(food.classification)}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span className="text-[10px] text-stone-400">{food.energyKcal} kcal/kg</span>
-                        {food.proteinG > 0 && <span className="text-[10px] text-stone-400">P:{food.proteinG}%</span>}
-                        {food.fatG > 0 && <span className="text-[10px] text-stone-400">G:{food.fatG}%</span>}
-                      </div>
-                    </button>
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isSelected ? (
+                            <Check className={cn("w-4 h-4 flex-shrink-0", selectedIconColor)} />
+                          ) : isRecommended ? (
+                            <Star className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          ) : (
+                            <Plus className="w-4 h-4 text-stone-300 flex-shrink-0" />
+                          )}
+                          <span className={cn("truncate", isSelected ? "font-semibold text-stone-800" : isRecommended ? "font-medium text-emerald-900" : "text-stone-600")}>{food.name}</span>
+                          {isRecommended && <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-700 flex-shrink-0">Vol.5</span>}
+                          {classificationBadge(food.classification)}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <span className="text-[10px] text-stone-400">{food.energyKcal} kcal/kg</span>
+                          {food.proteinG > 0 && <span className="text-[10px] text-stone-400">P:{food.proteinG}%</span>}
+                          {food.fatG > 0 && <span className="text-[10px] text-stone-400">G:{food.fatG}%</span>}
+                        </div>
+                      </button>
+                    </div>
                   );
                 })}
               </div>

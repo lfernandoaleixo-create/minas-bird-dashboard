@@ -61,3 +61,6 @@
 - [x] Interface: seção colapsável de alimentos tóxicos com categorias Fatal/Grave/Inadequado
 - [x] Notas de segurança em alimentos críticos (maçã: remover sementes, girassol: nunca como base, etc.)
 - [x] Expandir lista de vegetais/frutas/proteínas na calculadora para incluir TODOS os alimentos seguros dos 5 volumes — remover apenas perigosos e fatais
+- [x] Destacar alimentos recomendados por espécie no topo da lista ao selecionar vegetais/frutas na calculadora
+- [ ] Adicionar fotos reais dos novos alimentos (substituir imagem genérica) — adiado: sistema não usa thumbnails individuais
+- [x] Criar módulo de impressão de cartaz de tóxicos para fixar na cozinha/área de preparo
