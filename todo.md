@@ -71,3 +71,7 @@
 - [x] Cards de espécies: mostrar badges de dietas, aves e dias programados na frente mesmo quando colapsados
 - [x] Cards Exportar Calendário, Lista de Compras, Rotina e Preparo: tornar expansíveis (colapsados por padrão)
 - [x] Rodapé: seção de referência com os 5 volumes dos livros (capas pequenas + títulos)
+- [x] Corrigir capas dos livros: usar as capas originais do usuário (não as geradas por IA)
+- [x] Livros em card expansível na seção de referência
+- [x] Ao clicar em um livro, abrir o PDF para consulta/pesquisa
+- [x] Bug: corrigir erro JSX no OperationalTools.tsx (tag div não fechada na linha 720)
