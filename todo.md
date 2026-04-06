@@ -69,3 +69,5 @@
 - [x] Corrigir número de aves do plantel — agora usa currentCount do feeding.ts (119 aves confirmadas pelo usuário)
 - [x] Cards de espécies no início: mostrar apenas nome da ave quando colapsados, dietas visíveis somente ao expandir
 - [x] Cards de espécies: mostrar badges de dietas, aves e dias programados na frente mesmo quando colapsados
+- [x] Cards Exportar Calendário, Lista de Compras, Rotina e Preparo: tornar expansíveis (colapsados por padrão)
+- [x] Rodapé: seção de referência com os 5 volumes dos livros (capas pequenas + títulos)

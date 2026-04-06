@@ -32,7 +32,7 @@ import {
 import { exportDietAsText, generateDietId, type SavedDiet } from "@/lib/dietStorage";
 import { exportCalendarPdf, exportAllCalendarsPdf } from "@/lib/calendarPdf";
 import OperationalTools from "@/components/OperationalTools";
-// ToxicPoster removido a pedido do usuário
+import ReferenceBooks from "@/components/ReferenceBooks";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -215,6 +215,8 @@ export default function FeedingModule() {
   const [exportCustomMonths, setExportCustomMonths] = useState<number[]>([]);
   const [exportDateFrom, setExportDateFrom] = useState("");
   const [exportDateTo, setExportDateTo] = useState("");
+  const [exportCardExpanded, setExportCardExpanded] = useState(false);
+  const [toolsCardExpanded, setToolsCardExpanded] = useState(false);
   const dietsQuery = trpc.diet.list.useQuery();
   const calendarQuery = trpc.calendar.getAll.useQuery();
   const savedDiets: SavedDiet[] = dietsQuery.data ?? [];
@@ -1257,17 +1259,24 @@ export default function FeedingModule() {
           const now = new Date();
           const currentMonth = now.getMonth() + 1;
           return (
-            <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+            <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setExportCardExpanded(!exportCardExpanded)}
+                className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-stone-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                   <FileDown className="w-4 h-4 text-indigo-700" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-stone-800">Exportar Calendários em PDF</h3>
-                  <p className="text-xs text-stone-500">Escolha espécies e período para exportar</p>
-                </div>
-              </div>
+                <h3 className="font-bold text-stone-800">Exportar Calendários em PDF</h3>
+                <span className="ml-auto flex-shrink-0">
+                  {exportCardExpanded
+                    ? <ChevronDown className="w-5 h-5 text-stone-400" />
+                    : <ChevronRight className="w-5 h-5 text-stone-400" />}
+                </span>
+              </button>
 
+              {exportCardExpanded && (
+              <div className="px-5 pb-5">
               {/* Seletor de espécie */}
               <div className="mb-3">
                 <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Espécies</label>
@@ -1450,6 +1459,8 @@ export default function FeedingModule() {
                 <FileDown className="w-4 h-4" />
                 Exportar PDF {exportSpeciesIds.length > 0 ? `(${exportSpeciesIds.length} espécie${exportSpeciesIds.length > 1 ? "s" : ""})` : ""}
               </button>
+              </div>
+              )}
             </div>
           );
         })()}
@@ -1462,6 +1473,8 @@ export default function FeedingModule() {
           />
         )}
 
+        {/* ===== REFERÊNCIA BIBLIOGRÁFICA ===== */}
+        <ReferenceBooks />
 
         </>
       )}

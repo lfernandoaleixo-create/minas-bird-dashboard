@@ -10,7 +10,7 @@ import { useState, useMemo } from "react";
 import {
   ShoppingCart, ClipboardList, ChefHat, Calendar,
   Bird, Download, Package, Wheat, Leaf, Apple, Zap, Users, Scale,
-  FileText,
+  FileText, ChevronDown, ChevronRight, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
@@ -670,8 +670,29 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
 
   const currentTabConfig = tabs.find(t => t.id === activeTab)!;
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+      {/* Header expansível */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-stone-50 transition-colors"
+      >
+        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+          <Wrench className="w-4 h-4 text-amber-700" />
+        </div>
+        <h3 className="font-bold text-stone-800">Ferramentas Operacionais</h3>
+        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">Compras · Rotina · Preparo</span>
+        <span className="ml-auto flex-shrink-0">
+          {isExpanded
+            ? <ChevronDown className="w-5 h-5 text-stone-400" />
+            : <ChevronRight className="w-5 h-5 text-stone-400" />}
+        </span>
+      </button>
+
+      {isExpanded && (
+      <>
       {/* Tabs */}
       <div className="flex border-b border-stone-200">
         {tabs.map(tab => {
@@ -1075,6 +1096,8 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
