@@ -784,13 +784,16 @@ export default function FeedingModule() {
                 <button
                   type="button"
                   onClick={toggleExpand}
-                  className="w-full p-5 border-b border-stone-100 text-left hover:bg-stone-50 transition-colors"
+                  className={cn(
+                    "w-full px-5 py-3.5 text-left hover:bg-stone-50 transition-colors",
+                    isExpanded && "border-b border-stone-100"
+                  )}
                 >
                   <div className="flex items-center gap-3">
-                    <Bird className="w-6 h-6 text-emerald-600" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-lg font-bold text-stone-800">{speciesName}</h2>
+                    <Bird className="w-5 h-5 text-emerald-600" />
+                    <h2 className="text-base font-bold text-stone-800">{speciesName}</h2>
+                    {isExpanded && (
+                      <>
                         <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">
                           {dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""}
                         </span>
@@ -808,28 +811,14 @@ export default function FeedingModule() {
                             {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
                           </span>
                         )}
-                      </div>
-                      <span className="text-xs text-stone-400 mt-0.5 block">Registro de Alimentação {calendarYear}</span>
-                    </div>
+                      </>
+                    )}
                     <span className="ml-auto flex-shrink-0">
                       {isExpanded
                         ? <ChevronDown className="w-5 h-5 text-stone-400" />
                         : <ChevronRight className="w-5 h-5 text-stone-400" />}
                     </span>
                   </div>
-                  {!isExpanded && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {dietsForSpecies.map(diet => {
-                        const color = dietColorMap.get(diet.id)!;
-                        return (
-                          <span key={diet.id} className="flex items-center gap-1.5 bg-stone-50 px-2 py-1 rounded-md">
-                            <span className={cn("w-3 h-3 rounded-sm", color.bg)} />
-                            <DietNameStyled name={diet.name} size="xs" />
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
                 </button>
 
                 {isExpanded && (
