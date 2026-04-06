@@ -64,3 +64,6 @@
 - [x] Destacar alimentos recomendados por espécie no topo da lista ao selecionar vegetais/frutas na calculadora
 - [ ] Adicionar fotos reais dos novos alimentos (substituir imagem genérica) — adiado: sistema não usa thumbnails individuais
 - [x] Criar módulo de impressão de cartaz de tóxicos para fixar na cozinha/área de preparo
+- [x] Remover card de impressão de alimentos proibidos/tóxicos
+- [x] Cards de espécies no início: já eram expansíveis (confirmado) — mantido
+- [x] Corrigir número de aves do plantel — agora usa currentCount do feeding.ts (119 aves confirmadas pelo usuário)

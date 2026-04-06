@@ -32,7 +32,7 @@ import {
 import { exportDietAsText, generateDietId, type SavedDiet } from "@/lib/dietStorage";
 import { exportCalendarPdf, exportAllCalendarsPdf } from "@/lib/calendarPdf";
 import OperationalTools from "@/components/OperationalTools";
-import ToxicPoster from "@/components/ToxicPoster";
+// ToxicPoster removido a pedido do usuário
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -713,7 +713,7 @@ export default function FeedingModule() {
                   <span className="text-xs text-stone-500 font-medium">{savedDiets.length} dieta{savedDiets.length !== 1 ? "s" : ""}</span>
                   <span className="text-stone-300">·</span>
                   <span className="text-xs text-blue-600 font-medium flex items-center gap-0.5">
-                    <Users className="w-3 h-3" />{savedDiets.reduce((s, d) => s + d.birdCount, 0)} ave{savedDiets.reduce((s, d) => s + d.birdCount, 0) !== 1 ? "s" : ""}
+                    <Users className="w-3 h-3" />{species.filter(s => s.inCurrentFlock).reduce((s, sp) => s + sp.currentCount, 0)} aves no plantel
                   </span>
                 </div>
               </div>
@@ -795,12 +795,13 @@ export default function FeedingModule() {
                           {dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""}
                         </span>
                         {(() => {
-                          const totalBirds = dietsForSpecies.reduce((sum, d) => sum + d.birdCount, 0);
-                          return (
+                          const sp = species.find(s => s.commonName === speciesName);
+                          const plantelCount = sp?.currentCount || 0;
+                          return plantelCount > 0 ? (
                             <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                              <Users className="w-3 h-3" />{totalBirds} ave{totalBirds > 1 ? "s" : ""}
+                              <Users className="w-3 h-3" />{plantelCount} ave{plantelCount > 1 ? "s" : ""}
                             </span>
-                          );
+                          ) : null;
                         })()}
                         {totalAssigned > 0 && (
                           <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
@@ -1476,8 +1477,7 @@ export default function FeedingModule() {
           />
         )}
 
-        {/* ===== CARTAZ DE ALIMENTOS TÓXICOS ===== */}
-        <ToxicPoster />
+
         </>
       )}
 
@@ -1495,7 +1495,7 @@ export default function FeedingModule() {
                   <h2 className="text-lg font-bold text-stone-800">Dietas Salvas</h2>
                   <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">{savedDiets.length} dieta{savedDiets.length !== 1 ? "s" : ""}</span>
                   <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                    <Users className="w-3 h-3" />{savedDiets.reduce((s, d) => s + d.birdCount, 0)} ave{savedDiets.reduce((s, d) => s + d.birdCount, 0) !== 1 ? "s" : ""}
+                    <Users className="w-3 h-3" />{species.filter(s => s.inCurrentFlock).reduce((s, sp) => s + sp.currentCount, 0)} aves no plantel
                   </span>
                 </div>
               </div>
@@ -1567,9 +1567,11 @@ export default function FeedingModule() {
                           <Bird className="w-4 h-4 text-emerald-600" />
                           <span className="text-sm font-bold text-stone-700">{sp.commonName}</span>
                           <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-stone-200 text-stone-600">{dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""}</span>
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                            <Users className="w-3 h-3" />{dietsForSp.reduce((s, d) => s + d.birdCount, 0)} ave{dietsForSp.reduce((s, d) => s + d.birdCount, 0) !== 1 ? "s" : ""}
-                          </span>
+                          {sp.currentCount > 0 && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                              <Users className="w-3 h-3" />{sp.currentCount} ave{sp.currentCount > 1 ? "s" : ""}
+                            </span>
+                          )}
                           <span className="ml-auto">
                             {isExpanded
                               ? <ChevronDown className="w-4 h-4 text-stone-400" />
