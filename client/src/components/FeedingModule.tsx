@@ -792,26 +792,22 @@ export default function FeedingModule() {
                   <div className="flex items-center gap-3">
                     <Bird className="w-5 h-5 text-emerald-600" />
                     <h2 className="text-base font-bold text-stone-800">{speciesName}</h2>
-                    {isExpanded && (
-                      <>
-                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">
-                          {dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""}
+                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">
+                      {dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""}
+                    </span>
+                    {(() => {
+                      const sp = species.find(s => s.commonName === speciesName);
+                      const plantelCount = sp?.currentCount || 0;
+                      return plantelCount > 0 ? (
+                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                          <Users className="w-3 h-3" />{plantelCount} ave{plantelCount > 1 ? "s" : ""}
                         </span>
-                        {(() => {
-                          const sp = species.find(s => s.commonName === speciesName);
-                          const plantelCount = sp?.currentCount || 0;
-                          return plantelCount > 0 ? (
-                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                              <Users className="w-3 h-3" />{plantelCount} ave{plantelCount > 1 ? "s" : ""}
-                            </span>
-                          ) : null;
-                        })()}
-                        {totalAssigned > 0 && (
-                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
-                            {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </>
+                      ) : null;
+                    })()}
+                    {totalAssigned > 0 && (
+                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
+                        {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
+                      </span>
                     )}
                     <span className="ml-auto flex-shrink-0">
                       {isExpanded

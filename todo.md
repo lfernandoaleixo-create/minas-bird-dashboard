@@ -68,3 +68,4 @@
 - [x] Cards de espécies no início: já eram expansíveis (confirmado) — mantido
 - [x] Corrigir número de aves do plantel — agora usa currentCount do feeding.ts (119 aves confirmadas pelo usuário)
 - [x] Cards de espécies no início: mostrar apenas nome da ave quando colapsados, dietas visíveis somente ao expandir
+- [x] Cards de espécies: mostrar badges de dietas, aves e dias programados na frente mesmo quando colapsados
