@@ -98,3 +98,8 @@
 - [x] Alerta visual quando menos de 10 dias consecutivos marcados a partir de hoje
 - [x] Badge de aves: aumentar largura para número e texto ficarem na mesma linha
 - [x] Remover badge/card "dias programados" de todos os locais da interface
+- [x] PDF Calendário: refazer completamente com design profissional
+- [x] PDF Calendário: adicionar logo do criatório
+- [x] PDF Calendário: ocupar a folha toda (landscape A4)
+- [x] PDF Calendário: legenda grande e visível
+- [x] PDF Calendário: melhorar layout geral, cores e tipografia

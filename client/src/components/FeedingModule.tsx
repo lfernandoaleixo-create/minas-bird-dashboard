@@ -1326,6 +1326,8 @@ export default function FeedingModule() {
                         speciesId: speciesId,
                         diets: dietsForSpecies,
                         calendar: calendarForSpecies,
+                        lifePeriods,
+                        enclosureTypes,
                       });
                       toast.success("PDF do calendário exportado!");
                     }}
@@ -1655,6 +1657,8 @@ export default function FeedingModule() {
                     savedDiets,
                     speciesCalendars,
                     months,
+                    lifePeriods,
+                    enclosureTypes,
                   );
                   toast.success(`PDF exportado com ${filteredSpecies.length} espécie${filteredSpecies.length > 1 ? "s" : ""}!`);
                 }}
