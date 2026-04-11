@@ -97,3 +97,4 @@
 - [x] Dias programados: contar apenas do dia atual até a primeira lacuna (dia sem dieta = parar contagem)
 - [x] Alerta visual quando menos de 10 dias consecutivos marcados a partir de hoje
 - [x] Badge de aves: aumentar largura para número e texto ficarem na mesma linha
+- [x] Remover badge/card "dias programados" de todos os locais da interface

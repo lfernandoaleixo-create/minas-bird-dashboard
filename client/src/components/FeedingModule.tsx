@@ -941,26 +941,6 @@ export default function FeedingModule() {
               });
             };
 
-            // Contar dias programados consecutivos a partir de hoje até a primeira lacuna
-            const todayDate = new Date();
-            todayDate.setHours(0, 0, 0, 0);
-            let consecutiveDays = 0;
-            for (let d = 0; d < 400; d++) {
-              const checkDate = new Date(todayDate);
-              checkDate.setDate(checkDate.getDate() + d);
-              const y = checkDate.getFullYear();
-              const m = checkDate.getMonth() + 1;
-              const day = checkDate.getDate();
-              const key = `${y}-${m}-${day}`;
-              const legKey = `${m}-${day}`;
-              if (calendarForSpecies[key] || calendarForSpecies[legKey]) {
-                consecutiveDays++;
-              } else {
-                break; // Lacuna encontrada — aves sem alimentação nesse dia
-              }
-            }
-            const totalAssigned = consecutiveDays;
-            const needsAlert = totalAssigned < 10;
 
             return (
               <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm">
@@ -992,10 +972,7 @@ export default function FeedingModule() {
                         </span>
                       );
                     })()}
-                    <span className={`px-2 py-0.5 text-xs font-bold rounded-full text-center flex-shrink-0 ml-2 flex items-center justify-center gap-1 ${needsAlert ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-emerald-100 text-emerald-700'}`} style={{width: '160px'}}>
-                      {needsAlert && <span className="text-red-500">⚠</span>}
-                      {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
-                    </span>
+
                     <span className="ml-auto flex-shrink-0">
                       {isExpanded
                         ? <ChevronDown className="w-5 h-5 text-stone-400" />
