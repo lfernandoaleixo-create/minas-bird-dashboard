@@ -1325,16 +1325,39 @@ export default function FeedingModule() {
                   {dietsForSpecies.map(diet => {
                     const color = dietColorMap.get(diet.id)!;
                     const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;
+                    const calRacaoName = diet.racaoName || "";
+                    const calCleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
+                    const calIngredientsList = [
+                      ...(calRacaoName ? [calRacaoName] : []),
+                      ...diet.items.racao.map(i => calCleanFoodName(i.foodName)).filter(n => n !== calRacaoName),
+                      ...diet.items.vegetais.map(i => calCleanFoodName(i.foodName)),
+                      ...diet.items.frutas.map(i => calCleanFoodName(i.foodName)),
+                      ...diet.items.proteicos.map(i => calCleanFoodName(i.foodName)),
+                    ];
                     return (
                       <div key={diet.id} className="px-5 py-3.5 hover:bg-stone-50 transition-colors border-b border-stone-100 last:border-b-0">
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", color.bg)} />
-                              <h4 className="text-base font-semibold truncate">
-                                <span className="text-base font-semibold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
+                              <h4 className="text-sm font-bold text-stone-800">
+                                {(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}
                               </h4>
                             </div>
+                            {calIngredientsList.length > 0 && (
+                              <p className="text-[13px] font-semibold text-stone-600 mt-1.5 ml-5 leading-relaxed">
+                                {calIngredientsList.map((name, idx) => (
+                                  <span key={idx}>
+                                    {idx === 0 && calRacaoName ? (
+                                      <span className="text-amber-700 font-extrabold text-sm">{name}</span>
+                                    ) : (
+                                      <span>{name}</span>
+                                    )}
+                                    {idx < calIngredientsList.length - 1 && <span className="text-stone-300">{" \u00b7 "}</span>}
+                                  </span>
+                                ))}
+                              </p>
+                            )}
                             <div className="flex items-center gap-2 mt-1 ml-5">
                               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
                                 <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}

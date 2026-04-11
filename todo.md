@@ -89,3 +89,4 @@
 - [x] Dieta aberta: nome igual ao da listagem (mesmo formato)
 - [x] Dieta: incluir nome completo do ambiente com "Inverno" (não remover a estação do nome)
 - [x] Padronizar nome da dieta: mesmo formato no card Dietas, detalhe da dieta e calendário de cada espécie
+- [x] Calendário: nome da dieta deve incluir ingredientes, idêntico ao card Dietas expandido
