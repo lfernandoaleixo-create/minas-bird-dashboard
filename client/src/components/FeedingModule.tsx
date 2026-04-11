@@ -1013,7 +1013,7 @@ export default function FeedingModule() {
                           )}
                         >
                           <span className={cn("w-3 h-3 rounded-sm", isActive ? "bg-white/40" : color.bg)} />
-                          <DietNameStyled name={diet.name} size="xs" />
+                          <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
                           {assignedCount > 0 && (
                             <span className={cn(
                               "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
@@ -1057,7 +1057,7 @@ export default function FeedingModule() {
                           <CalendarDays className="w-4 h-4 text-blue-600" />
                           <span className="text-sm font-bold text-stone-800">{dayNum} de {monthName}</span>
                           {color && <span className={cn("w-3 h-3 rounded-sm", color.bg)} />}
-                          <DietNameStyled name={dayDetailDiet.name} size="sm" />
+                          <span className="text-sm font-bold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === dayDetailDiet.phaseId)?.label || dayDetailDiet.phaseId; const el = enclosureTypes.find(e => e.id === dayDetailDiet.enclosureId)?.label || dayDetailDiet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
                         </div>
                         <button
                           type="button"
@@ -1296,7 +1296,7 @@ export default function FeedingModule() {
                     return (
                       <span key={diet.id} className="flex items-center gap-1">
                         <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
-                        <DietNameStyled name={diet.name} size="xs" />
+                        <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
                       </span>
                     );
                   })}
@@ -1332,7 +1332,7 @@ export default function FeedingModule() {
                             <div className="flex items-center gap-2">
                               <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", color.bg)} />
                               <h4 className="text-base font-semibold truncate">
-                                <DietNameStyled name={diet.name} size="md" />
+                                <span className="text-base font-semibold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
                               </h4>
                             </div>
                             <div className="flex items-center gap-2 mt-1 ml-5">

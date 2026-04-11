@@ -88,3 +88,4 @@
 - [x] Dieta aberta: remover card "Dias Programados"
 - [x] Dieta aberta: nome igual ao da listagem (mesmo formato)
 - [x] Dieta: incluir nome completo do ambiente com "Inverno" (não remover a estação do nome)
+- [x] Padronizar nome da dieta: mesmo formato no card Dietas, detalhe da dieta e calendário de cada espécie
