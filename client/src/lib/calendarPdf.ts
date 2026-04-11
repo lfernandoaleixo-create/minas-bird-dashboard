@@ -1,7 +1,11 @@
 /**
- * Exportação do Calendário Anual em PDF — Design Profissional v2
- * Identidade visual Criatório Minas Bird com logo real, layout full-page,
- * legenda grande e visível, tipografia legível.
+ * Exportação do Calendário Anual em PDF — Design Profissional v3
+ * - Logo e título GRANDES
+ * - Dias MUITO maiores (2 páginas: 6 meses por página)
+ * - Rodapé com letras maiores
+ * - Sem indicador de "Dia Atual"
+ * - Feriados com BORDA VERMELHA ao redor do dia
+ * - Legenda grande na última página
  */
 import { jsPDF } from "jspdf";
 import type { SavedDiet } from "./dietStorage";
@@ -49,8 +53,7 @@ const B = {
   feriado: [220, 38, 38] as [number, number, number],
   feriadoBg: [254, 226, 226] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  headerBg: [250, 250, 249] as [number, number, number],
-  amber: [180, 83, 9] as [number, number, number],
+  gridLine: [229, 231, 235] as [number, number, number],
 };
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
@@ -89,11 +92,18 @@ function getDietIngredients(diet: SavedDiet): string {
     ...diet.items.proteicos,
   ];
   allFoods.forEach(item => {
-    // Clean food name: remove suffixes like "Crua", "com Casca", etc.
     let name = item.foodName;
-    // Remove suffixes after comma or dash: "Beterraba, Crua" → "Beterraba"
-    name = name.replace(/[,\s]+(?:Crua?|Cozid[ao]|Assad[ao]|com [Cc]asca|sem [Cc]asca|Fresc[ao]|Sec[ao]|Inteira?o?|Madur[ao]|Verde|Natural|em Pó|Desidratad[ao]|Moíd[ao]|Triturad[ao]|Ralad[ao]|Picad[ao]|Fatiado|em Flocos|em Grãos|em Pedaços)$/gi, "").trim();
-    name = name.replace(/\s*[-–]\s*(?:Crua?|Cozid[ao]|Assad[ao]|com [Cc]asca|sem [Cc]asca|Fresc[ao]|Sec[ao]|Inteira?o?|Madur[ao]|Verde|Natural|em Pó|Desidratad[ao]|Moíd[ao]|Triturad[ao]|Ralad[ao]|Picad[ao]|Fatiado|em Flocos|em Grãos|em Pedaços)/gi, "").trim();
+    // Strip all trailing comma-separated suffixes: "Maça, com casca, Crua" → "Maça"
+    const suffixPattern = /[,;]\s*(?:Crua?|Cozid[ao]|Assad[ao]|com\s+[Cc]asca|sem\s+[Cc]asca|Fresc[ao]|Sec[ao]|Inteira?o?|Madur[ao]|Verde|Natural|em\s+Pó|Desidratad[ao]|Moíd[ao]|Triturad[ao]|Ralad[ao]|Picad[ao]|Fatiado|em\s+Flocos|em\s+Grãos|em\s+Pedaços)\s*$/gi;
+    // Apply repeatedly to strip multiple suffixes
+    let prev = "";
+    while (prev !== name) {
+      prev = name;
+      name = name.replace(suffixPattern, "").trim();
+    }
+    name = name.replace(/\s*[-–]\s*(?:Crua?|Cozid[ao]|Assad[ao]|com\s+[Cc]asca|sem\s+[Cc]asca|Fresc[ao]|Sec[ao]|Inteira?o?|Madur[ao]|Verde|Natural|em\s+Pó|Desidratad[ao]|Moíd[ao]|Triturad[ao]|Ralad[ao]|Picad[ao]|Fatiado|em\s+Flocos|em\s+Grãos|em\s+Pedaços)/gi, "").trim();
+    // Fix common misspellings
+    name = name.replace(/^Maça$/i, "Maçã");
     if (name.toLowerCase() !== diet.racaoName?.toLowerCase()) {
       items.push(name);
     }
@@ -111,7 +121,9 @@ interface CalendarPdfOptions {
   enclosureTypes?: { id: string; label: string }[];
 }
 
-/** Draw professional header with real logo */
+// =============================================
+// HEADER — Logo e título GRANDES
+// =============================================
 function drawHeader(
   doc: jsPDF,
   pageW: number,
@@ -119,85 +131,90 @@ function drawHeader(
   subtitle: string,
   logoBase64: string | null,
 ): number {
-  const headerH = 24;
+  const headerH = 32;
 
   // Dark green top bar
   doc.setFillColor(...B.dark);
   doc.rect(0, 0, pageW, headerH, "F");
 
-  // Logo
+  // Logo — GRANDE (28x28)
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, "PNG", 6, 2, 20, 20);
+      doc.addImage(logoBase64, "PNG", 8, 2, 28, 28);
     } catch {
-      // Fallback: draw circle
       doc.setFillColor(...B.primary);
-      doc.circle(16, 12, 8, "F");
+      doc.circle(22, 16, 12, "F");
     }
   } else {
     doc.setFillColor(...B.primary);
-    doc.circle(16, 12, 8, "F");
+    doc.circle(22, 16, 12, "F");
   }
 
-  // Criatório name
-  doc.setFontSize(16);
+  // Criatório name — GRANDE
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text("Criatório Minas Bird", 30, 10);
+  doc.text("Criatório Minas Bird", 42, 14);
 
   // Subtitle
-  doc.setFontSize(8);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(200, 230, 210);
-  doc.text("Manual Operacional de Alimentação", 30, 16);
+  doc.text("Manual Operacional de Alimentação", 42, 22);
 
-  // Right side: title
-  doc.setFontSize(15);
+  // Right side: title — GRANDE
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text(title, pageW - 8, 10, { align: "right" });
+  doc.text(title, pageW - 10, 14, { align: "right" });
 
-  // Right side: subtitle
-  doc.setFontSize(10);
+  // Right side: subtitle — GRANDE
+  doc.setFontSize(14);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(200, 230, 210);
-  doc.text(subtitle, pageW - 8, 17, { align: "right" });
+  doc.text(subtitle, pageW - 10, 23, { align: "right" });
 
-  // Thin accent line at bottom of header
+  // Accent line
   doc.setFillColor(...B.primary);
-  doc.rect(0, headerH, pageW, 1.5, "F");
+  doc.rect(0, headerH, pageW, 2, "F");
 
-  return headerH + 3;
+  return headerH + 4;
 }
 
-/** Draw footer */
+// =============================================
+// FOOTER — Letras MAIORES
+// =============================================
 function drawFooter(doc: jsPDF, pageW: number, pageH: number, pageNum?: number, totalPages?: number): void {
-  const footerY = pageH - 6;
+  const footerY = pageH - 8;
 
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.line(8, footerY - 2, pageW - 8, footerY - 2);
+  doc.setDrawColor(...B.medium);
+  doc.setLineWidth(0.5);
+  doc.line(10, footerY - 3, pageW - 10, footerY - 3);
 
   const now = new Date();
   const dateStr = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()}`;
 
-  doc.setFontSize(7);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...B.muted);
-  doc.text(`Publicado em ${dateStr}`, 8, footerY);
+  doc.text(`Publicado em ${dateStr}`, 10, footerY);
 
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...B.medium);
+  doc.setFontSize(11);
+  doc.setTextColor(...B.dark);
   doc.text("Criatório Minas Bird — Ribeirão Vermelho, MG", pageW / 2, footerY, { align: "center" });
 
   if (pageNum !== undefined && totalPages !== undefined) {
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
     doc.setTextColor(...B.muted);
-    doc.text(`Página ${pageNum} de ${totalPages}`, pageW - 8, footerY, { align: "right" });
+    doc.text(`Página ${pageNum} de ${totalPages}`, pageW - 10, footerY, { align: "right" });
   }
 }
 
-/** Render month grid — bigger, more readable */
+// =============================================
+// MONTH GRID — Dias MUITO maiores
+// =============================================
 function drawMonthGrid(
   doc: jsPDF,
   x: number,
@@ -209,43 +226,48 @@ function drawMonthGrid(
   calendar: Record<string, string>,
   dietColorMap: Map<string, [number, number, number]>,
 ): void {
-  // Month header with rounded rect
+  const pad = 2; // internal padding
+
+  // Month header bar
   doc.setFillColor(...B.dark);
-  doc.roundedRect(x + 1, y, cellW - 2, 8, 2, 2, "F");
-  doc.setFontSize(11);
+  doc.roundedRect(x + pad, y, cellW - pad * 2, 10, 2, 2, "F");
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text(MONTH_NAMES[month - 1], x + cellW / 2, y + 5.8, { align: "center" });
+  doc.text(MONTH_NAMES[month - 1], x + cellW / 2, y + 7.2, { align: "center" });
 
   // Day names header
-  const dayHeaderY = y + 11;
-  doc.setFontSize(6.5);
+  const dayHeaderY = y + 14;
+  const dayCellW = (cellW - pad * 2) / 7;
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...B.dark);
-  const dayCellW = (cellW - 4) / 7;
   for (let d = 0; d < 7; d++) {
     const color = d === 0 ? B.feriado : B.dark;
     doc.setTextColor(...color);
-    doc.text(DAY_NAMES[d], x + 2 + d * dayCellW + dayCellW / 2, dayHeaderY, { align: "center" });
+    doc.text(DAY_NAMES[d], x + pad + d * dayCellW + dayCellW / 2, dayHeaderY, { align: "center" });
   }
 
   // Separator
-  doc.setDrawColor(...B.light);
-  doc.setLineWidth(0.3);
-  doc.line(x + 2, dayHeaderY + 2, x + cellW - 2, dayHeaderY + 2);
+  doc.setDrawColor(...B.gridLine);
+  doc.setLineWidth(0.4);
+  doc.line(x + pad, dayHeaderY + 2.5, x + cellW - pad, dayHeaderY + 2.5);
 
-  // Days
+  // Calculate day cell height to fill available space
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
-  const dayCellH = 5.5;
+  const totalRows = Math.ceil((daysInMonth + firstDayOfWeek) / 7);
+  const gridStartY = dayHeaderY + 4;
+  const availableGridH = cellH - (gridStartY - y) - 4; // leave 4mm at bottom for feriado text
+  const dayCellH = availableGridH / Math.max(totalRows, 5);
+
   let currentRow = 0;
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dayOfWeek = (firstDayOfWeek + day - 1) % 7;
     if (day > 1 && dayOfWeek === 0) currentRow++;
 
-    const dx = x + 2 + dayOfWeek * dayCellW;
-    const dy = dayHeaderY + 4 + currentRow * dayCellH;
+    const dx = x + pad + dayOfWeek * dayCellW;
+    const dy = gridStartY + currentRow * dayCellH;
 
     const dayKey = `${year}-${month}-${day}`;
     const legacyKey = `${month}-${day}`;
@@ -253,46 +275,49 @@ function drawMonthGrid(
     const feriadoKey = `${month}-${day}`;
     const isFeriado = !!FERIADOS[feriadoKey];
 
-    // Today highlight
-    const today = new Date();
-    const isToday = today.getFullYear() === year && today.getMonth() + 1 === month && today.getDate() === day;
+    const rectX = dx + 0.5;
+    const rectY = dy;
+    const rectW = dayCellW - 1;
+    const rectH = dayCellH - 1;
 
+    // Draw diet color fill
     if (assignedDietId && dietColorMap.has(assignedDietId)) {
       const [r, g, b] = dietColorMap.get(assignedDietId)!;
       doc.setFillColor(r, g, b);
-      doc.roundedRect(dx + 0.3, dy - 0.5, dayCellW - 0.8, dayCellH - 1, 1, 1, "F");
+      doc.roundedRect(rectX, rectY, rectW, rectH, 1.5, 1.5, "F");
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.5);
+      doc.setFontSize(11);
       doc.setTextColor(255, 255, 255);
-    } else if (isFeriado) {
-      doc.setFillColor(...B.feriadoBg);
-      doc.roundedRect(dx + 0.3, dy - 0.5, dayCellW - 0.8, dayCellH - 1, 1, 1, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...B.feriado);
     } else if (dayOfWeek === 0) {
+      // Sunday without diet — light bg
+      doc.setFillColor(254, 242, 242);
+      doc.roundedRect(rectX, rectY, rectW, rectH, 1.5, 1.5, "F");
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
-      doc.setTextColor(200, 100, 100);
+      doc.setFontSize(11);
+      doc.setTextColor(180, 80, 80);
     } else {
+      // Normal day without diet
+      doc.setFillColor(250, 250, 249);
+      doc.roundedRect(rectX, rectY, rectW, rectH, 1.5, 1.5, "F");
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
+      doc.setFontSize(11);
       doc.setTextColor(...B.text);
     }
 
-    doc.text(String(day), dx + (dayCellW - 0.5) / 2, dy + 3, { align: "center" });
+    // Day number — centered
+    doc.text(String(day), dx + dayCellW / 2, dy + rectH / 2 + 2, { align: "center" });
 
-    // Today ring
-    if (isToday) {
-      doc.setDrawColor(...B.primary);
-      doc.setLineWidth(0.6);
-      doc.roundedRect(dx + 0.1, dy - 0.7, dayCellW - 0.4, dayCellH - 0.6, 1.2, 1.2, "S");
+    // Feriado: red border around the day
+    if (isFeriado) {
+      doc.setDrawColor(...B.feriado);
+      doc.setLineWidth(1.2);
+      doc.roundedRect(rectX - 0.3, rectY - 0.3, rectW + 0.6, rectH + 0.6, 2, 2, "S");
     }
 
     doc.setTextColor(0, 0, 0);
   }
 
-  // Feriados do mês no rodapé do card
+  // Feriados text at bottom of month
   const feriadosDoMes: { day: number; name: string }[] = [];
   for (let d = 1; d <= daysInMonth; d++) {
     const fKey = `${month}-${d}`;
@@ -300,116 +325,114 @@ function drawMonthGrid(
   }
 
   if (feriadosDoMes.length > 0) {
-    const footerY = dayHeaderY + 4 + (currentRow + 1) * dayCellH + 1;
-    doc.setFontSize(5);
+    const footerY = gridStartY + totalRows * dayCellH + 1;
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(...B.feriado);
     feriadosDoMes.forEach((f, i) => {
-      doc.text(`${f.day} — ${f.name}`, x + 3, footerY + i * 3);
+      doc.text(`${f.day} — ${f.name}`, x + pad + 1, footerY + i * 3.5);
     });
     doc.setTextColor(0, 0, 0);
   }
 }
 
-/** Draw large, visible legend */
+// =============================================
+// LEGEND — Grande e visível
+// =============================================
 function drawLegend(
   doc: jsPDF,
   pageW: number,
   legendStartY: number,
-  pageH: number,
+  maxY: number,
   diets: SavedDiet[],
   dietColorMap: Map<string, [number, number, number]>,
   lifePeriods?: { id: string; label: string }[],
   enclosureTypes?: { id: string; label: string }[],
 ): void {
-  const margin = 8;
+  const margin = 10;
   const legendW = pageW - margin * 2;
 
   // Legend background
   doc.setFillColor(250, 250, 249);
-  doc.roundedRect(margin, legendStartY, legendW, pageH - legendStartY - 10, 3, 3, "F");
-  doc.setDrawColor(220, 220, 220);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(margin, legendStartY, legendW, pageH - legendStartY - 10, 3, 3, "S");
+  doc.roundedRect(margin, legendStartY, legendW, maxY - legendStartY, 4, 4, "F");
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(margin, legendStartY, legendW, maxY - legendStartY, 4, 4, "S");
 
   // Legend title
-  let ly = legendStartY + 5;
-  doc.setFontSize(9);
+  let ly = legendStartY + 8;
+  doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...B.dark);
-  doc.text("LEGENDA DAS DIETAS", margin + 5, ly);
-  ly += 5;
+  doc.text("LEGENDA DAS DIETAS", margin + 8, ly);
+  ly += 8;
 
-  // Diet items — each on its own row with color swatch, name and ingredients
-  doc.setFontSize(8);
+  // Diet items
   diets.forEach(diet => {
     const color = dietColorMap.get(diet.id);
     if (!color) return;
 
     const [r, g, b] = color;
 
-    // Color swatch
+    // Color swatch — bigger
     doc.setFillColor(r, g, b);
-    doc.roundedRect(margin + 5, ly - 2.5, 5, 5, 1, 1, "F");
+    doc.roundedRect(margin + 8, ly - 3.5, 8, 8, 1.5, 1.5, "F");
 
     // Diet display name
     let displayName: string;
     if (lifePeriods && enclosureTypes) {
       displayName = getDietDisplayName(diet, lifePeriods, enclosureTypes);
     } else {
-      // Fallback: parse from diet.name
       const parts = diet.name.split(" — ");
       displayName = parts.length >= 3 ? `${parts[1]} — ${parts[2]}` : diet.name;
     }
 
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
     doc.setTextColor(...B.text);
-    doc.text(displayName, margin + 13, ly + 0.5);
+    doc.text(displayName, margin + 20, ly + 1);
 
-    // Ingredients on same line or next
+    // Ingredients
     const nameWidth = doc.getTextWidth(displayName);
-    const ingredientsX = margin + 13 + nameWidth + 3;
-    const maxIngredientsW = legendW - (ingredientsX - margin) - 5;
+    const ingredientsX = margin + 20 + nameWidth + 4;
+    const maxIngredientsW = legendW - (ingredientsX - margin) - 8;
 
     if (lifePeriods && enclosureTypes) {
       const ingredients = getDietIngredients(diet);
       if (ingredients) {
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
+        doc.setFontSize(9);
         doc.setTextColor(...B.muted);
-        // Truncate if too long
         let displayIngredients = ingredients;
         while (doc.getTextWidth(displayIngredients) > maxIngredientsW && displayIngredients.length > 10) {
-          displayIngredients = displayIngredients.substring(0, displayIngredients.lastIndexOf(" · ")) + " …";
+          const lastDot = displayIngredients.lastIndexOf(" · ");
+          if (lastDot <= 0) break;
+          displayIngredients = displayIngredients.substring(0, lastDot) + " …";
         }
-        doc.text(displayIngredients, ingredientsX, ly + 0.5);
-        doc.setFontSize(8);
+        doc.text(displayIngredients, ingredientsX, ly + 1);
       }
     }
 
-    ly += 7;
+    ly += 10;
   });
 
-  // Feriado legend
-  doc.setFillColor(...B.feriadoBg);
-  doc.roundedRect(margin + 5, ly - 2.5, 5, 5, 1, 1, "F");
+  // Feriado legend — red border swatch
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(margin + 8, ly - 3.5, 8, 8, 1.5, 1.5, "F");
+  doc.setDrawColor(...B.feriado);
+  doc.setLineWidth(1.2);
+  doc.roundedRect(margin + 8, ly - 3.5, 8, 8, 1.5, 1.5, "S");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(11);
   doc.setTextColor(...B.feriado);
-  doc.text("Feriado Nacional", margin + 13, ly + 0.5);
-  ly += 7;
-
-  // Today legend
-  doc.setDrawColor(...B.primary);
-  doc.setLineWidth(0.6);
-  doc.roundedRect(margin + 5, ly - 2.5, 5, 5, 1, 1, "S");
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...B.primary);
-  doc.text("Dia Atual", margin + 13, ly + 0.5);
+  doc.text("Feriado Nacional", margin + 20, ly + 1);
 
   doc.setTextColor(0, 0, 0);
 }
 
+// =============================================
+// SINGLE SPECIES EXPORT — 2 pages (6 months each) + legend
+// =============================================
 export async function exportCalendarPdf(options: CalendarPdfOptions): Promise<void> {
   const { year, speciesName, diets, calendar, lifePeriods: lp, enclosureTypes: et } = options;
 
@@ -419,46 +442,58 @@ export async function exportCalendarPdf(options: CalendarPdfOptions): Promise<vo
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
 
-  // Header
-  const contentStartY = drawHeader(doc, pageW, `Calendário Anual ${year}`, speciesName, logoBase64);
-
   // Diet color map
   const dietColorMap = new Map<string, [number, number, number]>();
   diets.forEach((d, i) => {
     dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]);
   });
 
-  // Layout: 4 cols x 3 rows — fill the page
-  const cols = 4;
-  const rows = 3;
-  const marginX = 6;
-  const legendHeight = 10 + diets.length * 7 + 18; // dynamic based on diet count
-  const availableH = pageH - contentStartY - legendHeight - 8;
-  const cellW = (pageW - marginX * 2) / cols;
-  const cellH = availableH / rows;
+  const totalPages = 3; // 2 calendar pages + 1 legend page
+  const monthsPerPage = 6;
+  const cols = 3;
+  const rows = 2;
+  const marginX = 8;
 
-  for (let month = 1; month <= 12; month++) {
-    const col = (month - 1) % cols;
-    const row = Math.floor((month - 1) / cols);
-    const x = marginX + col * cellW;
-    const y = contentStartY + row * cellH;
+  for (let page = 0; page < 2; page++) {
+    if (page > 0) doc.addPage();
 
-    drawMonthGrid(doc, x, y, cellW, cellH, year, month, calendar, dietColorMap);
+    const startMonth = page * monthsPerPage + 1;
+    const pageLabel = page === 0 ? "Janeiro – Junho" : "Julho – Dezembro";
+
+    // Header
+    const contentStartY = drawHeader(doc, pageW, `Calendário ${year}`, `${speciesName} · ${pageLabel}`, logoBase64);
+
+    // Footer
+    drawFooter(doc, pageW, pageH, page + 1, totalPages);
+
+    const footerReserve = 14;
+    const availableH = pageH - contentStartY - footerReserve;
+    const cellW = (pageW - marginX * 2) / cols;
+    const cellH = availableH / rows;
+
+    for (let mi = 0; mi < monthsPerPage; mi++) {
+      const month = startMonth + mi;
+      const col = mi % cols;
+      const row = Math.floor(mi / cols);
+      const x = marginX + col * cellW;
+      const y = contentStartY + row * cellH;
+
+      drawMonthGrid(doc, x, y, cellW, cellH, year, month, calendar, dietColorMap);
+    }
   }
 
-  // Legend — large and visible at bottom
-  const legendY = contentStartY + rows * cellH + 2;
-  drawLegend(doc, pageW, legendY, pageH, diets, dietColorMap, lp, et);
-
-  // Footer
-  drawFooter(doc, pageW, pageH);
+  // Page 3: Legend
+  doc.addPage();
+  const legendHeaderY = drawHeader(doc, pageW, `Legenda`, speciesName, logoBase64);
+  drawFooter(doc, pageW, pageH, totalPages, totalPages);
+  drawLegend(doc, pageW, legendHeaderY + 4, pageH - 14, diets, dietColorMap, lp, et);
 
   doc.save(`Calendario_${speciesName.replace(/\s+/g, "_")}_${year}.pdf`);
 }
 
-/**
- * Export all species calendars in a single multi-page PDF
- */
+// =============================================
+// ALL SPECIES EXPORT — 2 pages per species + shared legend
+// =============================================
 export async function exportAllCalendarsPdf(
   year: number,
   speciesList: { id: string; commonName: string }[],
@@ -484,20 +519,21 @@ export async function exportAllCalendarsPdf(
 
   if (speciesWithDiets.length === 0) {
     const contentY = drawHeader(doc, pageW, "Calendário Anual", "Nenhuma espécie encontrada", logoBase64);
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...B.muted);
-    doc.text("Nenhuma dieta ou calendário encontrado para exportar.", pageW / 2, contentY + 30, { align: "center" });
+    doc.text("Nenhuma dieta ou calendário encontrado para exportar.", pageW / 2, contentY + 40, { align: "center" });
     drawFooter(doc, pageW, pageH);
     doc.save(`Calendario_Completo_${year}.pdf`);
     return;
   }
 
-  const totalPages = speciesWithDiets.length;
+  let pageCounter = 0;
 
-  speciesWithDiets.forEach((sp, idx) => {
-    if (idx > 0) doc.addPage();
+  // For full year: 2 pages per species
+  const isFullYear = activeMonths.length === 12;
 
+  speciesWithDiets.forEach((sp, spIdx) => {
     const dietsForSp = allDiets.filter(d => d.speciesId === sp.id);
     const calForSp = allCalendars[sp.id] || {};
 
@@ -506,34 +542,73 @@ export async function exportAllCalendarsPdf(
       dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]);
     });
 
-    // Header
-    const contentStartY = drawHeader(doc, pageW, `Calendário Anual ${year}`, sp.commonName, logoBase64);
+    if (isFullYear) {
+      // 2 pages: 6 months each
+      for (let half = 0; half < 2; half++) {
+        if (pageCounter > 0) doc.addPage();
+        pageCounter++;
 
-    const monthCount = activeMonths.length;
-    const cols = monthCount <= 1 ? 1 : monthCount <= 4 ? 2 : monthCount <= 6 ? 3 : 4;
-    const rows = Math.ceil(monthCount / cols);
-    const marginX = 6;
-    const legendHeight = 10 + dietsForSp.length * 7 + 18;
-    const availableH = pageH - contentStartY - legendHeight - 8;
-    const cellW = (pageW - marginX * 2) / cols;
-    const cellH = availableH / Math.max(rows, 1);
+        const startMonth = half * 6 + 1;
+        const pageLabel = half === 0 ? "Janeiro – Junho" : "Julho – Dezembro";
 
-    for (let mi = 0; mi < activeMonths.length; mi++) {
-      const month = activeMonths[mi];
-      const col = mi % cols;
-      const row = Math.floor(mi / cols);
-      const x = marginX + col * cellW;
-      const y = contentStartY + row * cellH;
+        const contentStartY = drawHeader(doc, pageW, `Calendário ${year}`, `${sp.commonName} · ${pageLabel}`, logoBase64);
+        drawFooter(doc, pageW, pageH);
 
-      drawMonthGrid(doc, x, y, cellW, cellH, year, month, calForSp, dietColorMap);
+        const cols = 3;
+        const rows = 2;
+        const marginX = 8;
+        const footerReserve = 14;
+        const availableH = pageH - contentStartY - footerReserve;
+        const cellW = (pageW - marginX * 2) / cols;
+        const cellH = availableH / rows;
+
+        for (let mi = 0; mi < 6; mi++) {
+          const month = startMonth + mi;
+          const col = mi % cols;
+          const row = Math.floor(mi / cols);
+          const x = marginX + col * cellW;
+          const y = contentStartY + row * cellH;
+
+          drawMonthGrid(doc, x, y, cellW, cellH, year, month, calForSp, dietColorMap);
+        }
+      }
+    } else {
+      // Fewer months: fit on 1 page
+      if (pageCounter > 0) doc.addPage();
+      pageCounter++;
+
+      const monthCount = activeMonths.length;
+      const cols = monthCount <= 2 ? 2 : monthCount <= 3 ? 3 : 3;
+      const rows = Math.ceil(monthCount / cols);
+      const marginX = 8;
+
+      const contentStartY = drawHeader(doc, pageW, `Calendário ${year}`, sp.commonName, logoBase64);
+      drawFooter(doc, pageW, pageH);
+
+      const footerReserve = 14;
+      const availableH = pageH - contentStartY - footerReserve;
+      const cellW = (pageW - marginX * 2) / cols;
+      const cellH = availableH / Math.max(rows, 1);
+
+      for (let mi = 0; mi < activeMonths.length; mi++) {
+        const month = activeMonths[mi];
+        const col = mi % cols;
+        const row = Math.floor(mi / cols);
+        const x = marginX + col * cellW;
+        const y = contentStartY + row * cellH;
+
+        drawMonthGrid(doc, x, y, cellW, cellH, year, month, calForSp, dietColorMap);
+      }
     }
 
-    // Legend
-    const legendY = contentStartY + rows * cellH + 2;
-    drawLegend(doc, pageW, legendY, pageH, dietsForSp, dietColorMap, lifePeriods, enclosureTypes);
-
-    // Footer with pagination
-    drawFooter(doc, pageW, pageH, idx + 1, totalPages);
+    // Legend page for this species (only if it has diets)
+    if (dietsForSp.length > 0) {
+      doc.addPage();
+      pageCounter++;
+      const legendHeaderY = drawHeader(doc, pageW, `Legenda`, sp.commonName, logoBase64);
+      drawFooter(doc, pageW, pageH);
+      drawLegend(doc, pageW, legendHeaderY + 4, pageH - 14, dietsForSp, dietColorMap, lifePeriods, enclosureTypes);
+    }
   });
 
   doc.save(`Calendario_Completo_${year}.pdf`);

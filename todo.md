@@ -103,3 +103,8 @@
 - [x] PDF Calendário: ocupar a folha toda (landscape A4)
 - [x] PDF Calendário: legenda grande e visível
 - [x] PDF Calendário: melhorar layout geral, cores e tipografia
+- [x] PDF Calendário v3: título e símbolo do criatório maiores
+- [x] PDF Calendário v3: quadrados dos dias muito maiores (dividir em 2 páginas: 6 meses por página)
+- [x] PDF Calendário v3: rodapé com letras maiores
+- [x] PDF Calendário v3: remover indicador de "Dia Atual"
+- [x] PDF Calendário v3: feriados com borda vermelha ao redor do dia (não fundo)
