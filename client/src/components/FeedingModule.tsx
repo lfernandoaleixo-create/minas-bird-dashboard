@@ -941,8 +941,26 @@ export default function FeedingModule() {
               });
             };
 
-            // Contar dias atribuídos
-            const totalAssigned = Object.keys(calendarForSpecies).length;
+            // Contar dias programados consecutivos a partir de hoje até a primeira lacuna
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            let consecutiveDays = 0;
+            for (let d = 0; d < 400; d++) {
+              const checkDate = new Date(todayDate);
+              checkDate.setDate(checkDate.getDate() + d);
+              const y = checkDate.getFullYear();
+              const m = checkDate.getMonth() + 1;
+              const day = checkDate.getDate();
+              const key = `${y}-${m}-${day}`;
+              const legKey = `${m}-${day}`;
+              if (calendarForSpecies[key] || calendarForSpecies[legKey]) {
+                consecutiveDays++;
+              } else {
+                break; // Lacuna encontrada — aves sem alimentação nesse dia
+              }
+            }
+            const totalAssigned = consecutiveDays;
+            const needsAlert = totalAssigned < 10;
 
             return (
               <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm">
@@ -969,12 +987,13 @@ export default function FeedingModule() {
                       const sp = species.find(s => s.commonName === speciesName);
                       const plantelCount = sp?.currentCount || 0;
                       return (
-                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center justify-center gap-0.5 flex-shrink-0 ml-2" style={{width: '72px'}}>
+                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center justify-center gap-1 flex-shrink-0 ml-2 whitespace-nowrap" style={{width: '90px'}}>
                           <Users className="w-3 h-3" />{plantelCount} ave{plantelCount > 1 ? "s" : ""}
                         </span>
                       );
                     })()}
-                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 text-center flex-shrink-0 ml-2" style={{width: '148px'}}>
+                    <span className={`px-2 py-0.5 text-xs font-bold rounded-full text-center flex-shrink-0 ml-2 flex items-center justify-center gap-1 ${needsAlert ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-emerald-100 text-emerald-700'}`} style={{width: '160px'}}>
+                      {needsAlert && <span className="text-red-500">⚠</span>}
                       {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
                     </span>
                     <span className="ml-auto flex-shrink-0">
