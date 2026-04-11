@@ -108,3 +108,6 @@
 - [x] PDF Calendário v3: rodapé com letras maiores
 - [x] PDF Calendário v3: remover indicador de "Dia Atual"
 - [x] PDF Calendário v3: feriados com borda vermelha ao redor do dia (não fundo)
+- [x] PDF Calendário v4: sempre 1 página única (independente do período)
+- [x] PDF Calendário v4: nome da espécie como título gigante (destaque principal)
+- [x] PDF Calendário v4: layout adaptativo que minimiza espaço em branco
