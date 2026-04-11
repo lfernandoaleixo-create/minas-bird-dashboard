@@ -68,7 +68,7 @@ export default function Home() {
       {/* Main content */}
       <main
         ref={contentRef}
-        className="flex-1 lg:ml-72 min-h-screen overflow-y-auto"
+        className="flex-1 lg:ml-72 h-screen overflow-y-auto"
       >
         {/* Top bar */}
         <div className="sticky top-0 z-20 bg-background/85 backdrop-blur-lg border-b border-border/30">

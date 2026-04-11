@@ -947,12 +947,17 @@ export default function FeedingModule() {
             const totalAssigned = Object.keys(calendarForSpecies).length;
 
             return (
-              <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+              <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm">
+                {/* Sticky header: nome da espécie + seletor de dieta */}
+                <div className={cn(
+                  "rounded-t-xl",
+                  isExpanded && "sticky top-[57px] z-10 bg-white shadow-sm border-b border-stone-200"
+                )}>
                 <button
                   type="button"
                   onClick={toggleExpand}
                   className={cn(
-                    "w-full px-5 py-3.5 text-left hover:bg-stone-50 transition-colors",
+                    "w-full px-5 py-3.5 text-left hover:bg-stone-50 transition-colors rounded-t-xl",
                     isExpanded && "border-b border-stone-100"
                   )}
                 >
@@ -1066,7 +1071,13 @@ export default function FeedingModule() {
                     </p>
                   )}
                 </div>
+                  </>
+                )}
+                </div>
+                {/* End sticky header */}
 
+                {isExpanded && (
+                  <>
                 {/* Resumo da dieta do dia clicado */}
                 {dayDetailDiet && dayDetailKey && (() => {
                   const keyParts = dayDetailKey.split("-");
