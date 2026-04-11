@@ -997,6 +997,15 @@ export default function FeedingModule() {
                       const color = dietColorMap.get(diet.id)!;
                       const isActive = activePaintDiet === diet.id;
                       const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;
+                      const selRacaoName = diet.racaoName || "";
+                      const selCleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
+                      const selIngredientsList = [
+                        ...(selRacaoName ? [selRacaoName] : []),
+                        ...diet.items.racao.map(i => selCleanFoodName(i.foodName)).filter(n => n !== selRacaoName),
+                        ...diet.items.vegetais.map(i => selCleanFoodName(i.foodName)),
+                        ...diet.items.frutas.map(i => selCleanFoodName(i.foodName)),
+                        ...diet.items.proteicos.map(i => selCleanFoodName(i.foodName)),
+                      ];
                       return (
                         <button
                           key={diet.id}
@@ -1006,20 +1015,36 @@ export default function FeedingModule() {
                             setDayDetailDiet(null);
                           }}
                           className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                            "flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left",
                             isActive
                               ? `${color.bg} text-white border-transparent ring-2 ring-offset-1 ring-stone-400 shadow-md`
                               : `${color.light} ${color.text} ${color.border} hover:shadow-sm`
                           )}
                         >
-                          <span className={cn("w-3 h-3 rounded-sm", isActive ? "bg-white/40" : color.bg)} />
-                          <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
-                          {assignedCount > 0 && (
-                            <span className={cn(
-                              "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
-                              isActive ? "bg-white/30 text-white" : "bg-white text-stone-600"
-                            )}>
-                              {assignedCount}d
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", isActive ? "bg-white/40" : color.bg)} />
+                            <span className="text-xs font-bold">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
+                            {assignedCount > 0 && (
+                              <span className={cn(
+                                "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
+                                isActive ? "bg-white/30 text-white" : "bg-white text-stone-600"
+                              )}>
+                                {assignedCount}d
+                              </span>
+                            )}
+                          </div>
+                          {selIngredientsList.length > 0 && (
+                            <span className={cn("text-[11px] leading-snug", isActive ? "text-white/80" : "text-stone-500")}>
+                              {selIngredientsList.map((name, idx) => (
+                                <span key={idx}>
+                                  {idx === 0 && selRacaoName ? (
+                                    <span className={cn("font-extrabold", isActive ? "text-white" : "text-amber-700")}>{name}</span>
+                                  ) : (
+                                    <span>{name}</span>
+                                  )}
+                                  {idx < selIngredientsList.length - 1 && <span className={isActive ? "text-white/40" : "text-stone-300"}>{" \u00b7 "}</span>}
+                                </span>
+                              ))}
                             </span>
                           )}
                         </button>

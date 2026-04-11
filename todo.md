@@ -90,3 +90,4 @@
 - [x] Dieta: incluir nome completo do ambiente com "Inverno" (não remover a estação do nome)
 - [x] Padronizar nome da dieta: mesmo formato no card Dietas, detalhe da dieta e calendário de cada espécie
 - [x] Calendário: nome da dieta deve incluir ingredientes, idêntico ao card Dietas expandido
+- [x] Calendário: botões de seleção de dieta (abaixo de "Selecione uma dieta...") devem mostrar ingredientes idênticos ao card Dietas
