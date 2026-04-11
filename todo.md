@@ -92,3 +92,5 @@
 - [x] Calendário: nome da dieta deve incluir ingredientes, idêntico ao card Dietas expandido
 - [x] Calendário: botões de seleção de dieta (abaixo de "Selecione uma dieta...") devem mostrar ingredientes idênticos ao card Dietas
 - [x] Calendário: título do card da espécie + botões de seleção de dieta ficam sticky no topo ao rolar o calendário
+- [x] Calendário: remover botão "Cancelar" ao selecionar dieta — basta clicar novamente no card para desmarcar
+- [x] Primeira página: alinhar badges (nº dietas, nº aves, dias programados) entre todas as espécies para estética uniforme

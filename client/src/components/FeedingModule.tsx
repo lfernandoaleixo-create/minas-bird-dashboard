@@ -766,16 +766,14 @@ export default function FeedingModule() {
                           onClick={toggleExpand}
                           className="w-full px-5 py-3 bg-stone-50 hover:bg-stone-100 transition-colors text-left"
                         >
-                          <div className="flex items-center gap-2">
-                            <Bird className="w-4 h-4 text-emerald-600" />
-                            <span className="text-sm font-bold text-stone-700">{sp.commonName}</span>
-                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-stone-200 text-stone-600">{dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""}</span>
-                            {sp.currentCount > 0 && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
-                                <Users className="w-3 h-3" />{sp.currentCount} ave{sp.currentCount > 1 ? "s" : ""}
-                              </span>
-                            )}
-                            <span className="ml-auto">
+                          <div className="flex items-center">
+                            <Bird className="w-4 h-4 text-emerald-600 flex-shrink-0 mr-2" />
+                            <span className="text-sm font-bold text-stone-700 flex-shrink-0" style={{width: '140px'}}>{sp.commonName}</span>
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-stone-200 text-stone-600 text-center flex-shrink-0 ml-2" style={{width: '56px'}}>{dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""}</span>
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center justify-center gap-0.5 flex-shrink-0 ml-2" style={{width: '64px'}}>
+                              <Users className="w-3 h-3" />{sp.currentCount || 0} ave{(sp.currentCount || 0) > 1 ? "s" : ""}
+                            </span>
+                            <span className="ml-auto flex-shrink-0">
                               {isExpanded
                                 ? <ChevronDown className="w-4 h-4 text-stone-400" />
                                 : <ChevronRight className="w-4 h-4 text-stone-400" />}
@@ -961,26 +959,24 @@ export default function FeedingModule() {
                     isExpanded && "border-b border-stone-100"
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <Bird className="w-5 h-5 text-emerald-600" />
-                    <h2 className="text-base font-bold text-stone-800">{speciesName}</h2>
-                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">
+                  <div className="flex items-center">
+                    <Bird className="w-5 h-5 text-emerald-600 flex-shrink-0 mr-3" />
+                    <h2 className="text-base font-bold text-stone-800 flex-shrink-0" style={{width: '160px'}}>{speciesName}</h2>
+                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600 text-center flex-shrink-0 ml-2" style={{width: '64px'}}>
                       {dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""}
                     </span>
                     {(() => {
                       const sp = species.find(s => s.commonName === speciesName);
                       const plantelCount = sp?.currentCount || 0;
-                      return plantelCount > 0 ? (
-                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                      return (
+                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center justify-center gap-0.5 flex-shrink-0 ml-2" style={{width: '72px'}}>
                           <Users className="w-3 h-3" />{plantelCount} ave{plantelCount > 1 ? "s" : ""}
                         </span>
-                      ) : null;
+                      );
                     })()}
-                    {totalAssigned > 0 && (
-                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
-                        {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
-                      </span>
-                    )}
+                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 text-center flex-shrink-0 ml-2" style={{width: '148px'}}>
+                      {totalAssigned} dia{totalAssigned > 1 ? "s" : ""} programado{totalAssigned > 1 ? "s" : ""}
+                    </span>
                     <span className="ml-auto flex-shrink-0">
                       {isExpanded
                         ? <ChevronDown className="w-5 h-5 text-stone-400" />
@@ -1055,21 +1051,9 @@ export default function FeedingModule() {
                         </button>
                       );
                     })}
-                    {activePaintDiet && (
-                      <button
-                        type="button"
-                        onClick={() => setActivePaintDiet(null)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-stone-500 border border-stone-200 hover:bg-stone-100 transition-colors"
-                      >
-                        <X className="w-3 h-3" /> Cancelar
-                      </button>
-                    )}
+
                   </div>
-                  {activePaintDiet && (
-                    <p className="text-[11px] text-emerald-700 mt-2 font-medium">
-                      Modo pintura ativo — clique nos dias para atribuir/remover a dieta selecionada
-                    </p>
-                  )}
+
                 </div>
                   </>
                 )}
