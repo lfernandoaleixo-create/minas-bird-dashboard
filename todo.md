@@ -111,3 +111,8 @@
 - [x] PDF Calendário v4: sempre 1 página única (independente do período)
 - [x] PDF Calendário v4: nome da espécie como título gigante (destaque principal)
 - [x] PDF Calendário v4: layout adaptativo que minimiza espaço em branco
+- [x] PDF v4.1: aumentar um pouco os dias da semana (D, S, T, Q...)
+- [x] PDF v4.1: nome do feriado não sobrepor os cards dos dias — reposicionar
+- [x] PDF v4.1: diminuir um pouco os quadrados dos dias
+- [x] PDF v4.1: "Manual Operacional de Alimentação" centralizado e com letra maior no header
+- [x] PDF v4.1: dar destaque aos ingredientes na legenda (maiores e mais visíveis)

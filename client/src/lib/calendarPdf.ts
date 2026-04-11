@@ -153,16 +153,17 @@ function drawPage(
     try { doc.addImage(logoBase64, "PNG", 5, 1, 16, 16); } catch { /* skip */ }
   }
 
-  // Criatório name
+  // Criatório name (left)
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
   doc.text("Criatório Minas Bird", 24, 8);
 
-  doc.setFontSize(8);
+  // "Manual Operacional de Alimentação" — CENTERED and BIGGER
+  doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(200, 230, 210);
-  doc.text("Manual Operacional de Alimentação", 24, 14);
+  doc.text("Manual Operacional de Alimentação", pageW / 2, 12, { align: "center" });
 
   // Right side: year
   doc.setFontSize(14);
@@ -267,7 +268,7 @@ function drawMonthCompact(
   // Day names
   const dayHeaderY = y + headerH + 2;
   const dayCellW = innerW / 7;
-  const dayNameFontSize = totalMonths <= 4 ? 8 : totalMonths <= 6 ? 7 : 5.5;
+  const dayNameFontSize = totalMonths <= 4 ? 9 : totalMonths <= 6 ? 8 : 7;
   doc.setFontSize(dayNameFontSize);
   doc.setFont("helvetica", "bold");
   for (let d = 0; d < 7; d++) {
@@ -286,9 +287,11 @@ function drawMonthCompact(
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
   const totalRows = Math.ceil((daysInMonth + firstDayOfWeek) / 7);
   const gridStartY = dayHeaderY + 2.5;
-  const feriadoReserve = totalMonths <= 6 ? 4 : 3;
+  // Reserve more space for feriado text so it doesn't overlap next row
+  const feriadoReserve = totalMonths <= 6 ? 6 : 5;
   const availableGridH = cellH - (gridStartY - y) - feriadoReserve;
-  const dayCellH = availableGridH / Math.max(totalRows, 5);
+  // Slightly smaller day cells (shrink factor)
+  const dayCellH = (availableGridH / Math.max(totalRows, 5)) * 0.94;
 
   const dayFontSize = totalMonths <= 2 ? 12 : totalMonths <= 4 ? 10 : totalMonths <= 6 ? 9 : 7;
 
@@ -307,10 +310,11 @@ function drawMonthCompact(
     const feriadoKey = `${month}-${day}`;
     const isFeriado = !!FERIADOS[feriadoKey];
 
-    const rectX = dx + 0.4;
-    const rectY = dy;
-    const rectW = dayCellW - 0.8;
-    const rectH = dayCellH - 0.6;
+    // Slightly smaller squares with more gap
+    const rectX = dx + 0.6;
+    const rectY = dy + 0.2;
+    const rectW = dayCellW - 1.2;
+    const rectH = dayCellH - 1.0;
 
     if (assignedDietId && dietColorMap.has(assignedDietId)) {
       const [r, g, b] = dietColorMap.get(assignedDietId)!;
@@ -395,9 +399,10 @@ function drawLegendInline(
   doc.text("LEGENDA", x + 4, ly);
   ly += itemH;
 
-  const swatchSize = diets.length <= 4 ? 4 : 3.5;
+  const swatchSize = diets.length <= 4 ? 4.5 : 4;
   const nameFontSize = diets.length <= 4 ? 8 : 7;
-  const ingredientsFontSize = diets.length <= 4 ? 7 : 6;
+  // Ingredients BIGGER and more prominent
+  const ingredientsFontSize = diets.length <= 4 ? 8 : 7;
 
   diets.forEach(diet => {
     const color = dietColorMap.get(diet.id);
@@ -425,11 +430,11 @@ function drawLegendInline(
       const ingredients = getDietIngredients(diet);
       if (ingredients) {
         const nameW = doc.getTextWidth(displayName);
-        const ingredientsX = x + 4 + swatchSize + 2 + nameW + 3;
+        const ingredientsX = x + 4 + swatchSize + 2 + nameW + 2;
         const maxW = w - (ingredientsX - x) - 4;
-        doc.setFont("helvetica", "normal");
+        doc.setFont("helvetica", "bold");
         doc.setFontSize(ingredientsFontSize);
-        doc.setTextColor(...B.muted);
+        doc.setTextColor(80, 80, 80);
         let displayIngredients = ingredients;
         while (doc.getTextWidth(displayIngredients) > maxW && displayIngredients.length > 10) {
           const lastDot = displayIngredients.lastIndexOf(" · ");
