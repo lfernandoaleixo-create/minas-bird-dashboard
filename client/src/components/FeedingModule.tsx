@@ -217,6 +217,7 @@ export default function FeedingModule() {
   const [exportDateTo, setExportDateTo] = useState("");
   const [exportCardExpanded, setExportCardExpanded] = useState(false);
   const [toolsCardExpanded, setToolsCardExpanded] = useState(false);
+  const [dietCardExpanded, setDietCardExpanded] = useState(false);
   const dietsQuery = trpc.diet.list.useQuery();
   const calendarQuery = trpc.calendar.getAll.useQuery();
   const savedDiets: SavedDiet[] = dietsQuery.data ?? [];
@@ -649,78 +650,261 @@ export default function FeedingModule() {
       {/* ===== MENU INICIAL ===== */}
       {dietMode === "menu" && (
         <>
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-6">
-          <h2 className="text-lg font-bold text-stone-800 mb-4">O que deseja fazer?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button
-              onClick={() => {
-                setSelectedSpeciesId(null);
-                setSelectedRacao(null);
-                setSelectedVegetais([]);
-                setSelectedFrutas([]);
-                setSelectedProteicos([]);
-                setCustomWeight(null);
-                setExpandedStep(null);
-                setPhaseId("manutencao");
-                setEnclosureId("viveiro-voo-interno");
-                setBirdCount(1);
-    setEditingDietId(null);
-    setDietName("");
-    setDietNotes("");
-    setShowSaveDialog(false);
-    setDietMode("creating");
-              }}
-              className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
-            >
-              <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors flex-shrink-0">
-                <FilePlus className="w-4 h-4 text-emerald-700" />
+        {/* Card único "Dietas" expansível */}
+        <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setDietCardExpanded(!dietCardExpanded)}
+            className="w-full px-5 py-4 text-left hover:bg-stone-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <Utensils className="w-5 h-5 text-emerald-700" />
               </div>
-              <div className="text-left">
-                <span className="font-semibold text-stone-800 block text-sm">Criar Nova Dieta</span>
-                <span className="text-[11px] text-stone-500">Montar do zero</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                if (savedDiets.length === 0) {
-                  toast.info("Nenhuma dieta salva. Crie uma nova dieta primeiro.");
-                  return;
-                }
-                setDietMode("saved-list");
-              }}
-              className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-100 hover:border-amber-400 transition-all group"
-            >
-              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors flex-shrink-0">
-                <Edit3 className="w-4 h-4 text-amber-700" />
-              </div>
-              <div className="text-left">
-                <span className="font-semibold text-stone-800 block text-sm">Mudar Dieta Atual</span>
-                <span className="text-[11px] text-stone-500">Ajustar existente</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                setDietMode("saved-list");
-              }}
-              className="flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50/50 hover:bg-stone-100 hover:border-stone-400 transition-all group"
-            >
-              <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center group-hover:bg-stone-200 transition-colors flex-shrink-0">
-                <FolderOpen className="w-5 h-5 text-stone-600" />
-              </div>
-              <div className="text-left flex-1">
-                <span className="font-bold text-stone-800 block text-base">Dietas Salvas</span>
+              <div className="flex-1">
+                <span className="font-bold text-stone-800 block text-lg">Dietas</span>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-stone-500 font-medium">{savedDiets.length} dieta{savedDiets.length !== 1 ? "s" : ""}</span>
+                  <span className="text-sm text-stone-500 font-medium">{savedDiets.length} dieta{savedDiets.length !== 1 ? "s" : ""}</span>
                   <span className="text-stone-300">·</span>
-                  <span className="text-xs text-blue-600 font-medium flex items-center gap-0.5">
+                  <span className="text-sm text-blue-600 font-medium flex items-center gap-0.5">
                     <Users className="w-3 h-3" />{species.filter(s => s.inCurrentFlock).reduce((s, sp) => s + sp.currentCount, 0)} aves no plantel
                   </span>
                 </div>
               </div>
-            </button>
-          </div>
+              <span className="ml-auto flex-shrink-0">
+                {dietCardExpanded
+                  ? <ChevronDown className="w-5 h-5 text-stone-400" />
+                  : <ChevronRight className="w-5 h-5 text-stone-400" />}
+              </span>
+            </div>
+          </button>
+
+          {dietCardExpanded && (
+            <div className="border-t border-stone-100">
+              {/* Busca e filtro */}
+              <div className="p-4 border-b border-stone-100 bg-stone-50/50">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {savedDiets.length > 3 && (
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                      <input
+                        type="text" placeholder="Buscar dieta..."
+                        value={savedDietsFilter} onChange={e => setSavedDietsFilter(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-stone-400" />
+                    <select
+                      value={phaseFilter}
+                      onChange={e => setPhaseFilter(e.target.value)}
+                      className="text-xs border border-stone-200 rounded-md px-2 py-2 bg-white text-stone-700 focus:outline-none focus:border-emerald-400"
+                    >
+                      <option value="all">Todas as fases</option>
+                      {lifePeriods.map(p => (
+                        <option key={p.id} value={p.id}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleResetAll();
+                      setDietMode("creating");
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors ml-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Nova Dieta
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista por espécie */}
+              {savedDiets.length === 0 ? (
+                <div className="p-8 text-center">
+                  <FolderOpen className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                  <p className="text-stone-500 font-medium">Nenhuma dieta salva ainda</p>
+                  <p className="text-xs text-stone-400 mt-1">Crie uma nova dieta e salve para vê-la aqui</p>
+                  <button
+                    onClick={() => { handleResetAll(); setDietMode("creating"); }}
+                    className="mt-4 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    Criar Nova Dieta
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-stone-100">
+                  {activeFlockSpecies.map(sp => {
+                    const dietsForSp = savedDiets.filter(d => d.speciesId === sp.id);
+                    const phaseFilteredDiets = phaseFilter === "all" ? dietsForSp : dietsForSp.filter(d => d.phaseId === phaseFilter);
+                    const filteredDietsForSp = savedDietsFilter
+                      ? phaseFilteredDiets.filter(d => d.name.toLowerCase().includes(savedDietsFilter.toLowerCase()) || d.speciesName.toLowerCase().includes(savedDietsFilter.toLowerCase()))
+                      : phaseFilteredDiets;
+                    const isExpanded = expandedRegistries.has(sp.id + "-diets");
+                    const toggleExpand = () => {
+                      setExpandedRegistries(prev => {
+                        const next = new Set(prev);
+                        const key = sp.id + "-diets";
+                        if (next.has(key)) next.delete(key);
+                        else next.add(key);
+                        return next;
+                      });
+                    };
+                    return (
+                      <div key={sp.id}>
+                        <button
+                          type="button"
+                          onClick={toggleExpand}
+                          className="w-full px-5 py-3 bg-stone-50 hover:bg-stone-100 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Bird className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm font-bold text-stone-700">{sp.commonName}</span>
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-stone-200 text-stone-600">{dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""}</span>
+                            {sp.currentCount > 0 && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                                <Users className="w-3 h-3" />{sp.currentCount} ave{sp.currentCount > 1 ? "s" : ""}
+                              </span>
+                            )}
+                            <span className="ml-auto">
+                              {isExpanded
+                                ? <ChevronDown className="w-4 h-4 text-stone-400" />
+                                : <ChevronRight className="w-4 h-4 text-stone-400" />}
+                            </span>
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div>
+                            {filteredDietsForSp.length === 0 ? (
+                              <div className="px-5 py-4 text-center">
+                                <p className="text-xs text-stone-400">Nenhuma dieta salva para {sp.commonName}</p>
+                                <button
+                                  onClick={() => {
+                                    handleResetAll();
+                                    handleSelectSpecies(sp);
+                                    setDietMode("creating");
+                                  }}
+                                  className="mt-2 text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+                                >
+                                  + Criar dieta
+                                </button>
+                              </div>
+                            ) : (
+                              filteredDietsForSp.map(diet => (
+                                <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-b-0">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-sm font-semibold truncate">
+                                          <DietNameStyled name={diet.name} size="sm" />
+                                        </h4>
+                                      </div>
+                                      <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
+                                        <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-0.5">
+                                          <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}
+                                        </span>
+                                        <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 font-medium text-[10px]">
+                                          {lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId}
+                                        </span>
+                                        <span className="font-medium text-stone-500">{fmtG(diet.totalGrams)}/ave</span>
+                                        <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
+                                        {(() => {
+                                          const cal = speciesCalendars[diet.speciesId] || {};
+                                          const assignedDays = Object.values(cal).filter(id => id === diet.id).length;
+                                          return assignedDays > 0 ? (
+                                            <span className="flex items-center gap-0.5 text-emerald-600">
+                                              <CalendarDays className="w-3 h-3" />
+                                              {assignedDays} dia{assignedDays > 1 ? "s" : ""}
+                                            </span>
+                                          ) : null;
+                                        })()}
+                                        <span>{formatDate(diet.updatedAt)}</span>
+                                      </div>
+                                      {diet.notes && (
+                                        <p className="text-[11px] text-stone-400 mt-0.5 italic truncate">{diet.notes}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 ml-3">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
+                                            className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                          >
+                                            <Eye className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Ver detalhes</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => loadDietForEditing(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                          >
+                                            <Edit3 className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Editar</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleDuplicateDiet(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                                          >
+                                            <CopyPlus className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Duplicar</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleCopyDiet(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                          >
+                                            <Copy className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Copiar</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleExportDiet(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                          >
+                                            <Download className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Exportar</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleDeleteDiet(diet.id)}
+                                            className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Excluir</TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
 
@@ -1693,7 +1877,7 @@ export default function FeedingModule() {
           <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <button onClick={() => setDietMode("saved-list")} className="text-stone-400 hover:text-stone-600 transition-colors">
+                <button onClick={() => setDietMode("menu")} className="text-stone-400 hover:text-stone-600 transition-colors">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <h2 className="font-bold"><DietNameStyled name={viewingDiet.name} size="lg" /></h2>

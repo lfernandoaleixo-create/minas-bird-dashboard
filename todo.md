@@ -75,3 +75,4 @@
 - [x] Livros em card expansível na seção de referência
 - [x] Ao clicar em um livro, abrir o PDF para consulta/pesquisa
 - [x] Bug: corrigir erro JSX no OperationalTools.tsx (tag div não fechada na linha 720)
+- [x] Simplificar dietas: apenas 1 card "Dietas" que ao expandir mostra lista de dietas salvas (remover cards criar/mudar/salvas separados)
