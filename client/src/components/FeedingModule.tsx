@@ -30,6 +30,7 @@ import {
   feedingToPetbirdId,
 } from "@/data/petbird";
 import { exportDietAsText, generateDietId, type SavedDiet } from "@/lib/dietStorage";
+import { exportDietPdf } from "@/lib/dietPdf";
 import { exportCalendarPdf, exportAllCalendarsPdf } from "@/lib/calendarPdf";
 import OperationalTools from "@/components/OperationalTools";
 import ReferenceBooks from "@/components/ReferenceBooks";
@@ -513,15 +514,13 @@ export default function FeedingModule() {
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
-    const text = exportDietAsText(diet);
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dieta-${diet.speciesName.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Dieta exportada!");
+    try {
+      exportDietPdf(diet, lifePeriods, enclosureTypes);
+      toast.success("PDF da dieta exportado!");
+    } catch (err) {
+      console.error("Erro ao exportar PDF:", err);
+      toast.error("Erro ao gerar PDF.");
+    }
   }, []);
 
 
@@ -663,12 +662,22 @@ export default function FeedingModule() {
               </div>
               <div className="flex-1">
                 <span className="font-bold text-stone-800 block text-lg">Dietas</span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-sm text-stone-500 font-medium">{savedDiets.length} dieta{savedDiets.length !== 1 ? "s" : ""}</span>
-                  <span className="text-stone-300">·</span>
-                  <span className="text-sm text-blue-600 font-medium flex items-center gap-0.5">
-                    <Users className="w-3 h-3" />{species.filter(s => s.inCurrentFlock).reduce((s, sp) => s + sp.currentCount, 0)} aves no plantel
-                  </span>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {lifePeriods.map(lp => {
+                    const count = savedDiets.filter(d => d.phaseId === lp.id).length;
+                    const phaseColors: Record<string, string> = {
+                      "manutencao": "bg-emerald-100 text-emerald-700",
+                      "pre-reproducao": "bg-amber-100 text-amber-700",
+                      "alimentacao-filhotes": "bg-blue-100 text-blue-700",
+                      "muda-penas": "bg-purple-100 text-purple-700",
+                    };
+                    return (
+                      <span key={lp.id} className={cn("px-2 py-0.5 text-[10px] font-bold rounded-full", phaseColors[lp.id] || "bg-stone-100 text-stone-600")}>
+                        {lp.label}: {count}
+                      </span>
+                    );
+                  })}
+                  <span className="text-[10px] text-stone-400 font-medium">({savedDiets.length} total)</span>
                 </div>
               </div>
               <span className="ml-auto flex-shrink-0">
@@ -790,63 +799,39 @@ export default function FeedingModule() {
                                 </button>
                               </div>
                             ) : (
-                              filteredDietsForSp.map(diet => (
-                                <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-b-0">
+                              filteredDietsForSp.map(diet => {
+                                const nameParts = diet.name.split(" \u2014 ");
+                                const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
+                                const encLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
+                                const racaoName = nameParts[3] || diet.racaoName || "";
+                                const allIngredients = [
+                                  ...diet.items.vegetais.map(i => i.foodName),
+                                  ...diet.items.frutas.map(i => i.foodName),
+                                  ...diet.items.proteicos.map(i => i.foodName),
+                                ].join(", ");
+                                return (
+                                <div
+                                  key={diet.id}
+                                  onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
+                                  className="px-5 py-3 hover:bg-emerald-50/50 transition-colors border-b border-stone-50 last:border-b-0 cursor-pointer group"
+                                >
                                   <div className="flex items-center justify-between">
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <h4 className="text-sm font-semibold truncate">
-                                          <DietNameStyled name={diet.name} size="sm" />
-                                        </h4>
-                                      </div>
-                                      <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
-                                        <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-0.5">
-                                          <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}
-                                        </span>
-                                        <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 font-medium text-[10px]">
-                                          {lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId}
-                                        </span>
-                                        <span className="font-medium text-stone-500">{fmtG(diet.totalGrams)}/ave</span>
-                                        <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
-                                        {(() => {
-                                          const cal = speciesCalendars[diet.speciesId] || {};
-                                          const assignedDays = Object.values(cal).filter(id => id === diet.id).length;
-                                          return assignedDays > 0 ? (
-                                            <span className="flex items-center gap-0.5 text-emerald-600">
-                                              <CalendarDays className="w-3 h-3" />
-                                              {assignedDays} dia{assignedDays > 1 ? "s" : ""}
-                                            </span>
-                                          ) : null;
-                                        })()}
-                                        <span>{formatDate(diet.updatedAt)}</span>
-                                      </div>
-                                      {diet.notes && (
-                                        <p className="text-[11px] text-stone-400 mt-0.5 italic truncate">{diet.notes}</p>
+                                      <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
+                                        {phaseLabel} — {encLabel}
+                                      </h4>
+                                      {racaoName && (
+                                        <p className="text-xs font-semibold text-amber-700 mt-0.5">
+                                          {racaoName}
+                                        </p>
+                                      )}
+                                      {allIngredients && (
+                                        <p className="text-[11px] text-stone-400 mt-0.5 truncate">
+                                          {allIngredients}
+                                        </p>
                                       )}
                                     </div>
-                                    <div className="flex items-center gap-1 ml-3">
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <button
-                                            onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                                            className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                                          >
-                                            <Eye className="w-4 h-4" />
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Ver detalhes</TooltipContent>
-                                      </Tooltip>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <button
-                                            onClick={() => loadDietForEditing(diet)}
-                                            className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                                          >
-                                            <Edit3 className="w-4 h-4" />
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Editar</TooltipContent>
-                                      </Tooltip>
+                                    <div className="flex items-center gap-1 ml-3" onClick={e => e.stopPropagation()}>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <button
@@ -861,24 +846,13 @@ export default function FeedingModule() {
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <button
-                                            onClick={() => handleCopyDiet(diet)}
-                                            className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                          >
-                                            <Copy className="w-4 h-4" />
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Copiar</TooltipContent>
-                                      </Tooltip>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <button
                                             onClick={() => handleExportDiet(diet)}
                                             className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                                           >
-                                            <Download className="w-4 h-4" />
+                                            <FileDown className="w-4 h-4" />
                                           </button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Exportar</TooltipContent>
+                                        <TooltipContent>Exportar PDF</TooltipContent>
                                       </Tooltip>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
@@ -894,7 +868,8 @@ export default function FeedingModule() {
                                     </div>
                                   </div>
                                 </div>
-                              ))
+                                );
+                              })
                             )}
                           </div>
                         )}
@@ -1778,55 +1753,35 @@ export default function FeedingModule() {
                               </button>
                             </div>
                           ) : (
-                            filteredDietsForSp.map(diet => (
-                              <div key={diet.id} className="px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-b-0">
+                            filteredDietsForSp.map(diet => {
+                              const phaseLabel2 = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
+                              const encLabel2 = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
+                              const nameParts2 = diet.name.split(" \u2014 ");
+                              const racaoName2 = nameParts2[3] || diet.racaoName || "";
+                              const allIngredients2 = [
+                                ...diet.items.vegetais.map(i => i.foodName),
+                                ...diet.items.frutas.map(i => i.foodName),
+                                ...diet.items.proteicos.map(i => i.foodName),
+                              ].join(", ");
+                              return (
+                              <div
+                                key={diet.id}
+                                onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
+                                className="px-5 py-3 hover:bg-emerald-50/50 transition-colors border-b border-stone-50 last:border-b-0 cursor-pointer group"
+                              >
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="text-sm font-semibold truncate">
-                                        <DietNameStyled name={diet.name} size="sm" />
-                                      </h4>
-                                    </div>
-                                    <div className="flex items-center gap-3 mt-1 text-[11px] text-stone-400">
-                                      <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-0.5">
-                                        <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}
-                                      </span>
-                                      <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 font-medium text-[10px]">
-                                        {lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId}
-                                      </span>
-                                      <span className="font-medium text-stone-500">{fmtG(diet.totalGrams)}/ave</span>
-                                      <span>{diet.totalKcal.toFixed(1)} kcal/ave</span>
-                                      {(() => {
-                                        const cal = speciesCalendars[diet.speciesId] || {};
-                                        const assignedDays = Object.values(cal).filter(id => id === diet.id).length;
-                                        return assignedDays > 0 ? (
-                                          <span className="flex items-center gap-0.5 text-emerald-600">
-                                            <CalendarDays className="w-3 h-3" />
-                                            {assignedDays} dia{assignedDays > 1 ? "s" : ""}
-                                          </span>
-                                        ) : null;
-                                      })()}
-                                      <span>{formatDate(diet.updatedAt)}</span>
-                                    </div>
-                                    {diet.notes && (
-                                      <p className="text-[11px] text-stone-400 mt-0.5 italic truncate">{diet.notes}</p>
+                                    <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
+                                      {phaseLabel2} \u2014 {encLabel2}
+                                    </h4>
+                                    {racaoName2 && (
+                                      <p className="text-xs font-semibold text-amber-700 mt-0.5">{racaoName2}</p>
+                                    )}
+                                    {allIngredients2 && (
+                                      <p className="text-[11px] text-stone-400 mt-0.5 truncate">{allIngredients2}</p>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-1 ml-3">
-                                    <button
-                                      onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                                      className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                                      title="Ver detalhes"
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => loadDietForEditing(diet)}
-                                      className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                                      title="Editar"
-                                    >
-                                      <Edit3 className="w-4 h-4" />
-                                    </button>
+                                  <div className="flex items-center gap-1 ml-3" onClick={e => e.stopPropagation()}>
                                     <button
                                       onClick={() => handleDuplicateDiet(diet)}
                                       className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
@@ -1835,18 +1790,11 @@ export default function FeedingModule() {
                                       <CopyPlus className="w-4 h-4" />
                                     </button>
                                     <button
-                                      onClick={() => handleCopyDiet(diet)}
-                                      className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                      title="Copiar"
-                                    >
-                                      <Copy className="w-4 h-4" />
-                                    </button>
-                                    <button
                                       onClick={() => handleExportDiet(diet)}
                                       className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                                      title="Exportar"
+                                      title="Exportar PDF"
                                     >
-                                      <Download className="w-4 h-4" />
+                                      <FileDown className="w-4 h-4" />
                                     </button>
                                     <button
                                       onClick={() => handleDeleteDiet(diet.id)}
@@ -1858,7 +1806,8 @@ export default function FeedingModule() {
                                   </div>
                                 </div>
                               </div>
-                            ))
+                              );
+                            })
                           )}
                         </div>
                       )}
@@ -1883,17 +1832,11 @@ export default function FeedingModule() {
                 <h2 className="font-bold"><DietNameStyled name={viewingDiet.name} size="lg" /></h2>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => loadDietForEditing(viewingDiet)} className="px-3 py-1.5 text-xs bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors flex items-center gap-1">
-                  <Edit3 className="w-3 h-3" /> Editar
-                </button>
                 <button onClick={() => handleDuplicateDiet(viewingDiet)} className="px-3 py-1.5 text-xs bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-1">
                   <CopyPlus className="w-3 h-3" /> Duplicar
                 </button>
-                <button onClick={() => handleCopyDiet(viewingDiet)} className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1">
-                  <Copy className="w-3 h-3" /> Copiar
-                </button>
                 <button onClick={() => handleExportDiet(viewingDiet)} className="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1">
-                  <Download className="w-3 h-3" /> Exportar
+                  <FileDown className="w-3 h-3" /> PDF
                 </button>
               </div>
             </div>

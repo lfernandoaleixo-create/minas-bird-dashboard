@@ -7,7 +7,7 @@
 import { sectors } from "@/data/sectors";
 import type { Sector, TopicGroup } from "@/data/sectors";
 import { cn } from "@/lib/utils";
-import { Menu, X, Feather, BookOpen, Utensils } from "lucide-react";
+import { Menu, X, Feather, BookOpen, Utensils, Settings } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,6 +18,7 @@ interface SidebarProps {
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
 const FEEDING_ID = "__alimentacao__";
+const SETTINGS_ID = "__configuracoes__";
 
 // Unified nav items: Alimentação first, then all sectors
 type NavEntry = {
@@ -48,7 +49,15 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
       count: 39,
     };
 
-    return [feedingItem, ...sectorItems];
+    const settingsItem: NavEntry = {
+      id: SETTINGS_ID,
+      title: "Configurações",
+      subtitle: "Equipe e acessos",
+      icon: Settings,
+      count: 5,
+    };
+
+    return [feedingItem, ...sectorItems, settingsItem];
   }, []);
 
   const totalTopics = useMemo(

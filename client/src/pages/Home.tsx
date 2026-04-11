@@ -7,12 +7,14 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import SectorContent from "@/components/SectorContent";
 import FeedingModule from "@/components/FeedingModule";
 import Sidebar from "@/components/Sidebar";
+import SettingsPanel from "@/components/SettingsPanel";
 import { sectors } from "@/data/sectors";
 import { useState, useEffect, useRef } from "react";
-import { BookOpen, ChevronLeft, ChevronRight, Utensils } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Utensils, Settings } from "lucide-react";
 
 // All navigable items: sectors + special modules
 const FEEDING_ID = "__alimentacao__";
+const SETTINGS_ID = "__configuracoes__";
 
 type NavItem = {
   id: string;
@@ -24,6 +26,7 @@ type NavItem = {
 const allNavItems: NavItem[] = [
   { id: FEEDING_ID, title: "Alimentação", subtitle: "39 espécies · Protocolos · Calculadora" },
   ...sectors.map(s => ({ id: s.id, title: s.title, subtitle: s.subtitle })),
+  { id: SETTINGS_ID, title: "Configurações", subtitle: "Equipe e acessos" },
 ];
 
 export default function Home() {
@@ -36,6 +39,7 @@ export default function Home() {
 
   const currentSector = sectors.find((s) => s.id === activeItem);
   const isFeeding = activeItem === FEEDING_ID;
+  const isSettings = activeItem === SETTINGS_ID;
   const currentIndex = allNavItems.findIndex((item) => item.id === activeItem);
   const currentNav = allNavItems[currentIndex];
 
@@ -73,6 +77,8 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 {isFeeding ? (
                   <Utensils size={14} className="text-primary/50" />
+                ) : isSettings ? (
+                  <Settings size={14} className="text-primary/50" />
                 ) : (
                   <BookOpen size={14} className="text-primary/50" />
                 )}
@@ -119,6 +125,8 @@ export default function Home() {
         <div className="px-6 lg:px-10 py-8 pb-20">
           {isFeeding ? (
             <FeedingModule />
+          ) : isSettings ? (
+            <SettingsPanel />
           ) : currentSector ? (
             <SectorContent sector={currentSector} />
           ) : null}

@@ -76,3 +76,9 @@
 - [x] Ao clicar em um livro, abrir o PDF para consulta/pesquisa
 - [x] Bug: corrigir erro JSX no OperationalTools.tsx (tag div não fechada na linha 720)
 - [x] Simplificar dietas: apenas 1 card "Dietas" que ao expandir mostra lista de dietas salvas (remover cards criar/mudar/salvas separados)
+- [x] Card Dietas: mostrar as 4 fases (Manutenção, Pré-Reprodução, Filhotes, Muda) com contagem de dietas por fase
+- [x] Dietas: ao clicar na dieta, abrir direto (sem botão editar/copiar separados)
+- [x] Dietas: botão exportar vira PDF
+- [x] Dietas: simplificar nome — "Fase — Ambiente — Estação" (sem nome da ave, sem nº aves, sem dias, sem hora)
+- [x] Dietas: abaixo do nome mostrar nome da ração + ingredientes
+- [x] Criar aba Configurações com 5 usuários e senhas (Pollyane, Eneias, Elaine, Juliano, Fernando)
