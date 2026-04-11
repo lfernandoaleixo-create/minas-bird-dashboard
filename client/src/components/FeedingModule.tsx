@@ -801,8 +801,7 @@ export default function FeedingModule() {
                             ) : (
                               filteredDietsForSp.map(diet => {
                                 const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-                                const rawEncLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
-                                const encLabel = rawEncLabel.replace(/\s*[\u2014—]\s*(Inverno|Ver[ãa]o)$/i, "").trim();
+                                const encLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
                                 const racaoName = diet.racaoName || "";
                                 const cleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
                                 const ingredientsList = [
@@ -1762,8 +1761,7 @@ export default function FeedingModule() {
                           ) : (
                             filteredDietsForSp.map(diet => {
                               const phaseLabel2 = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-                              const rawEncLabel2 = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
-                              const encLabel2 = rawEncLabel2.replace(/\s*[\u2014—]\s*(Inverno|Ver[ãa]o)$/i, "").trim();
+                              const encLabel2 = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
                               const racaoName2 = diet.racaoName || "";
                               const cleanFoodName2 = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
                               const ingredientsList2 = [
@@ -1847,7 +1845,13 @@ export default function FeedingModule() {
                 <button onClick={() => setDietMode("menu")} className="text-stone-400 hover:text-stone-600 transition-colors">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
-                <h2 className="font-bold"><DietNameStyled name={viewingDiet.name} size="lg" /></h2>
+                <h2 className="font-bold text-lg text-stone-800">
+                  {(() => {
+                    const pl = lifePeriods.find(p => p.id === viewingDiet.phaseId)?.label || viewingDiet.phaseId;
+                    const el = enclosureTypes.find(e => e.id === viewingDiet.enclosureId)?.label || viewingDiet.enclosureId;
+                    return <>{pl} {"\u2014"} {el}</>;
+                  })()}
+                </h2>
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => handleDuplicateDiet(viewingDiet)} className="px-3 py-1.5 text-xs bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-1">
@@ -1895,69 +1899,7 @@ export default function FeedingModule() {
               </div>
             )}
 
-            {/* Dias atribuídos no calendário */}
-            {(() => {
-              const cal = speciesCalendars[viewingDiet.speciesId] || {};
-              const assignedDayKeys = Object.entries(cal)
-                .filter(([, id]) => id === viewingDiet.id)
-                .map(([key]) => key);
-              if (assignedDayKeys.length === 0) return null;
-              const MONTH_NAMES_VIEW = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-              // Agrupar por mês
-              const byMonth: Record<number, number[]> = {};
-              assignedDayKeys.forEach(key => {
-                const [m, d] = key.split("-").map(Number);
-                if (!byMonth[m]) byMonth[m] = [];
-                byMonth[m].push(d);
-              });
-              const months = Object.keys(byMonth).map(Number).sort((a, b) => a - b);
-              return (
-                <div className="mb-4">
-                  <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <CalendarDays className="w-3.5 h-3.5 text-emerald-700" />
-                      <span className="text-xs font-medium text-emerald-800">
-                        Dias programados ({assignedDayKeys.length} dia{assignedDayKeys.length > 1 ? "s" : ""})
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {months.map(m => {
-                        const days = byMonth[m].sort((a, b) => a - b);
-                        const daysInMonth = new Date(2026, m, 0).getDate();
-                        return (
-                          <div key={m} className="bg-white/80 rounded-lg p-2 border border-emerald-100">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[11px] font-bold text-emerald-800">{MONTH_NAMES_VIEW[m - 1]}</span>
-                              <span className="text-[10px] text-emerald-500">
-                                {days.length === daysInMonth ? "todos os dias" : `${days.length} dia${days.length > 1 ? "s" : ""}`}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-0.5">
-                              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-                                const isActive = days.includes(day);
-                                return (
-                                  <span
-                                    key={day}
-                                    className={cn(
-                                      "w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center",
-                                      isActive
-                                        ? "bg-emerald-600 text-white"
-                                        : "bg-stone-100 text-stone-300"
-                                    )}
-                                  >
-                                    {day}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+
 
             {/* Per bird */}
             <div className="mb-4">

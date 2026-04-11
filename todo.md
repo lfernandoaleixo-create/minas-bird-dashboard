@@ -85,3 +85,6 @@
 - [x] Dietas: remover estação (ex: "Inverno") do nome simplificado — já aparece no título acima
 - [x] Dietas: aumentar e dar ênfase nos ingredientes na listagem
 - [x] Dietas: ingredientes começam pelo nome da ração, depois seguem na ordem de seleção (ração → vegetais → frutas → proteicos)
+- [x] Dieta aberta: remover card "Dias Programados"
+- [x] Dieta aberta: nome igual ao da listagem (mesmo formato)
+- [x] Dieta: incluir nome completo do ambiente com "Inverno" (não remover a estação do nome)
