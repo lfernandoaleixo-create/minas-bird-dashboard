@@ -82,3 +82,6 @@
 - [x] Dietas: simplificar nome — "Fase — Ambiente — Estação" (sem nome da ave, sem nº aves, sem dias, sem hora)
 - [x] Dietas: abaixo do nome mostrar nome da ração + ingredientes
 - [x] Criar aba Configurações com 5 usuários e senhas (Pollyane, Eneias, Elaine, Juliano, Fernando)
+- [x] Dietas: remover estação (ex: "Inverno") do nome simplificado — já aparece no título acima
+- [x] Dietas: aumentar e dar ênfase nos ingredientes na listagem
+- [x] Dietas: ingredientes começam pelo nome da ração, depois seguem na ordem de seleção (ração → vegetais → frutas → proteicos)

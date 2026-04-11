@@ -800,34 +800,41 @@ export default function FeedingModule() {
                               </div>
                             ) : (
                               filteredDietsForSp.map(diet => {
-                                const nameParts = diet.name.split(" \u2014 ");
                                 const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-                                const encLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
-                                const racaoName = nameParts[3] || diet.racaoName || "";
-                                const allIngredients = [
-                                  ...diet.items.vegetais.map(i => i.foodName),
-                                  ...diet.items.frutas.map(i => i.foodName),
-                                  ...diet.items.proteicos.map(i => i.foodName),
-                                ].join(", ");
+                                const rawEncLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
+                                const encLabel = rawEncLabel.replace(/\s*[\u2014—]\s*(Inverno|Ver[ãa]o)$/i, "").trim();
+                                const racaoName = diet.racaoName || "";
+                                const cleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
+                                const ingredientsList = [
+                                  ...(racaoName ? [racaoName] : []),
+                                  ...diet.items.racao.map(i => cleanFoodName(i.foodName)).filter(n => n !== racaoName),
+                                  ...diet.items.vegetais.map(i => cleanFoodName(i.foodName)),
+                                  ...diet.items.frutas.map(i => cleanFoodName(i.foodName)),
+                                  ...diet.items.proteicos.map(i => cleanFoodName(i.foodName)),
+                                ];
                                 return (
                                 <div
                                   key={diet.id}
                                   onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                                  className="px-5 py-3 hover:bg-emerald-50/50 transition-colors border-b border-stone-50 last:border-b-0 cursor-pointer group"
+                                  className="px-5 py-3.5 hover:bg-emerald-50/50 transition-colors border-b border-stone-50 last:border-b-0 cursor-pointer group"
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex-1 min-w-0">
                                       <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                                        {phaseLabel} — {encLabel}
+                                        {phaseLabel} {"\u2014"} {encLabel}
                                       </h4>
-                                      {racaoName && (
-                                        <p className="text-xs font-semibold text-amber-700 mt-0.5">
-                                          {racaoName}
-                                        </p>
-                                      )}
-                                      {allIngredients && (
-                                        <p className="text-[11px] text-stone-400 mt-0.5 truncate">
-                                          {allIngredients}
+                                      {ingredientsList.length > 0 && (
+                                        <p className="text-[13px] font-semibold text-stone-600 mt-1.5 leading-relaxed">
+                                          {ingredientsList.map((name, idx) => (
+                                            <span key={idx}>
+                                              {idx === 0 && racaoName ? (
+                                                <span className="text-amber-700 font-extrabold text-sm">{name}</span>
+                                              ) : (
+                                                <span>{name}</span>
+                                              )}
+                                              {idx < ingredientsList.length - 1 && <span className="text-stone-300">{" \u00b7 "}</span>}
+                                            </span>
+                                          ))}
                                         </p>
                                       )}
                                     </div>
@@ -1755,30 +1762,41 @@ export default function FeedingModule() {
                           ) : (
                             filteredDietsForSp.map(diet => {
                               const phaseLabel2 = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-                              const encLabel2 = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
-                              const nameParts2 = diet.name.split(" \u2014 ");
-                              const racaoName2 = nameParts2[3] || diet.racaoName || "";
-                              const allIngredients2 = [
-                                ...diet.items.vegetais.map(i => i.foodName),
-                                ...diet.items.frutas.map(i => i.foodName),
-                                ...diet.items.proteicos.map(i => i.foodName),
-                              ].join(", ");
+                              const rawEncLabel2 = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
+                              const encLabel2 = rawEncLabel2.replace(/\s*[\u2014—]\s*(Inverno|Ver[ãa]o)$/i, "").trim();
+                              const racaoName2 = diet.racaoName || "";
+                              const cleanFoodName2 = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
+                              const ingredientsList2 = [
+                                ...(racaoName2 ? [racaoName2] : []),
+                                ...diet.items.racao.map(i => cleanFoodName2(i.foodName)).filter(n => n !== racaoName2),
+                                ...diet.items.vegetais.map(i => cleanFoodName2(i.foodName)),
+                                ...diet.items.frutas.map(i => cleanFoodName2(i.foodName)),
+                                ...diet.items.proteicos.map(i => cleanFoodName2(i.foodName)),
+                              ];
                               return (
                               <div
                                 key={diet.id}
                                 onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                                className="px-5 py-3 hover:bg-emerald-50/50 transition-colors border-b border-stone-50 last:border-b-0 cursor-pointer group"
+                                className="px-5 py-3.5 hover:bg-emerald-50/50 transition-colors border-b border-stone-50 last:border-b-0 cursor-pointer group"
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
                                     <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                                      {phaseLabel2} \u2014 {encLabel2}
+                                      {phaseLabel2} {"\u2014"} {encLabel2}
                                     </h4>
-                                    {racaoName2 && (
-                                      <p className="text-xs font-semibold text-amber-700 mt-0.5">{racaoName2}</p>
-                                    )}
-                                    {allIngredients2 && (
-                                      <p className="text-[11px] text-stone-400 mt-0.5 truncate">{allIngredients2}</p>
+                                    {ingredientsList2.length > 0 && (
+                                      <p className="text-[13px] font-semibold text-stone-600 mt-1.5 leading-relaxed">
+                                        {ingredientsList2.map((name, idx) => (
+                                          <span key={idx}>
+                                            {idx === 0 && racaoName2 ? (
+                                              <span className="text-amber-700 font-extrabold text-sm">{name}</span>
+                                            ) : (
+                                              <span>{name}</span>
+                                            )}
+                                            {idx < ingredientsList2.length - 1 && <span className="text-stone-300">{" \u00b7 "}</span>}
+                                          </span>
+                                        ))}
+                                      </p>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-1 ml-3" onClick={e => e.stopPropagation()}>
