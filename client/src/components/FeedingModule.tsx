@@ -983,12 +983,15 @@ export default function FeedingModule() {
 
                 {isExpanded && (
                   <>
-                {/* Seletor de dieta para pintar no calendário */}
-                <div className="px-5 py-3 border-b border-stone-100 bg-stone-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Paintbrush className="w-4 h-4 text-stone-500" />
-                    <span className="text-xs font-semibold text-stone-600">Selecione uma dieta e clique nos dias do calendário para atribuí-la:</span>
+                {/* ═══ SEÇÃO 1: Seletor de dieta para pintar no calendário ═══ */}
+                <div className="px-5 py-4 bg-amber-50/60 border-b-2 border-amber-200/60">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                      <Paintbrush className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <h3 className="text-sm font-bold text-stone-800">Atribuir Dietas ao Calendário</h3>
                   </div>
+                  <p className="text-xs text-stone-500 mb-3 ml-9">Selecione uma dieta abaixo e clique nos dias do calendário para atribuí-la:</p>
                   <div className="flex flex-wrap gap-2">
                     {dietsForSpecies.map(diet => {
                       const color = dietColorMap.get(diet.id)!;
@@ -1140,8 +1143,15 @@ export default function FeedingModule() {
                   );
                 })()}
 
-                {/* Seletor de ano + Grid de meses */}
-                <div className="p-5">
+                {/* ═══ SEÇÃO 2: Calendário Anual ═══ */}
+                <div className="px-5 pt-5 pb-4 bg-white">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <CalendarDays className="w-4 h-4 text-emerald-700" />
+                    </div>
+                    <h3 className="text-sm font-bold text-stone-800">Calendário Anual</h3>
+                  </div>
+                <div>
                   <div className="flex items-center justify-center gap-3 mb-4">
                     <button
                       type="button"
@@ -1304,9 +1314,10 @@ export default function FeedingModule() {
                     })}
                   </div>
                 </div>
+                </div>
 
-                {/* Legenda */}
-                <div className="px-5 pb-3 flex flex-wrap items-center gap-3 text-[10px] text-stone-400">
+                {/* ═══ SEÇÃO 3: Legenda + Exportar PDF ═══ */}
+                <div className="mx-5 mb-4 mt-1 px-4 py-3 bg-stone-50 rounded-xl border border-stone-200 flex flex-wrap items-center gap-3 text-[10px] text-stone-500">
                   {dietsForSpecies.map(diet => {
                     const color = dietColorMap.get(diet.id)!;
                     return (
@@ -1338,8 +1349,15 @@ export default function FeedingModule() {
                   </button>
                 </div>
 
-                {/* Lista de dietas com ações */}
-                <div className="border-t border-stone-100">
+                {/* ═══ SEÇÃO 4: Detalhes das Dietas Cadastradas ═══ */}
+                <div className="border-t-2 border-emerald-200/60 bg-stone-50/40">
+                  <div className="px-5 py-3 flex items-center gap-2 border-b border-stone-200">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <Utensils className="w-4 h-4 text-emerald-700" />
+                    </div>
+                    <h3 className="text-sm font-bold text-stone-800">Dietas Cadastradas</h3>
+                    <span className="text-xs text-stone-500 ml-1">({dietsForSpecies.length})</span>
+                  </div>
                   {dietsForSpecies.map(diet => {
                     const color = dietColorMap.get(diet.id)!;
                     const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;

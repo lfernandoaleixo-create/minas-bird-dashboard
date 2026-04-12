@@ -116,3 +116,6 @@
 - [x] PDF v4.1: diminuir um pouco os quadrados dos dias
 - [x] PDF v4.1: "Manual Operacional de Alimentação" centralizado e com letra maior no header
 - [x] PDF v4.1: dar destaque aos ingredientes na legenda (maiores e mais visíveis)
+- [x] UI: melhorar estilo das cards expandidas com separações claras entre seções
+- [x] UI: separar visualmente dietas, calendário, legenda e botões quando card está aberta
+- [x] UI: reduzir confusão visual ao expandir uma espécie
