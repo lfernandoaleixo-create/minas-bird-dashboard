@@ -764,19 +764,18 @@ export default function FeedingModule() {
                         <button
                           type="button"
                           onClick={toggleExpand}
-                          className="w-full px-5 py-3 bg-stone-50 hover:bg-stone-100 transition-colors text-left"
+                          className="w-full px-4 py-2.5 hover:bg-white transition-colors text-left border-l-3 border-transparent hover:border-emerald-400"
                         >
                           <div className="flex items-center">
-                            <Bird className="w-4 h-4 text-emerald-600 flex-shrink-0 mr-2" />
-                            <span className="text-sm font-bold text-stone-700 flex-shrink-0" style={{width: '140px'}}>{sp.commonName}</span>
-                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-stone-200 text-stone-600 text-center flex-shrink-0 ml-2" style={{width: '56px'}}>{dietsForSp.length} dieta{dietsForSp.length !== 1 ? "s" : ""}</span>
-                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center justify-center gap-0.5 flex-shrink-0 ml-2" style={{width: '64px'}}>
-                              <Users className="w-3 h-3" />{sp.currentCount || 0} ave{(sp.currentCount || 0) > 1 ? "s" : ""}
+                            <span className="text-[13px] font-bold text-stone-700 flex-shrink-0">{sp.commonName}</span>
+                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-stone-100 text-stone-500 text-center flex-shrink-0 ml-2">{dietsForSp.length}</span>
+                            <span className="text-[10px] text-stone-400 flex items-center gap-0.5 flex-shrink-0 ml-2">
+                              <Users className="w-3 h-3" />{sp.currentCount || 0}
                             </span>
                             <span className="ml-auto flex-shrink-0">
                               {isExpanded
-                                ? <ChevronDown className="w-4 h-4 text-stone-400" />
-                                : <ChevronRight className="w-4 h-4 text-stone-400" />}
+                                ? <ChevronDown className="w-3.5 h-3.5 text-stone-300" />
+                                : <ChevronRight className="w-3.5 h-3.5 text-stone-300" />}
                             </span>
                           </div>
                         </button>
@@ -887,6 +886,18 @@ export default function FeedingModule() {
         </div>
 
 
+        {/* ═══ SEPARADOR: Calendário de Alimentação ═══ */}
+        {savedDiets.length > 0 && (
+          <div className="flex items-center gap-3 py-2">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-200">
+              <CalendarDays className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold text-emerald-700 tracking-wide uppercase">Calendário de Alimentação</span>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+          </div>
+        )}
+
         {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
         {savedDiets.length > 0 && (() => {
           const MONTH_NAMES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -943,7 +954,7 @@ export default function FeedingModule() {
 
 
             return (
-              <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm">
+              <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm border-l-4 border-l-emerald-400">
                 {/* Sticky header: nome da espécie + seletor de dieta */}
                 <div className={cn(
                   "rounded-t-xl",
@@ -984,14 +995,10 @@ export default function FeedingModule() {
                 {isExpanded && (
                   <>
                 {/* ═══ SEÇÃO 1: Seletor de dieta para pintar no calendário ═══ */}
-                <div className="px-5 py-4 bg-amber-50/60 border-b-2 border-amber-200/60">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
-                      <Paintbrush className="w-4 h-4 text-amber-700" />
-                    </div>
-                    <h3 className="text-sm font-bold text-stone-800">Atribuir Dietas ao Calendário</h3>
-                  </div>
-                  <p className="text-xs text-stone-500 mb-3 ml-9">Selecione uma dieta abaixo e clique nos dias do calendário para atribuí-la:</p>
+                <div className="px-5 py-3 bg-amber-50/40 border-b border-amber-200/40">
+                  <p className="text-[11px] text-amber-700/70 font-medium mb-2 flex items-center gap-1.5">
+                    <Paintbrush className="w-3.5 h-3.5" /> Selecione uma dieta e clique nos dias do calendário:
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {dietsForSpecies.map(diet => {
                       const color = dietColorMap.get(diet.id)!;
@@ -1144,13 +1151,7 @@ export default function FeedingModule() {
                 })()}
 
                 {/* ═══ SEÇÃO 2: Calendário Anual ═══ */}
-                <div className="px-5 pt-5 pb-4 bg-white">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <CalendarDays className="w-4 h-4 text-emerald-700" />
-                    </div>
-                    <h3 className="text-sm font-bold text-stone-800">Calendário Anual</h3>
-                  </div>
+                <div className="px-5 pt-4 pb-4 bg-white">
                 <div>
                   <div className="flex items-center justify-center gap-3 mb-4">
                     <button
@@ -1350,13 +1351,10 @@ export default function FeedingModule() {
                 </div>
 
                 {/* ═══ SEÇÃO 4: Detalhes das Dietas Cadastradas ═══ */}
-                <div className="border-t-2 border-emerald-200/60 bg-stone-50/40">
-                  <div className="px-5 py-3 flex items-center gap-2 border-b border-stone-200">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <Utensils className="w-4 h-4 text-emerald-700" />
-                    </div>
-                    <h3 className="text-sm font-bold text-stone-800">Dietas Cadastradas</h3>
-                    <span className="text-xs text-stone-500 ml-1">({dietsForSpecies.length})</span>
+                <div className="border-t border-stone-200 bg-stone-50/30">
+                  <div className="px-5 py-2 flex items-center gap-1.5">
+                    <Utensils className="w-3.5 h-3.5 text-stone-400" />
+                    <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Dietas ({dietsForSpecies.length})</span>
                   </div>
                   {dietsForSpecies.map(diet => {
                     const color = dietColorMap.get(diet.id)!;

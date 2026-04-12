@@ -119,3 +119,6 @@
 - [x] UI: melhorar estilo das cards expandidas com separações claras entre seções
 - [x] UI: separar visualmente dietas, calendário, legenda e botões quando card está aberta
 - [x] UI: reduzir confusão visual ao expandir uma espécie
+- [x] UI v2: refazer completamente o layout do card Dietas expandido — tudo misturado
+- [x] UI v2: criar separações visuais claras e limpas entre seções
+- [x] UI v2: garantir que o conteúdo expandido não fique confuso
