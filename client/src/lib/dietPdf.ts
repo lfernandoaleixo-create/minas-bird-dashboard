@@ -1,30 +1,10 @@
 /**
  * Exportação de Dieta em PDF — Design Profissional
- * Identidade visual Criatório Minas Bird
+ * Identidade visual Criatório Minas Bird (usando módulo compartilhado)
  */
 import { jsPDF } from "jspdf";
 import type { SavedDiet } from "./dietStorage";
-
-// Brand colors
-const BRAND = {
-  primary: [16, 185, 129] as [number, number, number],
-  dark: [6, 78, 59] as [number, number, number],
-  medium: [5, 150, 105] as [number, number, number],
-  light: [209, 250, 229] as [number, number, number],
-  bg: [240, 253, 244] as [number, number, number],
-  text: [41, 37, 36] as [number, number, number],
-  muted: [120, 113, 108] as [number, number, number],
-  amber: [180, 83, 9] as [number, number, number],
-  amberBg: [255, 251, 235] as [number, number, number],
-  green: [21, 128, 61] as [number, number, number],
-  greenBg: [240, 253, 244] as [number, number, number],
-  red: [185, 28, 28] as [number, number, number],
-  redBg: [254, 242, 242] as [number, number, number],
-  yellow: [161, 98, 7] as [number, number, number],
-  yellowBg: [254, 252, 232] as [number, number, number],
-  blue: [29, 78, 216] as [number, number, number],
-  blueBg: [239, 246, 255] as [number, number, number],
-};
+import { BRAND, loadLogo, drawBrandHeader, drawBrandFooter, fmtWeight } from "./pdfBrand";
 
 interface LifePeriodInfo {
   id: string;
@@ -36,84 +16,12 @@ interface EnclosureInfo {
   label: string;
 }
 
-function drawHeader(doc: jsPDF, pageW: number, title: string, subtitle: string): number {
-  doc.setFillColor(...BRAND.dark);
-  doc.rect(0, 0, pageW, 3, "F");
-
-  doc.setFillColor(...BRAND.bg);
-  doc.rect(0, 3, pageW, 20, "F");
-
-  doc.setDrawColor(...BRAND.primary);
-  doc.setLineWidth(0.3);
-  doc.line(0, 23, pageW, 23);
-
-  // Símbolo do criatório
-  const logoX = 10;
-  const logoY = 7;
-  doc.setFillColor(...BRAND.primary);
-  doc.circle(logoX + 4, logoY + 5, 4, "F");
-  doc.setFillColor(255, 255, 255);
-  doc.circle(logoX + 5.5, logoY + 4, 1.2, "F");
-  doc.setFillColor(...BRAND.dark);
-  doc.circle(logoX + 5.5, logoY + 4, 0.5, "F");
-  doc.setFillColor(...BRAND.medium);
-  doc.triangle(logoX + 8, logoY + 5, logoX + 10, logoY + 4.5, logoX + 8, logoY + 6, "F");
-
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.dark);
-  doc.text("Criatório Minas Bird", logoX + 14, logoY + 4);
-
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BRAND.muted);
-  doc.text("Manual Operacional de Alimentação", logoX + 14, logoY + 8);
-
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.text);
-  doc.text(title, pageW - 10, logoY + 4, { align: "right" });
-
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BRAND.muted);
-  doc.text(subtitle, pageW - 10, logoY + 8, { align: "right" });
-
-  return 28;
-}
-
-function drawFooter(doc: jsPDF, pageW: number, pageH: number): void {
-  const footerY = pageH - 7;
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.2);
-  doc.line(8, footerY - 2, pageW - 8, footerY - 2);
-
-  const now = new Date();
-  const dateStr = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()}`;
-  const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-
-  doc.setFontSize(6);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BRAND.muted);
-  doc.text(`Publicado em ${dateStr} às ${timeStr}`, 8, footerY);
-
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.medium);
-  doc.text("Criatório Minas Bird", pageW / 2, footerY, { align: "center" });
-}
-
-function fmtG(g: number): string {
-  if (g >= 1000) {
-    return (g / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + " kg";
-  }
-  return Math.round(g) + " g";
-}
-
-export function exportDietPdf(
+export async function exportDietPdf(
   diet: SavedDiet,
   lifePeriods: LifePeriodInfo[],
   enclosureTypes: EnclosureInfo[],
-): void {
+): Promise<void> {
+  const logo = await loadLogo();
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -123,15 +31,14 @@ export function exportDietPdf(
   const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
   const enclosureLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
 
-  // Header
-  let y = drawHeader(doc, pageW, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+  // Header using shared brand
+  let y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
 
   // Diet name
-  y += 4;
+  y += 2;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.text);
-  // Parse name: Ave — Fase — Ambiente — Ração — obs
   const nameParts = diet.name.split(" \u2014 ");
   const racao = nameParts[3] || diet.racaoName || "";
   const obs = nameParts.length >= 5 ? nameParts.slice(4).join(" — ") : "";
@@ -162,7 +69,7 @@ export function exportDietPdf(
     { label: "Peso", value: `${diet.weight}g` },
     { label: "Aves", value: `${diet.birdCount}` },
     { label: "MER", value: `${diet.mer.toFixed(1)} kcal/dia` },
-    { label: "Total/ave", value: `${fmtG(diet.totalGrams)} · ${diet.totalKcal.toFixed(1)} kcal` },
+    { label: "Total/ave", value: `${fmtWeight(diet.totalGrams)} · ${diet.totalKcal.toFixed(1)} kcal` },
   ];
   infoBoxes.forEach((box, i) => {
     const bx = margin + i * boxW;
@@ -203,7 +110,6 @@ export function exportDietPdf(
   doc.text("COMPOSIÇÃO DA DIETA (por ave / dia)", margin, y);
   y += 5;
 
-  // Helper to draw food items section
   const drawFoodSection = (
     title: string,
     items: typeof diet.items.racao,
@@ -211,21 +117,17 @@ export function exportDietPdf(
     textColor: [number, number, number],
   ) => {
     if (items.length === 0) return;
-    
-    // Check if we need a new page
     if (y > pageH - 40) {
-      drawFooter(doc, pageW, pageH);
+      drawBrandFooter(doc, pageW, pageH);
       doc.addPage();
-      y = drawHeader(doc, pageW, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+      y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
       y += 4;
     }
-
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...textColor);
     doc.text(title, margin, y);
     y += 4;
-
     items.forEach(item => {
       doc.setFillColor(...bgColor);
       doc.roundedRect(margin, y - 2.5, contentW, 5.5, 1, 1, "F");
@@ -235,7 +137,7 @@ export function exportDietPdf(
       doc.text(item.foodName, margin + 2, y + 0.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...textColor);
-      doc.text(`${fmtG(item.grams)}  (${item.kcal.toFixed(1)} kcal)`, pageW - margin - 2, y + 0.5, { align: "right" });
+      doc.text(`${fmtWeight(item.grams)}  (${item.kcal.toFixed(1)} kcal)`, pageW - margin - 2, y + 0.5, { align: "right" });
       y += 6.5;
     });
     y += 2;
@@ -248,9 +150,9 @@ export function exportDietPdf(
 
   // Total per bird
   if (y > pageH - 30) {
-    drawFooter(doc, pageW, pageH);
+    drawBrandFooter(doc, pageW, pageH);
     doc.addPage();
-    y = drawHeader(doc, pageW, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+    y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
     y += 4;
   }
 
@@ -260,7 +162,7 @@ export function exportDietPdf(
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
   doc.text("Total por ave", margin + 3, y + 5.5);
-  doc.text(`${fmtG(diet.totalGrams)}  ·  ${diet.totalKcal.toFixed(1)} kcal`, pageW - margin - 3, y + 5.5, { align: "right" });
+  doc.text(`${fmtWeight(diet.totalGrams)}  ·  ${diet.totalKcal.toFixed(1)} kcal`, pageW - margin - 3, y + 5.5, { align: "right" });
   y += 12;
 
   // Total for all birds
@@ -284,9 +186,9 @@ export function exportDietPdf(
     ) => {
       if (items.length === 0) return;
       if (y > pageH - 30) {
-        drawFooter(doc, pageW, pageH);
+        drawBrandFooter(doc, pageW, pageH);
         doc.addPage();
-        y = drawHeader(doc, pageW, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+        y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
         y += 4;
       }
       doc.setFontSize(8);
@@ -303,7 +205,7 @@ export function exportDietPdf(
         doc.text(item.foodName, margin + 2, y + 0.5);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(...textColor);
-        doc.text(fmtG(item.grams * diet.birdCount), pageW - margin - 2, y + 0.5, { align: "right" });
+        doc.text(fmtWeight(item.grams * diet.birdCount), pageW - margin - 2, y + 0.5, { align: "right" });
         y += 6.5;
       });
       y += 2;
@@ -322,12 +224,12 @@ export function exportDietPdf(
     doc.setTextColor(...BRAND.blue);
     doc.text(`Total para ${diet.birdCount} aves`, margin + 3, y + 5.5);
     doc.text(
-      `${fmtG(diet.totalGrams * diet.birdCount)}  ·  ${(diet.totalKcal * diet.birdCount).toFixed(1)} kcal`,
+      `${fmtWeight(diet.totalGrams * diet.birdCount)}  ·  ${(diet.totalKcal * diet.birdCount).toFixed(1)} kcal`,
       pageW - margin - 3, y + 5.5, { align: "right" }
     );
   }
 
-  drawFooter(doc, pageW, pageH);
+  drawBrandFooter(doc, pageW, pageH);
 
   doc.save(`dieta-${diet.speciesName.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`);
 }

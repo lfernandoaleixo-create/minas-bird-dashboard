@@ -130,3 +130,8 @@
 - [x] Rotina do Tratador: manhã = ração, tarde = salada — separação clara de turnos
 - [x] Rotina do Tratador: simples e direto, sem informação desnecessária
 - [x] Rotina do Tratador: formato imprimível para fixar na parede do criatório
+- [x] Rotina do Tratador: adicionar quantidade por ave e por casal
+- [x] PDF Padronização: criar módulo compartilhado de estilo (header verde escuro + logo + rodapé)
+- [x] PDF Padronização: aplicar estilo do calendário no PDF da Rotina do Tratador
+- [x] PDF Padronização: aplicar estilo do calendário no PDF da Lista de Compras
+- [x] PDF Padronização: todos os PDFs com símbolo do criatório
