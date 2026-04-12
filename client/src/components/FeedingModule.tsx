@@ -51,32 +51,29 @@ function fmtG(g: number): string {
 /** Renderiza o nome da dieta com destaque na ração e observações do usuário */
 function DietNameStyled({ name, size = "sm" }: { name: string; size?: "xs" | "sm" | "md" | "lg" }) {
   const parts = name.split(" \u2014 ");
-  // Formato: Ave — Fase — Ambiente — Ração — observações
-  const prefix = parts.slice(0, 3).join(" \u2014 "); // Ave — Fase — Ambiente
-  const racao = parts[3] || "";
-  const obs = parts.length >= 5 ? parts.slice(4).join(" \u2014 ") : "";
+  // REGRA PERMANENTE: Formato = "Espécie — Fase — Ração"
+  // Compatível com formato antigo (4+ partes) e novo (3 partes)
+  const especie = parts[0] || "";
+  const fase = parts[1] || "";
+  // No formato antigo: parts[2] era Ambiente, parts[3] era Ração
+  // No formato novo: parts[2] é Ração diretamente
+  const racao = parts.length >= 4 ? parts[3] : parts[2] || "";
 
   const sizeMap = {
-    xs: { prefix: "text-xs", racao: "text-sm", obs: "text-sm" },
-    sm: { prefix: "text-sm", racao: "text-base", obs: "text-base" },
-    md: { prefix: "text-base", racao: "text-lg", obs: "text-lg" },
-    lg: { prefix: "text-lg", racao: "text-xl", obs: "text-xl" },
+    xs: { prefix: "text-xs", racao: "text-sm" },
+    sm: { prefix: "text-sm", racao: "text-base" },
+    md: { prefix: "text-base", racao: "text-lg" },
+    lg: { prefix: "text-lg", racao: "text-xl" },
   };
   const s = sizeMap[size];
 
   return (
     <span className="inline leading-relaxed">
-      <span className={cn(s.prefix, "text-stone-500 font-medium")}>{prefix}</span>
+      <span className={cn(s.prefix, "text-stone-500 font-medium")}>{especie} \u2014 {fase}</span>
       {racao && (
         <>
-          <span className={cn(s.prefix, "text-stone-300 font-normal")}> — </span>
+          <span className={cn(s.prefix, "text-stone-300 font-normal")}> \u2014 </span>
           <span className={cn(s.racao, "font-extrabold text-amber-800 drop-shadow-sm")}>{racao}</span>
-        </>
-      )}
-      {obs && (
-        <>
-          <span className={cn(s.prefix, "text-stone-300 font-normal")}> — </span>
-          <span className={cn(s.obs, "font-extrabold text-emerald-700 drop-shadow-sm")}>{obs}</span>
         </>
       )}
     </span>
@@ -171,7 +168,7 @@ export default function FeedingModule() {
   const [showSpeciesDropdown, setShowSpeciesDropdown] = useState(false);
 
   const [phaseId, setPhaseId] = useState("manutencao");
-  const [enclosureId, setEnclosureId] = useState("viveiro-voo-interno");
+  const [enclosureId, setEnclosureId] = useState("gaiola-externa-inverno");
   const [customWeight, setCustomWeight] = useState<number | null>(null);
   const [phaseExpanded, setPhaseExpanded] = useState(false);
   const [enclosureExpanded, setEnclosureExpanded] = useState(false);
@@ -394,9 +391,9 @@ export default function FeedingModule() {
     setCustomWeight(null);
     setExpandedStep(null);
     setPhaseId("manutencao");
-    setEnclosureId("viveiro-voo-interno");
-    setBirdCount(1);
-    setDietMode("menu");
+      setEnclosureId("gaiola-externa-inverno");
+      setBirdCount(1);
+      setDietMode("menu");
     setEditingDietId(null);
     setDietName("");
     setDietNotes("");
@@ -427,11 +424,8 @@ export default function FeedingModule() {
     setSelectedProteicos(pro);
 
     setEditingDietId(diet.id);
-    // Extrair apenas o complemento do nome (remover prefixo "Ave — Fase — Ambiente — ")
-    const nameParts = diet.name.split(" — ");
-    // Se tem 5+ partes, o complemento é tudo após as 4 primeiras (Ave — Fase — Ambiente — Ração — ...)
-    const complement = nameParts.length >= 5 ? nameParts.slice(4).join(" — ") : (nameParts.length <= 3 ? diet.name : "");
-    setDietName(complement);
+    // REGRA PERMANENTE: nome é automático (Espécie — Fase — Ração), sem complemento
+    setDietName("");
     setDietNotes(diet.notes || "");
 
     setExpandedStep(null);
@@ -443,11 +437,9 @@ export default function FeedingModule() {
     if (!selectedSpecies || !selectedRacao || !nossaDieta) return;
 
     const phaseLabel = lifePeriods.find(p => p.id === phaseId)?.label || phaseId;
-    const enclosureLabel = enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId;
     const racaoLabel = selectedRacao.name;
-    const prefix = `${selectedSpecies.commonName} — ${phaseLabel} — ${enclosureLabel} — ${racaoLabel}`;
-    const suffix = dietName.trim();
-    const name = suffix ? `${prefix} — ${suffix}` : prefix;
+    // REGRA PERMANENTE: nome = "Espécie — Fase — Ração" (sem recinto, sem complemento)
+    const name = `${selectedSpecies.commonName} — ${phaseLabel} — ${racaoLabel}`;
 
     const dietData = {
       name,
@@ -501,7 +493,7 @@ export default function FeedingModule() {
       setCustomWeight(null);
       setExpandedStep(null);
       setPhaseId("manutencao");
-      setEnclosureId("viveiro-voo-interno");
+      setEnclosureId("gaiola-externa-inverno");
       setBirdCount(1);
       setEditingDietId(null);
       setDietName("");
@@ -510,7 +502,7 @@ export default function FeedingModule() {
 
       setDietMode("menu");
     }, 600);
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietName, dietNotes, editingDietId]);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietNotes, editingDietId]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -798,7 +790,6 @@ export default function FeedingModule() {
                             ) : (
                               filteredDietsForSp.map(diet => {
                                 const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-                                const encLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
                                 const racaoName = diet.racaoName || "";
                                 const cleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
                                 const ingredientsList = [
@@ -817,7 +808,7 @@ export default function FeedingModule() {
                                   <div className="flex items-center justify-between">
                                     <div className="flex-1 min-w-0">
                                       <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                                        {phaseLabel} {"\u2014"} {encLabel}
+                                        {phaseLabel}{racaoName ? <> <span className="text-stone-300">\u2014</span> <span className="text-amber-700 font-extrabold">{racaoName}</span></> : ""}
                                       </h4>
                                       {ingredientsList.length > 0 && (
                                         <p className="text-[13px] font-semibold text-stone-600 mt-1.5 leading-relaxed">
@@ -1041,8 +1032,8 @@ export default function FeedingModule() {
                         >
                           <div className="flex items-center gap-1.5">
                             <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", isActive ? "bg-white/40" : color.bg)} />
-                            <span className="text-xs font-bold">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
-                            {assignedCount > 0 && (
+<span className="text-xs font-bold">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}</span>
+                             {assignedCount > 0 && (
                               <span className={cn(
                                 "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
                                 isActive ? "bg-white/30 text-white" : "bg-white text-stone-600"
@@ -1094,7 +1085,7 @@ export default function FeedingModule() {
                           <CalendarDays className="w-4 h-4 text-blue-600" />
                           <span className="text-sm font-bold text-stone-800">{dayNum} de {monthName}</span>
                           {color && <span className={cn("w-3 h-3 rounded-sm", color.bg)} />}
-                          <span className="text-sm font-bold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === dayDetailDiet.phaseId)?.label || dayDetailDiet.phaseId; const el = enclosureTypes.find(e => e.id === dayDetailDiet.enclosureId)?.label || dayDetailDiet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
+                          <span className="text-sm font-bold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === dayDetailDiet.phaseId)?.label || dayDetailDiet.phaseId; const rn = dayDetailDiet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}</span>
                         </div>
                         <button
                           type="button"
@@ -1335,7 +1326,7 @@ export default function FeedingModule() {
                     return (
                       <span key={diet.id} className="flex items-center gap-1">
                         <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
-                        <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}</span>
+                        <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}</span>
                       </span>
                     );
                   })}
@@ -1386,8 +1377,8 @@ export default function FeedingModule() {
                             <div className="flex items-center gap-2">
                               <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", color.bg)} />
                               <h4 className="text-sm font-bold text-stone-800">
-                                {(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const el = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId; return `${pl} \u2014 ${el}`; })()}
-                              </h4>
+{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}
+                               </h4>
                             </div>
                             {calIngredientsList.length > 0 && (
                               <p className="text-[13px] font-semibold text-stone-600 mt-1.5 ml-5 leading-relaxed">
@@ -1831,7 +1822,6 @@ export default function FeedingModule() {
                           ) : (
                             filteredDietsForSp.map(diet => {
                               const phaseLabel2 = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-                              const encLabel2 = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
                               const racaoName2 = diet.racaoName || "";
                               const cleanFoodName2 = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
                               const ingredientsList2 = [
@@ -1850,7 +1840,7 @@ export default function FeedingModule() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
                                     <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                                      {phaseLabel2} {"\u2014"} {encLabel2}
+                                      {phaseLabel2}{racaoName2 ? <> <span className="text-stone-300">\u2014</span> <span className="text-amber-700 font-extrabold">{racaoName2}</span></> : ""}
                                     </h4>
                                     {ingredientsList2.length > 0 && (
                                       <p className="text-[13px] font-semibold text-stone-600 mt-1.5 leading-relaxed">
@@ -1918,8 +1908,8 @@ export default function FeedingModule() {
                 <h2 className="font-bold text-lg text-stone-800">
                   {(() => {
                     const pl = lifePeriods.find(p => p.id === viewingDiet.phaseId)?.label || viewingDiet.phaseId;
-                    const el = enclosureTypes.find(e => e.id === viewingDiet.enclosureId)?.label || viewingDiet.enclosureId;
-                    return <>{pl} {"\u2014"} {el}</>;
+                    const rn = viewingDiet.racaoName || "";
+                    return rn ? <>{pl} <span className="text-stone-300">\u2014</span> <span className="text-amber-700">{rn}</span></> : <>{pl}</>;
                   })()}
                 </h2>
               </div>
@@ -2278,19 +2268,26 @@ export default function FeedingModule() {
                     {enclosureExpanded && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         <div className="space-y-1 pl-2">
-                          {enclosureTypes.map(e => (
-                            <button
-                              key={e.id}
-                              onClick={() => { setEnclosureId(e.id); setEnclosureExpanded(false); }}
-                              className={cn("w-full text-left px-3 py-2 rounded-lg border transition-colors", enclosureId === e.id ? "border-emerald-400 bg-emerald-50" : "border-stone-100 hover:bg-stone-50")}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-stone-700">{e.label}</span>
-                                <span className="text-[10px] text-stone-500">x{e.multiplier}</span>
-                              </div>
-                              <p className="text-[11px] text-stone-500 mt-0.5 leading-tight">{e.description}</p>
-                            </button>
-                          ))}
+                          {enclosureTypes.map(e => {
+                            const isEnabled = e.id === "gaiola-externa-inverno";
+                            return (
+                              <button
+                                key={e.id}
+                                onClick={() => { if (isEnabled) { setEnclosureId(e.id); setEnclosureExpanded(false); } }}
+                                disabled={!isEnabled}
+                                className={cn(
+                                  "w-full text-left px-3 py-2 rounded-lg border transition-colors",
+                                  enclosureId === e.id ? "border-emerald-400 bg-emerald-50" : isEnabled ? "border-stone-100 hover:bg-stone-50" : "border-stone-100 bg-stone-50 opacity-50 cursor-not-allowed"
+                                )}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className={cn("text-sm font-medium", isEnabled ? "text-stone-700" : "text-stone-400")}>{e.label}</span>
+                                  <span className="text-[10px] text-stone-500">x{e.multiplier}</span>
+                                </div>
+                                <p className={cn("text-[11px] mt-0.5 leading-tight", isEnabled ? "text-stone-500" : "text-stone-400")}>{e.description}</p>
+                              </button>
+                            );
+                          })}
                         </div>
                       </motion.div>
                     )}
@@ -2595,23 +2592,15 @@ export default function FeedingModule() {
                   className="overflow-hidden mb-4"
                 >
                   <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4 space-y-3">
-                    {/* Nome da dieta (prefixo automático + complemento) */}
+                    {/* Nome da dieta (automático: Espécie — Fase — Ração) */}
                     <div>
                       <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Nome da dieta</label>
-                      <div className="flex items-center gap-0 rounded-md border border-emerald-300 bg-white overflow-hidden">
-                        <span className="px-3 py-2 text-sm font-medium text-stone-600 bg-stone-100 border-r border-emerald-200 whitespace-nowrap flex-shrink-0">
-                          {selectedSpecies?.commonName || "Espécie"} — {lifePeriods.find(p => p.id === phaseId)?.label || phaseId} — {enclosureTypes.find(e => e.id === enclosureId)?.label || enclosureId} — {selectedRacao?.name || "Ração"}
+                      <div className="rounded-md border border-emerald-300 bg-stone-100 px-3 py-2">
+                        <span className="text-sm font-semibold text-stone-700">
+                          {selectedSpecies?.commonName || "Espécie"} — {lifePeriods.find(p => p.id === phaseId)?.label || phaseId} — {selectedRacao?.name || "Ração"}
                         </span>
-                        <input
-                          type="text"
-                          value={dietName}
-                          onChange={e => setDietName(e.target.value)}
-                          placeholder="complemento (opcional)"
-                          className="flex-1 px-3 py-2 text-sm focus:outline-none bg-transparent min-w-0"
-                          autoFocus
-                        />
                       </div>
-                      <p className="text-[10px] text-stone-400 mt-1">O nome será salvo como: <span className="font-medium text-stone-600">{selectedSpecies?.commonName} — {lifePeriods.find(p => p.id === phaseId)?.label} — {enclosureTypes.find(e => e.id === enclosureId)?.label} — {selectedRacao?.name || "Ração"}{dietName.trim() ? ` — ${dietName.trim()}` : ""}</span></p>
+                      <p className="text-[10px] text-stone-400 mt-1">Nome gerado automaticamente: <span className="font-medium text-stone-600">Espécie — Fase — Ração</span></p>
                     </div>
 
                     <div className="flex items-center gap-2 pt-1">

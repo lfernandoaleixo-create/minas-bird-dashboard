@@ -52,8 +52,9 @@ const DIET_COLORS: [number, number, number][] = [
 
 function getDietDisplayName(diet: SavedDiet, lifePeriods: { id: string; label: string }[], enclosureTypes: { id: string; label: string }[]): string {
   const phase = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-  const enc = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
-  return `${phase} — ${enc}`;
+  // REGRA PERMANENTE: exibir Fase — Ração (sem recinto)
+  const racao = diet.racaoName || "";
+  return racao ? `${phase} — ${racao}` : phase;
 }
 
 function getDietIngredients(diet: SavedDiet): string {
@@ -395,7 +396,15 @@ function drawLegendInline(
       displayName = getDietDisplayName(diet, lifePeriods, enclosureTypes);
     } else {
       const parts = diet.name.split(" — ");
-      displayName = parts.length >= 3 ? `${parts[1]} — ${parts[2]}` : diet.name;
+      // Formato novo: Espécie — Fase — Ração (3 partes)
+      // Formato antigo: Espécie — Fase — Ambiente — Ração (4+ partes)
+      if (parts.length >= 4) {
+        displayName = `${parts[1]} — ${parts[3]}`; // Fase — Ração
+      } else if (parts.length === 3) {
+        displayName = `${parts[1]} — ${parts[2]}`; // Fase — Ração
+      } else {
+        displayName = diet.name;
+      }
     }
 
     doc.setFont("helvetica", "bold");

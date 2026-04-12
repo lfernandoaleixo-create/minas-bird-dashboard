@@ -144,3 +144,8 @@
 - [x] Revisar preparePdf.ts: fontes legíveis para impressão, margens, logo só símbolo
 - [x] Gerar PDFs de teste e validar visualmente todos os 4 PDFs
 - [x] dietPdf.ts: fontes mínimas 7pt, margens 12mm, logo só símbolo
+- [x] REGRA PERMANENTE: nome da dieta = "Espécie — Fase — Ração" (sem recinto, sem complemento)
+- [x] REGRA PERMANENTE: ingredientes (vegetais, frutas, sementes) sempre visíveis abaixo do nome
+- [x] REGRA PERMANENTE: recinto — todas opções visíveis mas somente "Gaiola Externa - Inverno" habilitada
+- [x] Remover campo de complemento/observações do nome da dieta
+- [x] Recinto não aparece no nome da dieta

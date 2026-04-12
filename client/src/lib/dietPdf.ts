@@ -29,21 +29,18 @@ export async function exportDietPdf(
   const contentW = pageW - margin * 2;
 
   const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
-  const enclosureLabel = enclosureTypes.find(e => e.id === diet.enclosureId)?.label || diet.enclosureId;
+  // REGRA PERMANENTE: nome = "Espécie — Fase — Ração" (sem recinto)
+  const racao = diet.racaoName || "";
 
   // Header using shared brand
-  let y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+  let y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` · ${racao}` : ""}`);
 
   // Diet name
   y += 2;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.text);
-  const nameParts = diet.name.split(" \u2014 ");
-  const racao = nameParts[3] || diet.racaoName || "";
-  const obs = nameParts.length >= 5 ? nameParts.slice(4).join(" — ") : "";
-  
-  doc.text(`${phaseLabel} — ${enclosureLabel}`, margin, y);
+  doc.text(phaseLabel, margin, y);
   y += 5;
   
   if (racao) {
@@ -51,13 +48,6 @@ export async function exportDietPdf(
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.amber);
     doc.text(`Ração: ${racao}`, margin, y);
-    y += 4.5;
-  }
-  if (obs) {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...BRAND.green);
-    doc.text(`Obs: ${obs}`, margin, y);
     y += 4.5;
   }
 
@@ -120,7 +110,7 @@ export async function exportDietPdf(
     if (y > pageH - 40) {
       drawBrandFooter(doc, pageW, pageH);
       doc.addPage();
-      y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+      y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` · ${racao}` : ""}`);
       y += 4;
     }
     doc.setFontSize(8);
@@ -152,7 +142,7 @@ export async function exportDietPdf(
   if (y > pageH - 30) {
     drawBrandFooter(doc, pageW, pageH);
     doc.addPage();
-    y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+    y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` · ${racao}` : ""}`);
     y += 4;
   }
 
@@ -188,7 +178,7 @@ export async function exportDietPdf(
       if (y > pageH - 30) {
         drawBrandFooter(doc, pageW, pageH);
         doc.addPage();
-        y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel} · ${enclosureLabel}`);
+        y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` · ${racao}` : ""}`);
         y += 4;
       }
       doc.setFontSize(8);
