@@ -1,7 +1,14 @@
 /**
  * Módulo compartilhado de estilo PDF — Criatório Minas Bird
  * Todos os PDFs do sistema devem usar estas funções para manter
- * identidade visual consistente (header verde escuro + logo real + rodapé).
+ * identidade visual consistente.
+ *
+ * PADRÃO DE IMPRESSÃO (cozinha do criatório):
+ * - Logo: SOMENTE o símbolo (sem texto "Criatório Minas Bird")
+ * - Margens: 12mm (portrait) / 8mm (landscape)
+ * - Fonte mínima: 7pt (nunca abaixo disso)
+ * - Header: barra verde escura 16mm + linha acento
+ * - Footer: data + nome criatório + paginação
  */
 import { jsPDF } from "jspdf";
 
@@ -38,7 +45,34 @@ export const CATEGORY_COLORS: Record<string, { r: number; g: number; b: number; 
 };
 
 // =============================================
-// LOGO LOADER (real logo image)
+// STANDARD MARGINS
+// =============================================
+export const PDF_MARGIN = {
+  portrait: 12,   // mm
+  landscape: 8,   // mm
+};
+
+// =============================================
+// STANDARD SIZES
+// =============================================
+export const PDF_HEADER_H = 16;  // mm - height of green bar
+export const PDF_FOOTER_H = 10;  // mm - reserved footer space
+export const PDF_ACCENT_H = 1.2; // mm - accent line below header
+
+// =============================================
+// MINIMUM FONT SIZES (for print legibility)
+// =============================================
+export const PDF_FONT = {
+  title: 14,      // main title in header
+  subtitle: 9,    // subtitle in header
+  sectionTitle: 10, // section headers
+  body: 8,        // body text
+  small: 7,       // smallest allowed (notes, captions)
+  // NEVER go below 7pt
+};
+
+// =============================================
+// LOGO LOADER (real logo image — symbol only)
 // =============================================
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
 
@@ -62,8 +96,12 @@ export async function loadLogo(): Promise<string | null> {
 }
 
 // =============================================
-// SHARED HEADER — green bar + real logo + title
+// SHARED HEADER — green bar + logo (symbol only) + title
 // Returns the Y position after the header
+//
+// Layout:
+//   [LOGO 14x14]  [TITLE centered]  [RIGHT INFO optional]
+//   No "Criatório Minas Bird" text next to logo
 // =============================================
 export function drawBrandHeader(
   doc: jsPDF,
@@ -73,66 +111,55 @@ export function drawBrandHeader(
   subtitle: string,
   options?: { rightTitle?: string; rightSubtitle?: string },
 ): number {
-  const barH = 18;
+  const barH = PDF_HEADER_H;
 
   // Dark green bar
   doc.setFillColor(...BRAND.dark);
   doc.rect(0, 0, pageW, barH, "F");
 
-  // Real logo
+  // Logo — symbol only, no text beside it
   if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", 5, 1, 16, 16); } catch { /* skip */ }
+    try { doc.addImage(logoBase64, "PNG", 4, 1, 14, 14); } catch { /* skip */ }
   }
 
-  // Criatório name (left)
-  doc.setFontSize(13);
+  // Title — centered in the bar
+  doc.setFontSize(PDF_FONT.title);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text("Criatório Minas Bird", 24, 8);
+  doc.text(title, pageW / 2, barH * 0.42, { align: "center" });
 
-  // "Manual Operacional de Alimentação" — centered
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(200, 230, 210);
-  doc.text("Manual Operacional de Alimentação", pageW / 2, 12, { align: "center" });
-
-  // Accent line
-  doc.setFillColor(...BRAND.primary);
-  doc.rect(0, barH, pageW, 1.5, "F");
-
-  // Title area below bar
-  const titleY = barH + 5;
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.dark);
-  doc.text(title, 10, titleY);
-
+  // Subtitle — below title, centered
   if (subtitle) {
-    doc.setFontSize(8);
+    doc.setFontSize(PDF_FONT.subtitle);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(...BRAND.muted);
-    doc.text(subtitle, 10, titleY + 4.5);
+    doc.setTextColor(200, 230, 210);
+    doc.text(subtitle, pageW / 2, barH * 0.75, { align: "center" });
   }
 
-  // Right side info
+  // Right side info (optional)
   if (options?.rightTitle) {
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...BRAND.text);
-    doc.text(options.rightTitle, pageW - 10, titleY, { align: "right" });
+    doc.setTextColor(255, 255, 255);
+    doc.text(options.rightTitle, pageW - 8, barH * 0.42, { align: "right" });
   }
   if (options?.rightSubtitle) {
-    doc.setFontSize(7.5);
+    doc.setFontSize(PDF_FONT.small);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(...BRAND.muted);
-    doc.text(options.rightSubtitle, pageW - 10, titleY + 4.5, { align: "right" });
+    doc.setTextColor(200, 230, 210);
+    doc.text(options.rightSubtitle, pageW - 8, barH * 0.75, { align: "right" });
   }
 
-  return titleY + 8;
+  // Accent line
+  doc.setFillColor(...BRAND.primary);
+  doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
+
+  return barH + PDF_ACCENT_H + 4;
 }
 
 // =============================================
 // SHARED FOOTER — date + criatório name + page
+// Consistent across ALL PDFs
 // =============================================
 export function drawBrandFooter(
   doc: jsPDF,
@@ -141,20 +168,21 @@ export function drawBrandFooter(
   pageNum?: number,
   totalPages?: number,
 ): void {
-  const fy = pageH - 6;
+  const margin = pageW > 250 ? PDF_MARGIN.landscape : PDF_MARGIN.portrait;
+  const fy = pageH - 7;
 
   // Separator line
   doc.setDrawColor(...BRAND.medium);
   doc.setLineWidth(0.3);
-  doc.line(8, fy - 2, pageW - 8, fy - 2);
+  doc.line(margin, fy - 2.5, pageW - margin, fy - 2.5);
 
-  // Date
+  // Date (left)
   const now = new Date();
   const ds = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()}`;
-  doc.setFontSize(7);
+  doc.setFontSize(PDF_FONT.small);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.muted);
-  doc.text(`Publicado em ${ds}`, 8, fy);
+  doc.text(`Publicado em ${ds}`, margin, fy);
 
   // Center name
   doc.setFont("helvetica", "bold");
@@ -162,12 +190,12 @@ export function drawBrandFooter(
   doc.setTextColor(...BRAND.dark);
   doc.text("Criatório Minas Bird — Ribeirão Vermelho, MG", pageW / 2, fy, { align: "center" });
 
-  // Page number
+  // Page number (right)
   if (pageNum !== undefined && totalPages !== undefined) {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(PDF_FONT.small);
     doc.setTextColor(...BRAND.muted);
-    doc.text(`Página ${pageNum} de ${totalPages}`, pageW - 8, fy, { align: "right" });
+    doc.text(`Página ${pageNum} de ${totalPages}`, pageW - margin, fy, { align: "right" });
   }
 }
 
@@ -179,15 +207,12 @@ const DASH_SUFFIX = /\s*[-–]\s*(?:Crua?|Cozid[ao]|Assad[ao]|com\s+[Cc]asca|sem
 
 export function cleanFoodName(raw: string): string {
   let name = raw;
-  // Remove trailing comma-separated suffixes iteratively
   let prev = "";
   while (prev !== name) {
     prev = name;
     name = name.replace(SUFFIX_PATTERN, "").trim();
   }
-  // Remove dash-separated suffixes
   name = name.replace(DASH_SUFFIX, "").trim();
-  // Fix common typos
   name = name.replace(/^Maça$/i, "Maçã");
   return name;
 }

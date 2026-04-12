@@ -137,3 +137,10 @@
 - [x] PDF Padronização: todos os PDFs com símbolo do criatório
 - [x] Dietas: adicionar opção de editar dieta existente com ícone de edição
 - [x] Dietas: incluir ícone de edição (lápis) ao lado de cada dieta
+- [x] Padronizar pdfBrand.ts: logo só símbolo (sem nome do criatório), margens consistentes, rodapé padronizado
+- [x] Revisar calendarPdf.ts: fontes legíveis para impressão, margens, logo só símbolo
+- [x] Revisar routinePdf.ts: fontes legíveis para impressão, margens, logo só símbolo
+- [x] Revisar shoppingPdf.ts: fontes legíveis para impressão, margens, logo só símbolo
+- [x] Revisar preparePdf.ts: fontes legíveis para impressão, margens, logo só símbolo
+- [x] Gerar PDFs de teste e validar visualmente todos os 4 PDFs
+- [x] dietPdf.ts: fontes mínimas 7pt, margens 12mm, logo só símbolo

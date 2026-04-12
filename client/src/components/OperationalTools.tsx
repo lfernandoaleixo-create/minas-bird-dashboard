@@ -380,22 +380,23 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
     let y = pdfHeader(doc, pageW, "Lista de Compras", periodStr, logo);
 
     // Info box
+    const m = 12; // margem padrão portrait
     doc.setFillColor(250, 250, 249);
-    doc.roundedRect(10, y, pageW - 20, 10, 1.5, 1.5, "F");
-    doc.setFontSize(7.5);
+    doc.roundedRect(m, y, pageW - m * 2, 10, 1.5, 1.5, "F");
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.text);
-    doc.text(`Período: ${periodStr}`, 14, y + 4);
+    doc.text(`Período: ${periodStr}`, m + 3, y + 4);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND.muted);
-    doc.text(`Espécies: ${speciesStr}`, 14, y + 8);
+    doc.text(`Espécies: ${speciesStr}`, m + 3, y + 8);
     y += 14;
 
     // === SUPERMERCADO (vegetais, frutas, proteicos) ===
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 64, 175); // blue-800
-    doc.text("COMPRAS NO SUPERMERCADO", 14, y + 3);
+    doc.text("COMPRAS NO SUPERMERCADO", m + 3, y + 3);
     y += 8;
 
     const supermarketCats: FoodCategory[] = ["vegetais", "frutas", "proteicos"];
@@ -411,12 +412,12 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
         y = pdfHeader(doc, pageW, "Lista de Compras (cont.)", periodStr, logo);
       }
       doc.setFillColor(cc.r, cc.g, cc.b);
-      doc.roundedRect(10, y, pageW - 20, 7, 1, 1, "F");
+      doc.roundedRect(m, y, pageW - m * 2, 7, 1, 1, "F");
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text(CATEGORY_CONFIG[cat].label.toUpperCase(), 14, y + 5);
-      doc.text(`${items.length} itens`, pageW - 14, y + 5, { align: "right" });
+      doc.text(CATEGORY_CONFIG[cat].label.toUpperCase(), m + 3, y + 5);
+      doc.text(`${items.length} itens`, pageW - m - 3, y + 5, { align: "right" });
       y += 9;
 
       // Items
@@ -430,14 +431,14 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
         const isEven = i % 2 === 0;
         if (isEven) {
           doc.setFillColor(cc.bgR, cc.bgG, cc.bgB);
-          doc.rect(10, y - 1, pageW - 20, 6, "F");
+          doc.rect(m, y - 1, pageW - m * 2, 6, "F");
         }
-        doc.setFontSize(8.5);
+        doc.setFontSize(9);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(...BRAND.text);
-        doc.text(cleanFoodName(item.name), 14, y + 3);
+        doc.text(cleanFoodName(item.name), m + 3, y + 3);
         doc.setFont("helvetica", "bold");
-        doc.text(formatWeight(item.totalGrams), pageW - 14, y + 3, { align: "right" });
+        doc.text(formatWeight(item.totalGrams), pageW - m - 3, y + 3, { align: "right" });
         y += 6;
       }
       y += 4;
@@ -455,29 +456,29 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
       y += 4;
       doc.setDrawColor(217, 119, 6); // amber-600
       doc.setLineDashPattern([2, 2], 0);
-      doc.line(10, y, pageW - 10, y);
+      doc.line(m, y, pageW - m, y);
       doc.setLineDashPattern([], 0);
       y += 6;
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(146, 64, 14); // amber-800
-      doc.text("RA\u00c7\u00d5ES \u2014 COMPRA VIA FORNECEDOR", 14, y + 3);
+      doc.text("RAÇÕES — COMPRA VIA FORNECEDOR", m + 3, y + 3);
       y += 6;
       doc.setFontSize(7);
       doc.setFont("helvetica", "italic");
       doc.setTextColor(180, 83, 9); // amber-600
-      doc.text("Compra trimestral direta do fornecedor \u2014 n\u00e3o incluir na lista de supermercado", 14, y + 3);
+      doc.text("Compra trimestral direta do fornecedor — não incluir na lista de supermercado", m + 3, y + 3);
       y += 8;
 
       const cc = CAT_COLORS.racao;
       doc.setFillColor(cc.r, cc.g, cc.b);
-      doc.roundedRect(10, y, pageW - 20, 7, 1, 1, "F");
+      doc.roundedRect(m, y, pageW - m * 2, 7, 1, 1, "F");
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text("RA\u00c7\u00c3O", 14, y + 5);
-      doc.text(`${racaoItems.length} itens`, pageW - 14, y + 5, { align: "right" });
+      doc.text("RAÇÃO", m + 3, y + 5);
+      doc.text(`${racaoItems.length} itens`, pageW - m - 3, y + 5, { align: "right" });
       y += 9;
 
       for (let i = 0; i < racaoItems.length; i++) {
@@ -490,14 +491,14 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
         const isEven = i % 2 === 0;
         if (isEven) {
           doc.setFillColor(cc.bgR, cc.bgG, cc.bgB);
-          doc.rect(10, y - 1, pageW - 20, 6, "F");
+          doc.rect(m, y - 1, pageW - m * 2, 6, "F");
         }
-        doc.setFontSize(8.5);
+        doc.setFontSize(9);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(...BRAND.text);
-        doc.text(cleanFoodName(item.name), 14, y + 3);
+        doc.text(cleanFoodName(item.name), m + 3, y + 3);
         doc.setFont("helvetica", "bold");
-        doc.text(formatWeight(item.totalGrams), pageW - 14, y + 3, { align: "right" });
+        doc.text(formatWeight(item.totalGrams), pageW - m - 3, y + 3, { align: "right" });
         y += 6;
       }
       y += 4;
@@ -542,41 +543,44 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
       const weekStart = formatDateBR(week[0]);
       const weekEnd = formatDateBR(week[week.length - 1]);
 
-      // === BRANDED HEADER ===
+      // === BRANDED HEADER (padronizado — logo somente símbolo) ===
       const barH = 16;
       doc.setFillColor(...BRAND.dark);
       doc.rect(0, 0, pageW, barH, "F");
-      if (logo) { try { doc.addImage(logo, "PNG", 4, 0.5, 15, 15); } catch { /* skip */ } }
-      doc.setFontSize(13);
+      // Logo — somente símbolo (sem texto ao lado)
+      if (logo) { try { doc.addImage(logo, "PNG", 4, 1, 14, 14); } catch { /* skip */ } }
+      // Título centralizado
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text("ROTINA DO TRATADOR", 22, 7);
-      doc.setFontSize(8);
+      doc.text("Rotina do Tratador", pageW / 2, barH * 0.42, { align: "center" });
+      // Subtítulo centralizado
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(200, 230, 210);
-      doc.text("Criat\u00f3rio Minas Bird \u2014 Manual Operacional de Alimenta\u00e7\u00e3o", 22, 12);
+      doc.text("Manual Operacional de Alimentação", pageW / 2, barH * 0.75, { align: "center" });
       // Week info right
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text(`Semana: ${weekStart} a ${weekEnd}`, pageW - 8, 7, { align: "right" });
-      doc.setFontSize(7.5);
+      doc.text(`Semana: ${weekStart} a ${weekEnd}`, pageW - 8, barH * 0.42, { align: "right" });
+      doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(200, 230, 210);
-      doc.text(`P\u00e1gina ${wi + 1} de ${totalPages}`, pageW - 8, 12, { align: "right" });
+      doc.text(`Página ${wi + 1} de ${totalPages}`, pageW - 8, barH * 0.75, { align: "right" });
       // Accent line
       doc.setFillColor(...BRAND.primary);
       doc.rect(0, barH, pageW, 1.2, "F");
 
       // === TABLE LAYOUT ===
       const tableTop = barH + 3;
-      const margin = 6;
+      const margin = 8;
       const tableW = pageW - margin * 2;
       const numCols = week.length; // adapt to actual days
       const colW = tableW / numCols;
       const morningColor: [number, number, number] = [255, 251, 235]; // amber-50
       const afternoonColor: [number, number, number] = [236, 253, 245]; // emerald-50
-      const footerY = pageH - 8;
+      const footerY = pageH - 10;
       const tableH = footerY - tableTop - 2;
       const dayHeaderH = 10;
       const shiftLabelH = 6;
@@ -640,97 +644,97 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
             const bc = diet.birdCount;
             const birdLabel = bc > 1 ? `(${bc} aves)` : "(1 ave)";
 
-            // Morning: ra\u00e7\u00e3o items
+            // Morning: ração items — fontes mínimas 7pt para impressão
             if (diet.items.racao.length > 0 && my < morningTop + contentAreaH - 2) {
-              doc.setFontSize(6);
+              doc.setFontSize(7);
               doc.setFont("helvetica", "bold");
               doc.setTextColor(...BRAND.dark);
               const maxNameW = colW * 0.55;
               const spLabel = doc.getTextWidth(sp.commonName) > maxNameW ? sp.commonName.substring(0, Math.max(6, Math.floor(sp.commonName.length * maxNameW / doc.getTextWidth(sp.commonName)))) + "." : sp.commonName;
-              doc.text(spLabel, x + 1.5, my);
+              doc.text(spLabel, x + 2, my);
               // Bird count badge
-              doc.setFontSize(4.5);
+              doc.setFontSize(7);
               doc.setFont("helvetica", "normal");
               doc.setTextColor(...BRAND.muted);
-              doc.text(birdLabel, x + colW - 1.5, my, { align: "right" });
-              my += 2.5;
+              doc.text(birdLabel, x + colW - 2, my, { align: "right" });
+              my += 3;
               for (const item of diet.items.racao) {
                 if (my >= morningTop + contentAreaH - 1) break;
-                doc.setFontSize(5);
+                doc.setFontSize(7);
                 doc.setFont("helvetica", "normal");
                 doc.setTextColor(...BRAND.text);
                 const maxFoodW = colW * 0.5;
                 const cName = cleanFoodName(item.foodName);
                 const nameShort = doc.getTextWidth(cName) > maxFoodW ? cName.substring(0, Math.max(5, Math.floor(cName.length * maxFoodW / doc.getTextWidth(cName)))) + "." : cName;
-                doc.text(nameShort, x + 1.5, my);
+                doc.text(nameShort, x + 2, my);
                 // Per bird
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(5);
+                doc.setFontSize(7);
                 doc.setTextColor(...BRAND.dark);
                 const perBird = formatWeightShort(item.grams);
                 if (bc > 1) {
                   const total = formatWeightShort(item.grams * bc);
-                  doc.text(`${perBird}/ave`, x + colW - 1.5, my, { align: "right" });
-                  my += 2.3;
-                  doc.setFontSize(4.5);
+                  doc.text(`${perBird}/ave`, x + colW - 2, my, { align: "right" });
+                  my += 2.8;
+                  doc.setFontSize(7);
                   doc.setTextColor(29, 78, 216); // blue
-                  doc.text(`Total: ${total}`, x + colW - 1.5, my, { align: "right" });
+                  doc.text(`Total: ${total}`, x + colW - 2, my, { align: "right" });
                 } else {
-                  doc.text(perBird, x + colW - 1.5, my, { align: "right" });
+                  doc.text(perBird, x + colW - 2, my, { align: "right" });
                 }
-                my += 2.5;
+                my += 3;
               }
               my += 0.5;
             }
 
-            // Afternoon: vegetais + frutas + proteicos
+            // Afternoon: vegetais + frutas + proteicos — fontes mínimas 7pt
             const saladItems = [...diet.items.vegetais, ...diet.items.frutas, ...diet.items.proteicos];
             if (saladItems.length > 0 && ay < afternoonTop + contentAreaH - 2) {
-              doc.setFontSize(6);
+              doc.setFontSize(7);
               doc.setFont("helvetica", "bold");
               doc.setTextColor(...BRAND.dark);
               const maxNameWA = colW * 0.55;
               const spLabel = doc.getTextWidth(sp.commonName) > maxNameWA ? sp.commonName.substring(0, Math.max(6, Math.floor(sp.commonName.length * maxNameWA / doc.getTextWidth(sp.commonName)))) + "." : sp.commonName;
-              doc.text(spLabel, x + 1.5, ay);
-              doc.setFontSize(4.5);
+              doc.text(spLabel, x + 2, ay);
+              doc.setFontSize(7);
               doc.setFont("helvetica", "normal");
               doc.setTextColor(...BRAND.muted);
-              doc.text(birdLabel, x + colW - 1.5, ay, { align: "right" });
-              ay += 2.5;
+              doc.text(birdLabel, x + colW - 2, ay, { align: "right" });
+              ay += 3;
               for (const item of saladItems) {
                 if (ay >= afternoonTop + contentAreaH - 1) break;
-                doc.setFontSize(5);
+                doc.setFontSize(7);
                 doc.setFont("helvetica", "normal");
                 doc.setTextColor(...BRAND.text);
                 const maxFoodWA = colW * 0.5;
                 const cNameA = cleanFoodName(item.foodName);
                 const nameShort = doc.getTextWidth(cNameA) > maxFoodWA ? cNameA.substring(0, Math.max(5, Math.floor(cNameA.length * maxFoodWA / doc.getTextWidth(cNameA)))) + "." : cNameA;
-                doc.text(nameShort, x + 1.5, ay);
+                doc.text(nameShort, x + 2, ay);
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(5);
+                doc.setFontSize(7);
                 doc.setTextColor(...BRAND.dark);
                 const perBird = formatWeightShort(item.grams);
                 if (bc > 1) {
                   const total = formatWeightShort(item.grams * bc);
-                  doc.text(`${perBird}/ave`, x + colW - 1.5, ay, { align: "right" });
-                  ay += 2.3;
-                  doc.setFontSize(4.5);
+                  doc.text(`${perBird}/ave`, x + colW - 2, ay, { align: "right" });
+                  ay += 2.8;
+                  doc.setFontSize(7);
                   doc.setTextColor(29, 78, 216);
-                  doc.text(`Total: ${total}`, x + colW - 1.5, ay, { align: "right" });
+                  doc.text(`Total: ${total}`, x + colW - 2, ay, { align: "right" });
                 } else {
-                  doc.text(perBird, x + colW - 1.5, ay, { align: "right" });
+                  doc.text(perBird, x + colW - 2, ay, { align: "right" });
                 }
-                ay += 2.5;
+                ay += 3;
               }
               ay += 0.5;
             }
           }
         } else {
-          doc.setFontSize(6);
+          doc.setFontSize(7);
           doc.setFont("helvetica", "italic");
           doc.setTextColor(...BRAND.muted);
           doc.text("Sem dieta", x + colW / 2, morningTop + contentAreaH / 2, { align: "center" });
-          doc.text("programada", x + colW / 2, morningTop + contentAreaH / 2 + 3, { align: "center" });
+          doc.text("programada", x + colW / 2, morningTop + contentAreaH / 2 + 3.5, { align: "center" });
         }
 
         // Column borders
@@ -761,14 +765,15 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
     const dateStr = `${dayName}, ${formatDateBR(prepGuide.date)}`;
 
     let y = pdfHeader(doc, pageW, "Guia de Preparo", dateStr, logo);
+    const m = 12; // margem padrão portrait
 
     // Consolidated ingredients
     doc.setFillColor(...BRAND.dark);
-    doc.roundedRect(10, y, pageW - 20, 7, 1.5, 1.5, "F");
-    doc.setFontSize(9);
+    doc.roundedRect(m, y, pageW - m * 2, 7, 1.5, 1.5, "F");
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("INGREDIENTES TOTAIS", 14, y + 5);
+    doc.text("INGREDIENTES TOTAIS", m + 3, y + 5);
     y += 9;
 
     const sortedItems = Object.entries(prepGuide.consolidated).sort((a, b) => b[1].totalGrams - a[1].totalGrams);
@@ -776,25 +781,25 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
       const [name, data] = sortedItems[i];
       if (i % 2 === 0) {
         doc.setFillColor(250, 250, 249);
-        doc.rect(10, y - 1, pageW - 20, 5.5, "F");
+        doc.rect(m, y - 1, pageW - m * 2, 5.5, "F");
       }
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...BRAND.text);
-      doc.text(name, 14, y + 3);
+      doc.text(name, m + 3, y + 3);
       doc.setFont("helvetica", "bold");
-      doc.text(formatWeight(data.totalGrams), pageW - 14, y + 3, { align: "right" });
+      doc.text(formatWeight(data.totalGrams), pageW - m - 3, y + 3, { align: "right" });
       y += 5.5;
     }
     y += 5;
 
     // Per species
     doc.setFillColor(...BRAND.medium);
-    doc.roundedRect(10, y, pageW - 20, 7, 1.5, 1.5, "F");
-    doc.setFontSize(9);
+    doc.roundedRect(m, y, pageW - m * 2, 7, 1.5, 1.5, "F");
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("PREPARO POR ESPÉCIE", 14, y + 5);
+    doc.text("PREPARO POR ESPÉCIE", m + 3, y + 5);
     y += 9;
 
     for (const { species: sp, diet } of prepGuide.speciesPreps) {
@@ -805,21 +810,21 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
       }
 
       doc.setFillColor(...BRAND.bg);
-      doc.roundedRect(12, y, pageW - 24, 6, 1, 1, "F");
-      doc.setFontSize(9);
+      doc.roundedRect(m, y, pageW - m * 2, 6, 1, 1, "F");
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.dark);
-      doc.text(`${sp.commonName} — ${diet.birdCount} ave${diet.birdCount > 1 ? "s" : ""}`, 15, y + 4);
+      doc.text(`${sp.commonName} — ${diet.birdCount} ave${diet.birdCount > 1 ? "s" : ""}`, m + 3, y + 4);
       y += 8;
 
       const categories: FoodCategory[] = ["racao", "vegetais", "frutas", "proteicos"];
       for (const cat of categories) {
         if (diet.items[cat].length > 0) {
           const cc = CAT_COLORS[cat];
-          doc.setFontSize(7.5);
+          doc.setFontSize(8);
           doc.setFont("helvetica", "bold");
           doc.setTextColor(cc.r, cc.g, cc.b);
-          doc.text(CATEGORY_CONFIG[cat].label, 15, y + 2.5);
+          doc.text(CATEGORY_CONFIG[cat].label, m + 3, y + 2.5);
           y += 4;
 
           for (const item of diet.items[cat]) {
@@ -828,12 +833,12 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
               doc.addPage();
               y = pdfHeader(doc, pageW, "Guia de Preparo (cont.)", dateStr, logo);
             }
-            doc.setFontSize(7.5);
+            doc.setFontSize(8);
             doc.setFont("helvetica", "normal");
             doc.setTextColor(...BRAND.text);
-            doc.text(`• ${cleanFoodName(item.foodName)}`, 18, y + 2.5);
+            doc.text(`• ${cleanFoodName(item.foodName)}`, m + 6, y + 2.5);
             doc.setFont("helvetica", "bold");
-            doc.text(`${formatWeightShort(item.grams)}/ave — ${formatWeightShort(item.grams * diet.birdCount)} total`, pageW - 14, y + 2.5, { align: "right" });
+            doc.text(`${formatWeightShort(item.grams)}/ave — ${formatWeightShort(item.grams * diet.birdCount)} total`, pageW - m - 3, y + 2.5, { align: "right" });
             y += 4.5;
           }
         }
@@ -1229,8 +1234,9 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
                                             {diet.items.racao.map((item, ii) => (
                                               <div key={ii} className="text-[8px] text-stone-600">
                                                 <div className="flex justify-between">
-                                                <span>{cleanFoodName(item.foodName)}</span>
-                                                  <span className="text-xs text-stone-500">{formatWeightShort(item.grams)}</span>                                         </div>
+                                                  <span>{cleanFoodName(item.foodName)}</span>
+                                                  <span className="text-xs text-stone-500">{formatWeightShort(item.grams)}</span>
+                                                </div>
                                                 {diet.birdCount > 1 && (
                                                   <div className="flex justify-end">
                                                     <span className="text-[7px] text-blue-600 font-bold">Total: {formatWeightShort(item.grams * diet.birdCount)}</span>

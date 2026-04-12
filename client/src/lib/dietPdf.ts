@@ -4,7 +4,7 @@
  */
 import { jsPDF } from "jspdf";
 import type { SavedDiet } from "./dietStorage";
-import { BRAND, loadLogo, drawBrandHeader, drawBrandFooter, fmtWeight } from "./pdfBrand";
+import { BRAND, loadLogo, drawBrandHeader, drawBrandFooter, fmtWeight, PDF_FONT } from "./pdfBrand";
 
 interface LifePeriodInfo {
   id: string;
@@ -25,7 +25,7 @@ export async function exportDietPdf(
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const margin = 12;
+  const margin = 12; // margem padrão portrait
   const contentW = pageW - margin * 2;
 
   const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
@@ -75,7 +75,7 @@ export async function exportDietPdf(
     const bx = margin + i * boxW;
     doc.setFillColor(...BRAND.bg);
     doc.roundedRect(bx + 1, y, boxW - 2, boxH, 1.5, 1.5, "F");
-    doc.setFontSize(6);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND.muted);
     doc.text(box.label, bx + 3, y + 4);
