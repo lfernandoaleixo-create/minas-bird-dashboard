@@ -122,3 +122,6 @@
 - [x] UI v2: refazer completamente o layout do card Dietas expandido — tudo misturado
 - [x] UI v2: criar separações visuais claras e limpas entre seções
 - [x] UI v2: garantir que o conteúdo expandido não fique confuso
+- [x] Lista de Compras: rações por último em seção separada (compra do fornecedor a cada 3 meses)
+- [x] Lista de Compras: organizar itens de supermercado por categoria (vegetais, frutas, proteicos)
+- [x] Lista de Compras: papel focado no funcionário que vai ao supermercado

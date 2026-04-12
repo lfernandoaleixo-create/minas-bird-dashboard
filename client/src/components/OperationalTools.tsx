@@ -442,13 +442,25 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
     doc.text(`Espécies: ${speciesStr}`, 14, y + 8);
     y += 14;
 
-    const categories: FoodCategory[] = ["racao", "vegetais", "frutas", "proteicos"];
-    for (const cat of categories) {
+    // === SUPERMERCADO (vegetais, frutas, proteicos) ===
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 64, 175); // blue-800
+    doc.text("COMPRAS NO SUPERMERCADO", 14, y + 3);
+    y += 8;
+
+    const supermarketCats: FoodCategory[] = ["vegetais", "frutas", "proteicos"];
+    for (const cat of supermarketCats) {
       const items = shoppingList.grouped[cat];
       if (items.length === 0) continue;
       const cc = CAT_COLORS[cat];
 
       // Category header
+      if (y > pageH - 25) {
+        pdfFooter(doc, pageW, pageH);
+        doc.addPage();
+        y = pdfHeader(doc, pageW, "Lista de Compras (cont.)", periodStr);
+      }
       doc.setFillColor(cc.r, cc.g, cc.b);
       doc.roundedRect(10, y, pageW - 20, 7, 1, 1, "F");
       doc.setFontSize(9);
@@ -466,6 +478,66 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
           y = pdfHeader(doc, pageW, "Lista de Compras (cont.)", periodStr);
         }
         const item = items[i];
+        const isEven = i % 2 === 0;
+        if (isEven) {
+          doc.setFillColor(cc.bgR, cc.bgG, cc.bgB);
+          doc.rect(10, y - 1, pageW - 20, 6, "F");
+        }
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...BRAND.text);
+        doc.text(item.name, 14, y + 3);
+        doc.setFont("helvetica", "bold");
+        doc.text(formatWeight(item.totalGrams), pageW - 14, y + 3, { align: "right" });
+        y += 6;
+      }
+      y += 4;
+    }
+
+    // === RAÇÕES (FORNECEDOR) ===
+    const racaoItems = shoppingList.grouped.racao;
+    if (racaoItems.length > 0) {
+      if (y > pageH - 35) {
+        pdfFooter(doc, pageW, pageH);
+        doc.addPage();
+        y = pdfHeader(doc, pageW, "Lista de Compras (cont.)", periodStr);
+      }
+      // Dashed separator line
+      y += 4;
+      doc.setDrawColor(217, 119, 6); // amber-600
+      doc.setLineDashPattern([2, 2], 0);
+      doc.line(10, y, pageW - 10, y);
+      doc.setLineDashPattern([], 0);
+      y += 6;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(146, 64, 14); // amber-800
+      doc.text("RA\u00c7\u00d5ES \u2014 COMPRA VIA FORNECEDOR", 14, y + 3);
+      y += 6;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(180, 83, 9); // amber-600
+      doc.text("Compra trimestral direta do fornecedor \u2014 n\u00e3o incluir na lista de supermercado", 14, y + 3);
+      y += 8;
+
+      const cc = CAT_COLORS.racao;
+      doc.setFillColor(cc.r, cc.g, cc.b);
+      doc.roundedRect(10, y, pageW - 20, 7, 1, 1, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("RA\u00c7\u00c3O", 14, y + 5);
+      doc.text(`${racaoItems.length} itens`, pageW - 14, y + 5, { align: "right" });
+      y += 9;
+
+      for (let i = 0; i < racaoItems.length; i++) {
+        if (y > pageH - 20) {
+          pdfFooter(doc, pageW, pageH);
+          doc.addPage();
+          y = pdfHeader(doc, pageW, "Lista de Compras (cont.)", periodStr);
+        }
+        const item = racaoItems[i];
         const isEven = i % 2 === 0;
         if (isEven) {
           doc.setFillColor(cc.bgR, cc.bgG, cc.bgB);
@@ -868,41 +940,86 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
                   </button>
                 </div>
 
-                <div className="space-y-4">
-                  {(["racao", "vegetais", "frutas", "proteicos"] as FoodCategory[]).map(cat => {
-                    const items = shoppingList.grouped[cat];
-                    if (items.length === 0) return null;
-                    const config = CATEGORY_CONFIG[cat];
-                    const Icon = config.icon;
+                {/* === SEÇÃO SUPERMERCADO === */}
+                <div className="mb-2">
+                  <div className="flex items-center gap-2 mb-3 px-1">
+                    <ShoppingCart className="w-5 h-5 text-blue-600" />
+                    <span className="text-base font-bold text-stone-800">Compras no Supermercado</span>
+                  </div>
+                  <div className="space-y-4">
+                    {(["vegetais", "frutas", "proteicos"] as FoodCategory[]).map(cat => {
+                      const items = shoppingList.grouped[cat];
+                      if (items.length === 0) return null;
+                      const config = CATEGORY_CONFIG[cat];
+                      const Icon = config.icon;
 
-                    return (
-                      <div key={cat} className={cn("rounded-xl border p-4", config.bg, config.border)}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Icon className={cn("w-5 h-5", config.color)} />
-                          <span className={cn("text-base font-bold", config.color)}>{config.label}</span>
-                          <span className={cn("px-2 py-0.5 text-xs font-semibold rounded-full", config.badgeBg, config.badgeText)}>
-                            {items.length} {items.length === 1 ? "item" : "itens"}
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {items.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-white/80 shadow-sm">
-                              <span className="text-base font-medium text-stone-800">{item.name}</span>
-                              <div className="text-right">
-                                <span className="text-base font-bold text-stone-900">{formatWeightShort(item.totalGrams)}</span>
-                                {Object.keys(item.perSpecies).length > 1 && (
-                                  <div className="text-xs text-stone-500 mt-0.5">
-                                    {Object.entries(item.perSpecies).map(([sp, g]) => `${sp}: ${formatWeightShort(g)}`).join(" · ")}
-                                  </div>
-                                )}
+                      return (
+                        <div key={cat} className={cn("rounded-xl border p-4", config.bg, config.border)}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Icon className={cn("w-5 h-5", config.color)} />
+                            <span className={cn("text-base font-bold", config.color)}>{config.label}</span>
+                            <span className={cn("px-2 py-0.5 text-xs font-semibold rounded-full", config.badgeBg, config.badgeText)}>
+                              {items.length} {items.length === 1 ? "item" : "itens"}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {items.map((item, i) => (
+                              <div key={i} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-white/80 shadow-sm">
+                                <span className="text-base font-medium text-stone-800">{item.name}</span>
+                                <div className="text-right">
+                                  <span className="text-base font-bold text-stone-900">{formatWeightShort(item.totalGrams)}</span>
+                                  {Object.keys(item.perSpecies).length > 1 && (
+                                    <div className="text-xs text-stone-500 mt-0.5">
+                                      {Object.entries(item.perSpecies).map(([sp, g]) => `${sp}: ${formatWeightShort(g)}`).join(" · ")}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
+
+                {/* === SEÇÃO RAÇÕES (FORNECEDOR) === */}
+                {shoppingList.grouped.racao.length > 0 && (
+                  <div className="mt-6 pt-5 border-t-2 border-dashed border-amber-300">
+                    <div className="flex items-center gap-2 mb-1 px-1">
+                      <Wheat className="w-5 h-5 text-amber-700" />
+                      <span className="text-base font-bold text-amber-800">Rações — Compra via Fornecedor</span>
+                    </div>
+                    <p className="text-xs text-amber-600 mb-3 px-1 flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      Compra trimestral direta do fornecedor — não incluir na lista de supermercado
+                    </p>
+                    <div className={cn("rounded-xl border p-4", CATEGORY_CONFIG.racao.bg, CATEGORY_CONFIG.racao.border)}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Wheat className={cn("w-5 h-5", CATEGORY_CONFIG.racao.color)} />
+                        <span className={cn("text-base font-bold", CATEGORY_CONFIG.racao.color)}>{CATEGORY_CONFIG.racao.label}</span>
+                        <span className={cn("px-2 py-0.5 text-xs font-semibold rounded-full", CATEGORY_CONFIG.racao.badgeBg, CATEGORY_CONFIG.racao.badgeText)}>
+                          {shoppingList.grouped.racao.length} {shoppingList.grouped.racao.length === 1 ? "item" : "itens"}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {shoppingList.grouped.racao.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-white/80 shadow-sm">
+                            <span className="text-base font-medium text-stone-800">{item.name}</span>
+                            <div className="text-right">
+                              <span className="text-base font-bold text-stone-900">{formatWeightShort(item.totalGrams)}</span>
+                              {Object.keys(item.perSpecies).length > 1 && (
+                                <div className="text-xs text-stone-500 mt-0.5">
+                                  {Object.entries(item.perSpecies).map(([sp, g]) => `${sp}: ${formatWeightShort(g)}`).join(" · ")}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
