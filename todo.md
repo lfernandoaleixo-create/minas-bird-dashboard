@@ -151,3 +151,5 @@
 - [x] Recinto não aparece no nome da dieta
 - [x] BUG: \u2014 aparecendo como texto literal nos cards de dieta em vez de travessão (—)
 - [x] Melhorar visual dos cards de dieta: nome da ave maior, número de aves maior e alinhado
+- [x] Alinhar badges de dietas e aves em colunas fixas nos cards de espécie (layout tabular)
+- [x] Criar separação visual na sidebar entre módulos trabalhados e módulos pendentes
