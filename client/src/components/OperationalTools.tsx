@@ -547,11 +547,10 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
       const barH = 16;
       doc.setFillColor(...BRAND.headerBg);
       doc.rect(0, 0, pageW, barH, "F");
-      // "Minas Bird" text (legible + saves ink)
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...BRAND.headerText);
-      doc.text("Minas Bird", 6, barH * 0.55);
+      // MB symbol logo
+      if (logo) {
+        try { doc.addImage(logo, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+      }
       // Título centralizado
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");

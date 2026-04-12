@@ -77,7 +77,8 @@ export const PDF_FONT = {
 // =============================================
 // LOGO LOADER (real logo image — symbol only)
 // =============================================
-const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
+// MB symbol only (cropped from full logo — no text below)
+const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663487476806/GbyPqTQ4WPAeZLRC6VPuta/mb-symbol_eba1d647.png";
 
 let _cachedLogo: string | null | undefined = undefined;
 
@@ -99,17 +100,17 @@ export async function loadLogo(): Promise<string | null> {
 }
 
 // =============================================
-// SHARED HEADER — light green bar + "Minas Bird" text + title
+// SHARED HEADER — light green bar + MB symbol + title
 // Returns the Y position after the header
 //
 // Layout (ink-saving):
-//   ["Minas Bird" text]  [TITLE centered]  [RIGHT INFO optional]
+//   [MB logo 12x12]  [TITLE centered]  [RIGHT INFO optional]
 //   Light green background with dark green text
 // =============================================
 export function drawBrandHeader(
   doc: jsPDF,
   pageW: number,
-  _logoBase64: string | null,
+  logoBase64: string | null,
   title: string,
   subtitle: string,
   options?: { rightTitle?: string; rightSubtitle?: string },
@@ -120,11 +121,10 @@ export function drawBrandHeader(
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(0, 0, pageW, barH, "F");
 
-  // "Minas Bird" text instead of logo image (more legible + saves ink)
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.headerText);
-  doc.text("Minas Bird", 6, barH * 0.55);
+  // MB symbol logo (legible at small size)
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+  }
 
   // Title — centered in the bar
   doc.setFontSize(PDF_FONT.title);

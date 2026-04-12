@@ -159,3 +159,6 @@
 - [x] PDF: trocar cabeçalho verde escuro por tom mais claro para economizar tinta
 - [x] PDF: logo/símbolo ilegível — usar apenas nome "Minas Bird" em texto ou apenas símbolo maior
 - [x] PDF Calendário: letras dos dias da semana (D,S,T,Q) muito apertadas — aumentar espaçamento
+- [x] PDF Calendário: legenda deve conter apenas dietas que aparecem nos meses selecionados
+- [x] PDF: procurar e usar logo MB (símbolo) do criatório nos PDFs
+- [x] Card Dietas: melhorar estética e badges

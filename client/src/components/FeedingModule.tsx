@@ -642,34 +642,38 @@ export default function FeedingModule() {
       {dietMode === "menu" && (
         <>
         {/* Card único "Dietas" expansível */}
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-stone-200 shadow-md overflow-hidden">
           <button
             type="button"
             onClick={() => setDietCardExpanded(!dietCardExpanded)}
-            className="w-full px-5 py-4 text-left hover:bg-stone-50 transition-colors"
+            className="w-full px-6 py-5 text-left hover:bg-stone-50/70 transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <Utensils className="w-5 h-5 text-emerald-700" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Utensils className="w-6 h-6 text-emerald-700" />
               </div>
-              <div className="flex-1">
-                <span className="font-bold text-stone-800 block text-lg">Dietas</span>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="font-bold text-stone-800 text-lg">Dietas</span>
+                  <span className="text-xs text-stone-400 font-medium bg-stone-100 px-2 py-0.5 rounded-full">{savedDiets.length} total</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
                   {lifePeriods.map(lp => {
                     const count = savedDiets.filter(d => d.phaseId === lp.id).length;
-                    const phaseColors: Record<string, string> = {
-                      "manutencao": "bg-emerald-100 text-emerald-700",
-                      "pre-reproducao": "bg-amber-100 text-amber-700",
-                      "alimentacao-filhotes": "bg-blue-100 text-blue-700",
-                      "muda-penas": "bg-purple-100 text-purple-700",
+                    const phaseStyles: Record<string, { bg: string; dot: string }> = {
+                      "manutencao": { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+                      "pre-reproducao": { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+                      "alimentacao-filhotes": { bg: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" },
+                      "muda-penas": { bg: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
                     };
+                    const style = phaseStyles[lp.id] || { bg: "bg-stone-50 text-stone-600 border-stone-200", dot: "bg-stone-400" };
                     return (
-                      <span key={lp.id} className={cn("px-2 py-0.5 text-[10px] font-bold rounded-full", phaseColors[lp.id] || "bg-stone-100 text-stone-600")}>
+                      <span key={lp.id} className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border", style.bg)}>
+                        <span className={cn("w-2 h-2 rounded-full", style.dot)} />
                         {lp.label}: {count}
                       </span>
                     );
                   })}
-                  <span className="text-[10px] text-stone-400 font-medium">({savedDiets.length} total)</span>
                 </div>
               </div>
               <span className="ml-auto flex-shrink-0">

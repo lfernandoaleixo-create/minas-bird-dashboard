@@ -107,7 +107,7 @@ function drawCalendarHeader(
   pageW: number,
   speciesName: string,
   year: number,
-  _logoBase64: string | null,
+  logoBase64: string | null,
 ): number {
   const marginX = PDF_MARGIN.landscape;
   const barH = PDF_HEADER_H;
@@ -116,11 +116,10 @@ function drawCalendarHeader(
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(0, 0, pageW, barH, "F");
 
-  // "Minas Bird" text instead of logo (legible + saves ink)
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.headerText);
-  doc.text("Minas Bird", 6, barH * 0.55);
+  // MB symbol logo (legible at small size)
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+  }
 
   // "Calendário de Alimentação" — centered
   doc.setFontSize(12);
@@ -182,10 +181,23 @@ function drawPage(
   // ---- FOOTER (reserve space) ----
   drawBrandFooter(doc, pageW, pageH);
 
+  // ---- FILTER DIETS: only show diets that appear in selected months ----
+  const usedDietIds = new Set<string>();
+  for (const month of months) {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayKey = `${year}-${month}-${day}`;
+      const legacyKey = `${month}-${day}`;
+      const dietId = calendar[dayKey] || calendar[legacyKey];
+      if (dietId) usedDietIds.add(dietId);
+    }
+  }
+  const visibleDiets = diets.filter(d => usedDietIds.has(d.id));
+
   // ---- LEGEND (calculate height to reserve space) ----
-  const legendItemH = diets.length <= 4 ? 5 : 4;
+  const legendItemH = visibleDiets.length <= 4 ? 5 : 4;
   const legendTitleH = 5;
-  const legendH = legendTitleH + diets.length * legendItemH + (diets.length > 0 ? legendItemH : 0) + 3;
+  const legendH = legendTitleH + visibleDiets.length * legendItemH + (visibleDiets.length > 0 ? legendItemH : 0) + 3;
   const footerReserve = 10; // space for footer
   const legendStartY = pageH - footerReserve - legendH - 1;
 
@@ -208,8 +220,8 @@ function drawPage(
     drawMonthCompact(doc, x, y, cellW, cellH, year, month, calendar, dietColorMap, monthCount);
   }
 
-  // ---- DRAW LEGEND ----
-  drawLegendInline(doc, marginX, legendStartY, pageW - marginX * 2, diets, dietColorMap, lifePeriods, enclosureTypes);
+  // ---- DRAW LEGEND (only diets used in selected months) ----
+  drawLegendInline(doc, marginX, legendStartY, pageW - marginX * 2, visibleDiets, dietColorMap, lifePeriods, enclosureTypes);
 }
 
 // =============================================
@@ -505,10 +517,9 @@ export async function exportAllCalendarsPdf(
   if (speciesWithDiets.length === 0) {
     doc.setFillColor(...BRAND.headerBg);
     doc.rect(0, 0, pageW, PDF_HEADER_H, "F");
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...BRAND.headerText);
-    doc.text("Minas Bird", 6, PDF_HEADER_H * 0.55);
+    if (logoBase64) {
+      try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+    }
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.muted);
