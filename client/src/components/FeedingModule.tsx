@@ -838,6 +838,17 @@ export default function FeedingModule() {
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <button
+                                            onClick={() => loadDietForEditing(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                          >
+                                            <Edit3 className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Editar</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
                                             onClick={() => handleDuplicateDiet(diet)}
                                             className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
                                           >

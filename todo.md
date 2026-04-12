@@ -135,3 +135,5 @@
 - [x] PDF Padronização: aplicar estilo do calendário no PDF da Rotina do Tratador
 - [x] PDF Padronização: aplicar estilo do calendário no PDF da Lista de Compras
 - [x] PDF Padronização: todos os PDFs com símbolo do criatório
+- [x] Dietas: adicionar opção de editar dieta existente com ícone de edição
+- [x] Dietas: incluir ícone de edição (lápis) ao lado de cada dieta
