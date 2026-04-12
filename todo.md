@@ -149,3 +149,5 @@
 - [x] REGRA PERMANENTE: recinto — todas opções visíveis mas somente "Gaiola Externa - Inverno" habilitada
 - [x] Remover campo de complemento/observações do nome da dieta
 - [x] Recinto não aparece no nome da dieta
+- [x] BUG: \u2014 aparecendo como texto literal nos cards de dieta em vez de travessão (—)
+- [x] Melhorar visual dos cards de dieta: nome da ave maior, número de aves maior e alinhado

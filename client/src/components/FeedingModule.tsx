@@ -50,7 +50,7 @@ function fmtG(g: number): string {
 
 /** Renderiza o nome da dieta com destaque na ração e observações do usuário */
 function DietNameStyled({ name, size = "sm" }: { name: string; size?: "xs" | "sm" | "md" | "lg" }) {
-  const parts = name.split(" \u2014 ");
+  const parts = name.split(" — ");
   // REGRA PERMANENTE: Formato = "Espécie — Fase — Ração"
   // Compatível com formato antigo (4+ partes) e novo (3 partes)
   const especie = parts[0] || "";
@@ -69,10 +69,10 @@ function DietNameStyled({ name, size = "sm" }: { name: string; size?: "xs" | "sm
 
   return (
     <span className="inline leading-relaxed">
-      <span className={cn(s.prefix, "text-stone-500 font-medium")}>{especie} \u2014 {fase}</span>
+      <span className={cn(s.prefix, "text-stone-500 font-medium")}>{especie} — {fase}</span>
       {racao && (
         <>
-          <span className={cn(s.prefix, "text-stone-300 font-normal")}> \u2014 </span>
+          <span className={cn(s.prefix, "text-stone-300 font-normal")}> — </span>
           <span className={cn(s.racao, "font-extrabold text-amber-800 drop-shadow-sm")}>{racao}</span>
         </>
       )}
@@ -756,18 +756,20 @@ export default function FeedingModule() {
                         <button
                           type="button"
                           onClick={toggleExpand}
-                          className="w-full px-4 py-2.5 hover:bg-white transition-colors text-left border-l-3 border-transparent hover:border-emerald-400"
+                          className="w-full px-5 py-3.5 hover:bg-white transition-colors text-left border-l-3 border-transparent hover:border-emerald-400"
                         >
-                          <div className="flex items-center">
-                            <span className="text-[13px] font-bold text-stone-700 flex-shrink-0">{sp.commonName}</span>
-                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-stone-100 text-stone-500 text-center flex-shrink-0 ml-2">{dietsForSp.length}</span>
-                            <span className="text-[10px] text-stone-400 flex items-center gap-0.5 flex-shrink-0 ml-2">
-                              <Users className="w-3 h-3" />{sp.currentCount || 0}
-                            </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-base font-bold text-stone-800 flex-shrink-0">{sp.commonName}</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 tabular-nums">{dietsForSp.length} {dietsForSp.length === 1 ? "dieta" : "dietas"}</span>
+                              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-stone-100 text-stone-600 flex items-center gap-1 tabular-nums">
+                                <Users className="w-3.5 h-3.5" /> {sp.currentCount || 0} aves
+                              </span>
+                            </div>
                             <span className="ml-auto flex-shrink-0">
                               {isExpanded
-                                ? <ChevronDown className="w-3.5 h-3.5 text-stone-300" />
-                                : <ChevronRight className="w-3.5 h-3.5 text-stone-300" />}
+                                ? <ChevronDown className="w-4 h-4 text-stone-400" />
+                                : <ChevronRight className="w-4 h-4 text-stone-400" />}
                             </span>
                           </div>
                         </button>
@@ -803,26 +805,33 @@ export default function FeedingModule() {
                                 <div
                                   key={diet.id}
                                   onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                                  className="px-5 py-3.5 hover:bg-emerald-50/50 transition-colors border-b border-stone-50 last:border-b-0 cursor-pointer group"
+                                  className="px-5 py-4 hover:bg-emerald-50/50 transition-colors border-b border-stone-100 last:border-b-0 cursor-pointer group"
                                 >
-                                  <div className="flex items-center justify-between">
+                                  <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">
-                                      <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                                        {phaseLabel}{racaoName ? <> <span className="text-stone-300">\u2014</span> <span className="text-amber-700 font-extrabold">{racaoName}</span></> : ""}
+                                      <h4 className="text-base font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
+                                        {phaseLabel}{racaoName ? <> <span className="text-stone-300 mx-1">{"\u2014"}</span> <span className="text-amber-700 font-extrabold">{racaoName}</span></> : ""}
                                       </h4>
                                       {ingredientsList.length > 0 && (
-                                        <p className="text-[13px] font-semibold text-stone-600 mt-1.5 leading-relaxed">
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
                                           {ingredientsList.map((name, idx) => (
-                                            <span key={idx}>
-                                              {idx === 0 && racaoName ? (
-                                                <span className="text-amber-700 font-extrabold text-sm">{name}</span>
-                                              ) : (
-                                                <span>{name}</span>
+                                            <span
+                                              key={idx}
+                                              className={cn(
+                                                "px-2 py-0.5 text-xs font-medium rounded-full",
+                                                idx === 0 && racaoName
+                                                  ? "bg-amber-100 text-amber-800"
+                                                  : diet.items.vegetais.some(v => name === (() => { let n = v.foodName; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; })())
+                                                    ? "bg-green-100 text-green-800"
+                                                    : diet.items.frutas.some(f => name === (() => { let n = f.foodName; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; })())
+                                                      ? "bg-orange-100 text-orange-800"
+                                                      : "bg-stone-100 text-stone-700"
                                               )}
-                                              {idx < ingredientsList.length - 1 && <span className="text-stone-300">{" \u00b7 "}</span>}
+                                            >
+                                              {name}
                                             </span>
                                           ))}
-                                        </p>
+                                        </div>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-1 ml-3" onClick={e => e.stopPropagation()}>
@@ -1032,7 +1041,7 @@ export default function FeedingModule() {
                         >
                           <div className="flex items-center gap-1.5">
                             <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", isActive ? "bg-white/40" : color.bg)} />
-<span className="text-xs font-bold">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}</span>
+<span className="text-xs font-bold">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
                              {assignedCount > 0 && (
                               <span className={cn(
                                 "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
@@ -1085,7 +1094,7 @@ export default function FeedingModule() {
                           <CalendarDays className="w-4 h-4 text-blue-600" />
                           <span className="text-sm font-bold text-stone-800">{dayNum} de {monthName}</span>
                           {color && <span className={cn("w-3 h-3 rounded-sm", color.bg)} />}
-                          <span className="text-sm font-bold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === dayDetailDiet.phaseId)?.label || dayDetailDiet.phaseId; const rn = dayDetailDiet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}</span>
+                          <span className="text-sm font-bold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === dayDetailDiet.phaseId)?.label || dayDetailDiet.phaseId; const rn = dayDetailDiet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
                         </div>
                         <button
                           type="button"
@@ -1326,7 +1335,7 @@ export default function FeedingModule() {
                     return (
                       <span key={diet.id} className="flex items-center gap-1">
                         <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
-                        <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}</span>
+                        <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
                       </span>
                     );
                   })}
@@ -1377,7 +1386,7 @@ export default function FeedingModule() {
                             <div className="flex items-center gap-2">
                               <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", color.bg)} />
                               <h4 className="text-sm font-bold text-stone-800">
-{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} \u2014 ${rn}` : pl; })()}
+{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}
                                </h4>
                             </div>
                             {calIngredientsList.length > 0 && (
@@ -1840,7 +1849,7 @@ export default function FeedingModule() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
                                     <h4 className="text-sm font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                                      {phaseLabel2}{racaoName2 ? <> <span className="text-stone-300">\u2014</span> <span className="text-amber-700 font-extrabold">{racaoName2}</span></> : ""}
+                                      {phaseLabel2}{racaoName2 ? <> <span className="text-stone-300">—</span> <span className="text-amber-700 font-extrabold">{racaoName2}</span></> : ""}
                                     </h4>
                                     {ingredientsList2.length > 0 && (
                                       <p className="text-[13px] font-semibold text-stone-600 mt-1.5 leading-relaxed">
@@ -1909,7 +1918,7 @@ export default function FeedingModule() {
                   {(() => {
                     const pl = lifePeriods.find(p => p.id === viewingDiet.phaseId)?.label || viewingDiet.phaseId;
                     const rn = viewingDiet.racaoName || "";
-                    return rn ? <>{pl} <span className="text-stone-300">\u2014</span> <span className="text-amber-700">{rn}</span></> : <>{pl}</>;
+                    return rn ? <>{pl} <span className="text-stone-300">—</span> <span className="text-amber-700">{rn}</span></> : <>{pl}</>;
                   })()}
                 </h2>
               </div>
