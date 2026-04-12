@@ -4,10 +4,10 @@
  * identidade visual consistente.
  *
  * PADRÃO DE IMPRESSÃO (cozinha do criatório):
- * - Logo: SOMENTE o símbolo (sem texto "Criatório Minas Bird")
+ * - Logo: SOMENTE texto "Minas Bird" (sem símbolo/imagem para economia de tinta)
  * - Margens: 12mm (portrait) / 8mm (landscape)
  * - Fonte mínima: 7pt (nunca abaixo disso)
- * - Header: barra verde escura 16mm + linha acento
+ * - Header: barra verde CLARO 16mm + linha acento (economia de tinta)
  * - Footer: data + nome criatório + paginação
  */
 import { jsPDF } from "jspdf";
@@ -18,6 +18,9 @@ import { jsPDF } from "jspdf";
 export const BRAND = {
   primary: [16, 185, 129] as [number, number, number],
   dark: [6, 78, 59] as [number, number, number],
+  headerBg: [220, 245, 230] as [number, number, number],   // light green for ink-saving header
+  headerText: [6, 78, 59] as [number, number, number],     // dark green text on light header
+  headerAccent: [16, 185, 129] as [number, number, number], // accent line
   medium: [5, 150, 105] as [number, number, number],
   light: [209, 250, 229] as [number, number, number],
   bg: [240, 253, 244] as [number, number, number],
@@ -96,43 +99,44 @@ export async function loadLogo(): Promise<string | null> {
 }
 
 // =============================================
-// SHARED HEADER — green bar + logo (symbol only) + title
+// SHARED HEADER — light green bar + "Minas Bird" text + title
 // Returns the Y position after the header
 //
-// Layout:
-//   [LOGO 14x14]  [TITLE centered]  [RIGHT INFO optional]
-//   No "Criatório Minas Bird" text next to logo
+// Layout (ink-saving):
+//   ["Minas Bird" text]  [TITLE centered]  [RIGHT INFO optional]
+//   Light green background with dark green text
 // =============================================
 export function drawBrandHeader(
   doc: jsPDF,
   pageW: number,
-  logoBase64: string | null,
+  _logoBase64: string | null,
   title: string,
   subtitle: string,
   options?: { rightTitle?: string; rightSubtitle?: string },
 ): number {
   const barH = PDF_HEADER_H;
 
-  // Dark green bar
-  doc.setFillColor(...BRAND.dark);
+  // Light green bar (ink-saving)
+  doc.setFillColor(...BRAND.headerBg);
   doc.rect(0, 0, pageW, barH, "F");
 
-  // Logo — symbol only, no text beside it
-  if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", 4, 1, 14, 14); } catch { /* skip */ }
-  }
+  // "Minas Bird" text instead of logo image (more legible + saves ink)
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.headerText);
+  doc.text("Minas Bird", 6, barH * 0.55);
 
   // Title — centered in the bar
   doc.setFontSize(PDF_FONT.title);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...BRAND.headerText);
   doc.text(title, pageW / 2, barH * 0.42, { align: "center" });
 
   // Subtitle — below title, centered
   if (subtitle) {
     doc.setFontSize(PDF_FONT.subtitle);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(200, 230, 210);
+    doc.setTextColor(...BRAND.medium);
     doc.text(subtitle, pageW / 2, barH * 0.75, { align: "center" });
   }
 
@@ -140,18 +144,18 @@ export function drawBrandHeader(
   if (options?.rightTitle) {
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...BRAND.headerText);
     doc.text(options.rightTitle, pageW - 8, barH * 0.42, { align: "right" });
   }
   if (options?.rightSubtitle) {
     doc.setFontSize(PDF_FONT.small);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(200, 230, 210);
+    doc.setTextColor(...BRAND.medium);
     doc.text(options.rightSubtitle, pageW - 8, barH * 0.75, { align: "right" });
   }
 
-  // Accent line
-  doc.setFillColor(...BRAND.primary);
+  // Accent line (thin green)
+  doc.setFillColor(...BRAND.headerAccent);
   doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
 
   return barH + PDF_ACCENT_H + 4;

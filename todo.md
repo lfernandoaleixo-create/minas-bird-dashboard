@@ -156,3 +156,6 @@
 - [x] Melhorar distinção visual dos cards de dieta quando espécie é expandida (cores, bordas, espaçamento)
 - [x] Sidebar: remover "155 tópicos em 10 módulos" e "39 espécies · Protocolos" do Alimentação
 - [x] Sidebar: melhorar estética geral
+- [x] PDF: trocar cabeçalho verde escuro por tom mais claro para economizar tinta
+- [x] PDF: logo/símbolo ilegível — usar apenas nome "Minas Bird" em texto ou apenas símbolo maior
+- [x] PDF Calendário: letras dos dias da semana (D,S,T,Q) muito apertadas — aumentar espaçamento

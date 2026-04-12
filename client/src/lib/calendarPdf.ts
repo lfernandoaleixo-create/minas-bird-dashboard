@@ -107,40 +107,41 @@ function drawCalendarHeader(
   pageW: number,
   speciesName: string,
   year: number,
-  logoBase64: string | null,
+  _logoBase64: string | null,
 ): number {
   const marginX = PDF_MARGIN.landscape;
   const barH = PDF_HEADER_H;
 
-  // Dark green bar
-  doc.setFillColor(...BRAND.dark);
+  // Light green bar (ink-saving)
+  doc.setFillColor(...BRAND.headerBg);
   doc.rect(0, 0, pageW, barH, "F");
 
-  // Logo — symbol only (no text beside it)
-  if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", 4, 1, 14, 14); } catch { /* skip */ }
-  }
+  // "Minas Bird" text instead of logo (legible + saves ink)
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.headerText);
+  doc.text("Minas Bird", 6, barH * 0.55);
 
   // "Calendário de Alimentação" — centered
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...BRAND.headerText);
   doc.text("Calendário de Alimentação", pageW / 2, barH * 0.42, { align: "center" });
 
   // "Manual Operacional" — subtitle centered
   doc.setFontSize(PDF_FONT.subtitle);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(200, 230, 210);
+  doc.setTextColor(...BRAND.medium);
   doc.text("Manual Operacional de Alimentação", pageW / 2, barH * 0.75, { align: "center" });
 
   // Year — right side
   doc.setFontSize(PDF_FONT.title);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...BRAND.headerText);
   doc.text(`${year}`, pageW - marginX, barH * 0.55, { align: "right" });
 
   // Accent line
-  doc.setFillColor(...BRAND.primary);
+  doc.setFillColor(...BRAND.headerAccent);
   doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
 
   // Species name — GIANT title below header
@@ -229,19 +230,19 @@ function drawMonthCompact(
   const pad = 1.5;
   const innerW = cellW - pad * 2;
 
-  // Month header
+  // Month header (light green for ink saving)
   const headerH = totalMonths <= 4 ? 8 : totalMonths <= 6 ? 7 : 6;
-  doc.setFillColor(...BRAND.dark);
+  doc.setFillColor(...BRAND.headerBg);
   doc.roundedRect(x + pad, y, innerW, headerH, 1.5, 1.5, "F");
 
   const monthFontSize = totalMonths <= 4 ? 12 : totalMonths <= 6 ? 10 : 9;
   doc.setFontSize(monthFontSize);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...BRAND.headerText);
   doc.text(MONTH_NAMES[month - 1], x + cellW / 2, y + headerH * 0.65, { align: "center" });
 
-  // Day names — minimum 7pt
-  const dayHeaderY = y + headerH + 2;
+  // Day names — minimum 7pt, with proper spacing
+  const dayHeaderY = y + headerH + 3;
   const dayCellW = innerW / 7;
   const dayNameFontSize = Math.max(PDF_FONT.small, totalMonths <= 4 ? 9 : totalMonths <= 6 ? 8 : 7);
   doc.setFontSize(dayNameFontSize);
@@ -249,19 +250,21 @@ function drawMonthCompact(
   for (let d = 0; d < 7; d++) {
     const color = d === 0 ? BRAND.feriado : BRAND.dark;
     doc.setTextColor(...color);
-    doc.text(DAY_NAMES_SHORT[d], x + pad + d * dayCellW + dayCellW / 2, dayHeaderY, { align: "center" });
+    // Center each letter in its cell with proper spacing
+    const letterX = x + pad + d * dayCellW + dayCellW / 2;
+    doc.text(DAY_NAMES_SHORT[d], letterX, dayHeaderY, { align: "center" });
   }
 
   // Separator
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.3);
-  doc.line(x + pad, dayHeaderY + 1.5, x + pad + innerW, dayHeaderY + 1.5);
+  doc.line(x + pad, dayHeaderY + 2, x + pad + innerW, dayHeaderY + 2);
 
   // Day cells
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
   const totalRows = Math.ceil((daysInMonth + firstDayOfWeek) / 7);
-  const gridStartY = dayHeaderY + 2.5;
+  const gridStartY = dayHeaderY + 3;
   const feriadoReserve = totalMonths <= 6 ? 6 : 5;
   const availableGridH = cellH - (gridStartY - y) - feriadoReserve;
   const dayCellH = (availableGridH / Math.max(totalRows, 5)) * 0.94;
@@ -500,11 +503,12 @@ export async function exportAllCalendarsPdf(
   });
 
   if (speciesWithDiets.length === 0) {
-    doc.setFillColor(...BRAND.dark);
+    doc.setFillColor(...BRAND.headerBg);
     doc.rect(0, 0, pageW, PDF_HEADER_H, "F");
-    if (logoBase64) {
-      try { doc.addImage(logoBase64, "PNG", 4, 1, 14, 14); } catch { /* skip */ }
-    }
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.headerText);
+    doc.text("Minas Bird", 6, PDF_HEADER_H * 0.55);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.muted);

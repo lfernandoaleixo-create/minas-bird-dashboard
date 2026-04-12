@@ -543,33 +543,36 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
       const weekStart = formatDateBR(week[0]);
       const weekEnd = formatDateBR(week[week.length - 1]);
 
-      // === BRANDED HEADER (padronizado — logo somente símbolo) ===
+      // === BRANDED HEADER (ink-saving light green) ===
       const barH = 16;
-      doc.setFillColor(...BRAND.dark);
+      doc.setFillColor(...BRAND.headerBg);
       doc.rect(0, 0, pageW, barH, "F");
-      // Logo — somente símbolo (sem texto ao lado)
-      if (logo) { try { doc.addImage(logo, "PNG", 4, 1, 14, 14); } catch { /* skip */ } }
+      // "Minas Bird" text (legible + saves ink)
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BRAND.headerText);
+      doc.text("Minas Bird", 6, barH * 0.55);
       // Título centralizado
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...BRAND.headerText);
       doc.text("Rotina do Tratador", pageW / 2, barH * 0.42, { align: "center" });
       // Subtítulo centralizado
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(200, 230, 210);
+      doc.setTextColor(...BRAND.medium);
       doc.text("Manual Operacional de Alimentação", pageW / 2, barH * 0.75, { align: "center" });
       // Week info right
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...BRAND.headerText);
       doc.text(`Semana: ${weekStart} a ${weekEnd}`, pageW - 8, barH * 0.42, { align: "right" });
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(200, 230, 210);
+      doc.setTextColor(...BRAND.medium);
       doc.text(`Página ${wi + 1} de ${totalPages}`, pageW - 8, barH * 0.75, { align: "right" });
       // Accent line
-      doc.setFillColor(...BRAND.primary);
+      doc.setFillColor(...BRAND.headerAccent);
       doc.rect(0, barH, pageW, 1.2, "F");
 
       // === TABLE LAYOUT ===
@@ -593,12 +596,12 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
         const dayData = routineMap.get(getDayKey(day));
         const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
-        // Day header
-        doc.setFillColor(isWeekend ? 180 : BRAND.dark[0], isWeekend ? 83 : BRAND.dark[1], isWeekend ? 9 : BRAND.dark[2]);
+        // Day header (lighter for ink saving)
+        doc.setFillColor(isWeekend ? 255 : BRAND.headerBg[0], isWeekend ? 243 : BRAND.headerBg[1], isWeekend ? 224 : BRAND.headerBg[2]);
         doc.rect(x, tableTop, colW, dayHeaderH, "F");
         doc.setFontSize(9);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(255, 255, 255);
+        doc.setTextColor(...BRAND.headerText);
         if (day) {
           doc.text(DAY_NAMES_SHORT[day.getDay()].toUpperCase(), x + colW / 2, tableTop + 4, { align: "center" });
           doc.setFontSize(7.5);
@@ -768,11 +771,11 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
     const m = 12; // margem padrão portrait
 
     // Consolidated ingredients
-    doc.setFillColor(...BRAND.dark);
+    doc.setFillColor(...BRAND.headerBg);
     doc.roundedRect(m, y, pageW - m * 2, 7, 1.5, 1.5, "F");
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...BRAND.headerText);
     doc.text("INGREDIENTES TOTAIS", m + 3, y + 5);
     y += 9;
 
