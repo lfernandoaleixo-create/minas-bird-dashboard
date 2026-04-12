@@ -10,7 +10,7 @@ import { useState, useMemo } from "react";
 import {
   ShoppingCart, ClipboardList, ChefHat, Calendar,
   Bird, Download, Package, Wheat, Leaf, Apple, Zap, Users, Scale,
-  FileText, ChevronDown, ChevronRight, Wrench,
+  FileText, ChevronDown, ChevronRight, Wrench, Sun, CloudSun,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
@@ -559,82 +559,234 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
   };
 
   const exportRoutinePdf = () => {
-    if (!dailyRoutine) return;
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const periodStr = `${formatDateBR(fromInputDate(startDate))} a ${formatDateBR(fromInputDate(endDate))}`;
-    let pageNum = 1;
-    const totalPages = Math.max(1, Math.ceil(dailyRoutine.length / 3));
+    if (!dailyRoutine || dailyRoutine.length === 0) return;
 
-    let y = pdfHeader(doc, pageW, "Rotina do Tratador", periodStr);
-
-    for (let di = 0; di < dailyRoutine.length; di++) {
-      const { date, speciesRoutines } = dailyRoutine[di];
-      const dayName = DAY_NAMES[date.getDay()];
-
-      // Check space
-      const neededH = 12 + speciesRoutines.length * 20;
-      if (y + neededH > pageH - 15) {
-        pdfFooter(doc, pageW, pageH, pageNum, totalPages);
-        doc.addPage();
-        pageNum++;
-        y = pdfHeader(doc, pageW, "Rotina do Tratador (cont.)", periodStr);
-      }
-
-      // Day header
-      doc.setFillColor(...BRAND.dark);
-      doc.roundedRect(10, y, pageW - 20, 8, 1.5, 1.5, "F");
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
-      doc.text(`${dayName}, ${formatDateBR(date)}`, 14, y + 5.5);
-      y += 10;
-
-      for (const { species: sp, diet } of speciesRoutines) {
-        if (y + 18 > pageH - 15) {
-          pdfFooter(doc, pageW, pageH, pageNum, totalPages);
-          doc.addPage();
-          pageNum++;
-          y = pdfHeader(doc, pageW, "Rotina do Tratador (cont.)", periodStr);
-        }
-
-        // Species card
-        doc.setFillColor(...BRAND.bg);
-        doc.roundedRect(12, y, pageW - 24, 5, 1, 1, "F");
-        doc.setFontSize(8.5);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...BRAND.dark);
-        doc.text(`${sp.commonName} — ${diet.birdCount} ave${diet.birdCount > 1 ? "s" : ""}`, 15, y + 3.5);
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(...BRAND.muted);
-        doc.text(`Dieta: ${diet.name}`, pageW - 15, y + 3.5, { align: "right" });
-        y += 7;
-
-        const categories: FoodCategory[] = ["racao", "vegetais", "frutas", "proteicos"];
-        for (const cat of categories) {
-          if (diet.items[cat].length > 0) {
-            const cc = CAT_COLORS[cat];
-            doc.setFillColor(cc.r, cc.g, cc.b);
-            doc.circle(15, y + 1.5, 1, "F");
-            doc.setFontSize(7);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(cc.r, cc.g, cc.b);
-            doc.text(CATEGORY_CONFIG[cat].label + ":", 18, y + 2.5);
-            const catItems = diet.items[cat].map(i => `${i.foodName} ${formatWeightShort(i.grams * diet.birdCount)}`).join("  |  ");
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(...BRAND.text);
-            doc.text(catItems, 18 + doc.getTextWidth(CATEGORY_CONFIG[cat].label + ": ") + 1, y + 2.5);
-            y += 4;
-          }
-        }
-        y += 3;
-      }
-      y += 2;
+    // Build a map of all days in the period (including days without diets)
+    const allDays = getDaysInRange(fromInputDate(startDate), fromInputDate(endDate));
+    const routineMap = new Map<string, typeof dailyRoutine[0]>();
+    for (const r of dailyRoutine) {
+      routineMap.set(getDayKey(r.date), r);
     }
 
-    pdfFooter(doc, pageW, pageH, pageNum, totalPages);
+    // Group days into weeks (Mon-Sun)
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
+    for (const day of allDays) {
+      const dow = day.getDay(); // 0=Sun
+      if (dow === 1 && currentWeek.length > 0) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+      currentWeek.push(day);
+    }
+    if (currentWeek.length > 0) weeks.push(currentWeek);
+
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const totalPages = weeks.length;
+
+    for (let wi = 0; wi < weeks.length; wi++) {
+      if (wi > 0) doc.addPage();
+      const week = weeks[wi];
+      const weekStart = formatDateBR(week[0]);
+      const weekEnd = formatDateBR(week[week.length - 1]);
+
+      // === HEADER ===
+      doc.setFillColor(...BRAND.dark);
+      doc.rect(0, 0, pageW, 2.5, "F");
+      doc.setFillColor(...BRAND.bg);
+      doc.rect(0, 2.5, pageW, 16, "F");
+      doc.setDrawColor(...BRAND.primary);
+      doc.setLineWidth(0.3);
+      doc.line(0, 18.5, pageW, 18.5);
+      // Logo
+      doc.setFillColor(...BRAND.primary);
+      doc.circle(12, 10, 3.5, "F");
+      doc.setFillColor(255, 255, 255);
+      doc.circle(13.2, 9.2, 1, "F");
+      doc.setFillColor(...BRAND.dark);
+      doc.circle(13.2, 9.2, 0.4, "F");
+      doc.setFillColor(...BRAND.medium);
+      doc.triangle(15.5, 10, 17, 9.5, 15.5, 11, "F");
+      // Title
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BRAND.dark);
+      doc.text("ROTINA DO TRATADOR", 22, 9);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND.muted);
+      doc.text("Criatório Minas Bird — Manual Operacional de Alimentação", 22, 14);
+      // Week info right
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BRAND.text);
+      doc.text(`Semana: ${weekStart} a ${weekEnd}`, pageW - 10, 9, { align: "right" });
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND.muted);
+      doc.text(`Página ${wi + 1} de ${totalPages}`, pageW - 10, 14, { align: "right" });
+
+      // === TABLE LAYOUT ===
+      const tableTop = 22;
+      const margin = 6;
+      const tableW = pageW - margin * 2;
+      const colW = tableW / 7;
+      const morningColor: [number, number, number] = [255, 251, 235]; // amber-50
+      const afternoonColor: [number, number, number] = [236, 253, 245]; // emerald-50
+      const footerY = pageH - 8;
+      const tableH = footerY - tableTop - 2;
+      const dayHeaderH = 10;
+      const shiftLabelH = 6;
+      const contentAreaH = (tableH - dayHeaderH - shiftLabelH * 2) / 2;
+
+      // Draw 7 columns
+      for (let ci = 0; ci < 7; ci++) {
+        const x = margin + ci * colW;
+        const day = week[ci] || null;
+        const dayData = day ? routineMap.get(getDayKey(day)) : null;
+        const isWeekend = day ? (day.getDay() === 0 || day.getDay() === 6) : false;
+
+        // Day header
+        doc.setFillColor(isWeekend ? 180 : BRAND.dark[0], isWeekend ? 83 : BRAND.dark[1], isWeekend ? 9 : BRAND.dark[2]);
+        doc.rect(x, tableTop, colW, dayHeaderH, "F");
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        if (day) {
+          doc.text(DAY_NAMES_SHORT[day.getDay()].toUpperCase(), x + colW / 2, tableTop + 4, { align: "center" });
+          doc.setFontSize(7.5);
+          doc.setFont("helvetica", "normal");
+          doc.text(formatDateBR(day), x + colW / 2, tableTop + 8, { align: "center" });
+        } else {
+          doc.text("—", x + colW / 2, tableTop + 6, { align: "center" });
+        }
+
+        const shiftTop = tableTop + dayHeaderH;
+
+        // MANHÃ section
+        doc.setFillColor(255, 247, 237); // orange-50
+        doc.rect(x, shiftTop, colW, shiftLabelH, "F");
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(194, 65, 12); // orange-700
+        doc.text("MANHA - RACAO", x + colW / 2, shiftTop + 4, { align: "center" });
+
+        // Morning content area
+        const morningTop = shiftTop + shiftLabelH;
+        doc.setFillColor(...morningColor);
+        doc.rect(x, morningTop, colW, contentAreaH, "F");
+
+        // TARDE section
+        const afternoonLabelTop = morningTop + contentAreaH;
+        doc.setFillColor(220, 252, 231); // green-100
+        doc.rect(x, afternoonLabelTop, colW, shiftLabelH, "F");
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(21, 128, 61); // green-700
+        doc.text("TARDE - SALADA", x + colW / 2, afternoonLabelTop + 4, { align: "center" });
+
+        // Afternoon content area
+        const afternoonTop = afternoonLabelTop + shiftLabelH;
+        doc.setFillColor(...afternoonColor);
+        doc.rect(x, afternoonTop, colW, contentAreaH, "F");
+
+        // Fill content for this day
+        if (dayData) {
+          let my = morningTop + 3;
+          let ay = afternoonTop + 3;
+
+          for (const { species: sp, diet } of dayData.speciesRoutines) {
+            // Morning: ração items
+            if (diet.items.racao.length > 0 && my < morningTop + contentAreaH - 2) {
+              doc.setFontSize(6.5);
+              doc.setFont("helvetica", "bold");
+              doc.setTextColor(...BRAND.dark);
+              const spLabel = sp.commonName.length > 12 ? sp.commonName.substring(0, 11) + "." : sp.commonName;
+              doc.text(spLabel, x + 2, my);
+              my += 3;
+              for (const item of diet.items.racao) {
+                if (my >= morningTop + contentAreaH - 1) break;
+                doc.setFontSize(5.5);
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(...BRAND.text);
+                const nameShort = item.foodName.length > 14 ? item.foodName.substring(0, 13) + "." : item.foodName;
+                doc.text(`${nameShort}`, x + 2, my);
+                doc.setFont("helvetica", "bold");
+                doc.text(formatWeightShort(item.grams * diet.birdCount), x + colW - 2, my, { align: "right" });
+                my += 2.8;
+              }
+              my += 1;
+            }
+
+            // Afternoon: vegetais + frutas + proteicos
+            const saladItems = [...diet.items.vegetais, ...diet.items.frutas, ...diet.items.proteicos];
+            if (saladItems.length > 0 && ay < afternoonTop + contentAreaH - 2) {
+              doc.setFontSize(6.5);
+              doc.setFont("helvetica", "bold");
+              doc.setTextColor(...BRAND.dark);
+              const spLabel = sp.commonName.length > 12 ? sp.commonName.substring(0, 11) + "." : sp.commonName;
+              doc.text(spLabel, x + 2, ay);
+              ay += 3;
+              for (const item of saladItems) {
+                if (ay >= afternoonTop + contentAreaH - 1) break;
+                doc.setFontSize(5.5);
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(...BRAND.text);
+                const nameShort = item.foodName.length > 14 ? item.foodName.substring(0, 13) + "." : item.foodName;
+                doc.text(`${nameShort}`, x + 2, ay);
+                doc.setFont("helvetica", "bold");
+                doc.text(formatWeightShort(item.grams * diet.birdCount), x + colW - 2, ay, { align: "right" });
+                ay += 2.8;
+              }
+              ay += 1;
+            }
+          }
+        } else if (!day) {
+          // Empty column for missing days
+          doc.setFillColor(245, 245, 244);
+          doc.rect(x, morningTop, colW, contentAreaH, "F");
+          doc.rect(x, afternoonTop, colW, contentAreaH, "F");
+        } else {
+          // Day exists but no diet
+          doc.setFontSize(6);
+          doc.setFont("helvetica", "italic");
+          doc.setTextColor(...BRAND.muted);
+          doc.text("Sem dieta", x + colW / 2, morningTop + contentAreaH / 2, { align: "center" });
+          doc.text("programada", x + colW / 2, morningTop + contentAreaH / 2 + 3, { align: "center" });
+        }
+
+        // Column borders
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.15);
+        doc.rect(x, tableTop, colW, tableH);
+      }
+
+      // Outer border
+      doc.setDrawColor(...BRAND.dark);
+      doc.setLineWidth(0.4);
+      doc.rect(margin, tableTop, tableW, tableH);
+
+      // Footer
+      const fy = pageH - 4;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(margin, fy - 2, pageW - margin, fy - 2);
+      const now = new Date();
+      const ds = `${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()}`;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND.muted);
+      doc.text(`Publicado em ${ds}`, margin, fy);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BRAND.medium);
+      doc.text("Criatório Minas Bird", pageW / 2, fy, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND.muted);
+      doc.text(`Manhã = Ração · Tarde = Salada`, pageW - margin, fy, { align: "right" });
+    }
+
     doc.save(`Rotina_Tratador_${startDate}_a_${endDate}.pdf`);
   };
 
@@ -1034,82 +1186,128 @@ export default function OperationalTools({ savedDiets, speciesCalendars }: Opera
                 <p className="text-base font-medium">Nenhuma dieta programada no período selecionado.</p>
                 <p className="text-sm mt-1">Programe dietas no calendário para gerar a rotina.</p>
               </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5 text-emerald-600" />
-                    <span className="text-base font-bold text-stone-800">
-                      {dailyRoutine.length} dias com atividades
-                    </span>
+            ) : (() => {
+              // Build weekly groups for UI
+              const allDaysUI = getDaysInRange(fromInputDate(startDate), fromInputDate(endDate));
+              const routineMapUI = new Map<string, typeof dailyRoutine[0]>();
+              for (const r of dailyRoutine) routineMapUI.set(getDayKey(r.date), r);
+              const weeksUI: Date[][] = [];
+              let cwUI: Date[] = [];
+              for (const d of allDaysUI) {
+                if (d.getDay() === 1 && cwUI.length > 0) { weeksUI.push(cwUI); cwUI = []; }
+                cwUI.push(d);
+              }
+              if (cwUI.length > 0) weeksUI.push(cwUI);
+
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="w-5 h-5 text-emerald-600" />
+                      <span className="text-base font-bold text-stone-800">
+                        {dailyRoutine.length} dias com atividades
+                      </span>
+                      <span className="text-xs text-stone-400 font-medium">
+                        Manhã = Ração · Tarde = Salada
+                      </span>
+                    </div>
+                    <button
+                      onClick={exportRoutinePdf}
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Exportar PDF
+                    </button>
                   </div>
-                  <button
-                    onClick={exportRoutinePdf}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    Exportar PDF
-                  </button>
-                </div>
 
-                <div className="space-y-4">
-                  {dailyRoutine.map(({ date, speciesRoutines }, idx) => {
-                    const dayName = DAY_NAMES_SHORT[date.getDay()];
-                    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
-                    return (
-                      <div key={idx} className={cn("rounded-xl border p-4", isWeekend ? "bg-amber-50/60 border-amber-200" : "bg-white border-stone-200")}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Calendar className="w-5 h-5 text-stone-500" />
-                          <span className={cn("text-base font-bold", isWeekend ? "text-amber-700" : "text-stone-800")}>
-                            {dayName}, {formatDateBR(date)}
+                  <div className="space-y-6">
+                    {weeksUI.map((week, wi) => (
+                      <div key={wi} className="rounded-xl border border-stone-200 overflow-hidden">
+                        {/* Week header */}
+                        <div className="bg-emerald-800 px-4 py-2.5 flex items-center justify-between">
+                          <span className="text-sm font-bold text-white">
+                            Semana: {formatDateBR(week[0])} a {formatDateBR(week[week.length - 1])}
                           </span>
-                          <span className={cn("px-2 py-0.5 text-xs font-semibold rounded-full", isWeekend ? "bg-amber-100 text-amber-700" : "bg-stone-100 text-stone-600")}>
-                            {speciesRoutines.length} {speciesRoutines.length === 1 ? "espécie" : "espécies"}
+                          <span className="text-xs text-emerald-200 font-medium">
+                            {week.length} dias
                           </span>
                         </div>
 
-                        <div className="space-y-3">
-                          {speciesRoutines.map(({ species: sp, diet }, si) => (
-                            <div key={si} className="bg-stone-50 rounded-lg p-4 border border-stone-100">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Bird className="w-4.5 h-4.5 text-emerald-600" />
-                                <span className="text-base font-bold text-stone-800">{sp.commonName}</span>
-                                <span className="flex items-center gap-1 text-sm text-stone-500 font-medium">
-                                  <Users className="w-3.5 h-3.5" /> {diet.birdCount} aves
-                                </span>
-                              </div>
+                        {/* Days grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 divide-x divide-stone-100">
+                          {week.map((day, di) => {
+                            const dayData = routineMapUI.get(getDayKey(day));
+                            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {(["racao", "vegetais", "frutas", "proteicos"] as FoodCategory[]).map(cat => {
-                                  if (diet.items[cat].length === 0) return null;
-                                  const config = CATEGORY_CONFIG[cat];
-                                  const Icon = config.icon;
-                                  return (
-                                    <div key={cat} className={cn("rounded-lg px-3 py-2.5 border", config.bg, config.border)}>
-                                      <div className="flex items-center gap-1.5 mb-1.5">
-                                        <Icon className={cn("w-4 h-4", config.color)} />
-                                        <span className={cn("text-sm font-bold", config.color)}>{config.label}</span>
+                            return (
+                              <div key={di} className={cn("min-h-[120px] flex flex-col", isWeekend ? "bg-amber-50/40" : "bg-white")}>
+                                {/* Day header */}
+                                <div className={cn("px-2 py-1.5 text-center border-b", isWeekend ? "bg-amber-100 border-amber-200" : "bg-stone-100 border-stone-200")}>
+                                  <div className={cn("text-xs font-bold", isWeekend ? "text-amber-700" : "text-stone-700")}>
+                                    {DAY_NAMES_SHORT[day.getDay()]}
+                                  </div>
+                                  <div className="text-[10px] text-stone-500">{formatDateBR(day)}</div>
+                                </div>
+
+                                {dayData ? (
+                                  <div className="flex-1 flex flex-col">
+                                    {/* MANHÃ */}
+                                    <div className="flex-1 border-b border-dashed border-stone-200 p-1.5">
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <Sun className="w-3 h-3 text-orange-500" />
+                                        <span className="text-[9px] font-bold text-orange-600 uppercase">Ração</span>
                                       </div>
-                                      {diet.items[cat].map((item, ii) => (
-                                        <div key={ii} className="flex items-center justify-between text-sm text-stone-700 py-0.5">
-                                          <span className="font-medium">{item.foodName}</span>
-                                          <span className="font-bold text-stone-800">{formatWeightShort(item.grams * diet.birdCount)}</span>
-                                        </div>
+                                      {dayData.speciesRoutines.map(({ species: sp, diet }, si) => (
+                                        diet.items.racao.length > 0 && (
+                                          <div key={si} className="mb-0.5">
+                                            <div className="text-[9px] font-bold text-stone-700">{sp.commonName}</div>
+                                            {diet.items.racao.map((item, ii) => (
+                                              <div key={ii} className="text-[8px] text-stone-600 flex justify-between">
+                                                <span>{item.foodName}</span>
+                                                <span className="font-semibold">{formatWeightShort(item.grams * diet.birdCount)}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )
                                       ))}
                                     </div>
-                                  );
-                                })}
+                                    {/* TARDE */}
+                                    <div className="flex-1 p-1.5">
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <CloudSun className="w-3 h-3 text-emerald-500" />
+                                        <span className="text-[9px] font-bold text-emerald-600 uppercase">Salada</span>
+                                      </div>
+                                      {dayData.speciesRoutines.map(({ species: sp, diet }, si) => {
+                                        const saladItems = [...diet.items.vegetais, ...diet.items.frutas, ...diet.items.proteicos];
+                                        return saladItems.length > 0 && (
+                                          <div key={si} className="mb-0.5">
+                                            <div className="text-[9px] font-bold text-stone-700">{sp.commonName}</div>
+                                            {saladItems.map((item, ii) => (
+                                              <div key={ii} className="text-[8px] text-stone-600 flex justify-between">
+                                                <span>{item.foodName}</span>
+                                                <span className="font-semibold">{formatWeightShort(item.grams * diet.birdCount)}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex-1 flex items-center justify-center">
+                                    <span className="text-[10px] text-stone-300 italic">Sem dieta</span>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 

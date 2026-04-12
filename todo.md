@@ -125,3 +125,8 @@
 - [x] Lista de Compras: rações por último em seção separada (compra do fornecedor a cada 3 meses)
 - [x] Lista de Compras: organizar itens de supermercado por categoria (vegetais, frutas, proteicos)
 - [x] Lista de Compras: papel focado no funcionário que vai ao supermercado
+- [x] Rotina do Tratador: reformular completamente para ser útil e prático
+- [x] Rotina do Tratador: PDF com 1 semana por página (7 dias)
+- [x] Rotina do Tratador: manhã = ração, tarde = salada — separação clara de turnos
+- [x] Rotina do Tratador: simples e direto, sem informação desnecessária
+- [x] Rotina do Tratador: formato imprimível para fixar na parede do criatório
