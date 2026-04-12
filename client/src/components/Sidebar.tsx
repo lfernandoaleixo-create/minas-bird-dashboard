@@ -2,13 +2,12 @@
  * Sidebar Navigation — Tropical Craft Design
  * DM Serif Display for titles, DM Sans for body
  * Deep forest-green sidebar with golden accents
- * Alimentação is the first module in the unified list
- * Modules are separated into "Em andamento" and "A implementar"
+ * Modules separated into "Em andamento" and "A implementar"
  */
 import { sectors } from "@/data/sectors";
 import type { Sector, TopicGroup } from "@/data/sectors";
 import { cn } from "@/lib/utils";
-import { Menu, X, Feather, BookOpen, Utensils, Settings, CheckCircle2, Clock } from "lucide-react";
+import { Menu, X, Feather, Utensils, Settings, CheckCircle2, Clock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,7 +28,6 @@ type NavEntry = {
   title: string;
   subtitle: string;
   icon: typeof Utensils;
-  count: number;
 };
 
 export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) {
@@ -41,15 +39,13 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
       title: s.title,
       subtitle: s.subtitle,
       icon: s.icon,
-      count: s.topicGroups.reduce((sum: number, g: TopicGroup) => sum + g.topics.length, 0),
     }));
 
     const feedingItem: NavEntry = {
       id: FEEDING_ID,
       title: "Alimentação",
-      subtitle: "39 espécies · Protocolos",
+      subtitle: "",
       icon: Utensils,
-      count: 39,
     };
 
     const settingsItem: NavEntry = {
@@ -57,7 +53,6 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
       title: "Configurações",
       subtitle: "Equipe e acessos",
       icon: Settings,
-      count: 5,
     };
 
     return [feedingItem, ...sectorItems, settingsItem];
@@ -65,11 +60,6 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
 
   const activeModules = useMemo(() => navItems.filter(item => ACTIVE_MODULE_IDS.has(item.id)), [navItems]);
   const pendingModules = useMemo(() => navItems.filter(item => !ACTIVE_MODULE_IDS.has(item.id)), [navItems]);
-
-  const totalTopics = useMemo(
-    () => navItems.reduce((sum, item) => sum + item.count, 0),
-    [navItems]
-  );
 
   const handleSelect = (id: string) => {
     onSectorChange(id);
@@ -91,7 +81,7 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
               ? "bg-sidebar-accent text-sidebar-accent-foreground"
               : isImplemented
                 ? "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/90"
-                : "text-sidebar-foreground/45 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground/70"
+                : "text-sidebar-foreground/40 hover:bg-sidebar-accent/25 hover:text-sidebar-foreground/65"
           )}
         >
           {isActive && (
@@ -108,7 +98,7 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
                 ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                 : isImplemented
                   ? "bg-sidebar-foreground/8 text-sidebar-foreground/40"
-                  : "bg-sidebar-foreground/5 text-sidebar-foreground/25"
+                  : "bg-sidebar-foreground/5 text-sidebar-foreground/20"
             )}
           >
             <Icon size={15} />
@@ -120,23 +110,15 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
             )}>
               {item.title}
             </p>
-            <p className={cn(
-              "text-[10px] truncate transition-opacity",
-              isActive ? "opacity-50" : "opacity-30"
-            )}>
-              {item.subtitle}
-            </p>
-          </div>
-          <span
-            className={cn(
-              "text-[10px] font-bold min-w-[22px] h-5 flex items-center justify-center rounded-md transition-all",
-              isActive
-                ? "bg-sidebar-primary/25 text-sidebar-primary"
-                : "text-sidebar-foreground/20"
+            {item.subtitle && (
+              <p className={cn(
+                "text-[10px] truncate transition-opacity",
+                isActive ? "opacity-50" : "opacity-30"
+              )}>
+                {item.subtitle}
+              </p>
             )}
-          >
-            {item.count}
-          </span>
+          </div>
         </button>
       </li>
     );
@@ -161,20 +143,13 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
             </p>
           </div>
         </div>
-        {/* Total stats */}
-        <div className="mt-4 flex items-center gap-2 bg-sidebar-accent/40 rounded-lg px-3 py-2">
-          <BookOpen size={13} className="text-sidebar-primary" />
-          <span className="text-[11px] text-sidebar-foreground/60">
-            <span className="font-bold text-sidebar-primary">{totalTopics}</span> tópicos em <span className="font-bold text-sidebar-primary">{navItems.length}</span> módulos
-          </span>
-        </div>
       </div>
 
       {/* Navigation — separated into active and pending */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
         {/* Active/Working modules */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 px-3 mb-2.5">
+        <div className="mb-3">
+          <div className="flex items-center gap-2 px-3 mb-2">
             <CheckCircle2 size={11} className="text-emerald-400" />
             <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-emerald-400/80">
               Em andamento
@@ -187,13 +162,13 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
         </div>
 
         {/* Divider */}
-        <div className="mx-3 mb-4">
+        <div className="mx-3 mb-3">
           <div className="h-px bg-sidebar-border/30" />
         </div>
 
         {/* Pending modules */}
         <div>
-          <div className="flex items-center gap-2 px-3 mb-2.5">
+          <div className="flex items-center gap-2 px-3 mb-2">
             <Clock size={11} className="text-sidebar-foreground/25" />
             <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-sidebar-foreground/25">
               A implementar

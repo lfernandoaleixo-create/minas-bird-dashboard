@@ -760,14 +760,22 @@ export default function FeedingModule() {
                       });
                     };
                     return (
-                      <div key={sp.id}>
+                      <div key={sp.id} className={isExpanded ? "bg-stone-50/60" : ""}>
                         <button
                           type="button"
                           onClick={toggleExpand}
-                          className="w-full px-5 py-3 hover:bg-white transition-colors text-left border-l-3 border-transparent hover:border-emerald-400"
+                          className={cn(
+                            "w-full px-5 py-3 transition-colors text-left border-l-3",
+                            isExpanded
+                              ? "bg-emerald-50/80 border-emerald-500"
+                              : "border-transparent hover:bg-white hover:border-emerald-400"
+                          )}
                         >
                           <div className="flex items-center">
-                            <span className="text-[15px] font-bold text-stone-800 flex-1 min-w-0 truncate">{sp.commonName}</span>
+                            <span className={cn(
+                              "text-[15px] font-bold flex-1 min-w-0 truncate",
+                              isExpanded ? "text-emerald-800" : "text-stone-800"
+                            )}>{sp.commonName}</span>
                             <span className="w-20 text-center text-xs font-semibold text-emerald-700 tabular-nums flex-shrink-0">
                               <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-emerald-100">{dietsForSp.length} {dietsForSp.length === 1 ? "dieta" : "dietas"}</span>
                             </span>
@@ -776,13 +784,13 @@ export default function FeedingModule() {
                             </span>
                             <span className="w-6 flex items-center justify-center flex-shrink-0">
                               {isExpanded
-                                ? <ChevronDown className="w-4 h-4 text-stone-400" />
+                                ? <ChevronDown className="w-4 h-4 text-emerald-600" />
                                 : <ChevronRight className="w-4 h-4 text-stone-400" />}
                             </span>
                           </div>
                         </button>
                         {isExpanded && (
-                          <div>
+                          <div className="px-4 py-3 space-y-2.5">
                             {filteredDietsForSp.length === 0 ? (
                               <div className="px-5 py-4 text-center">
                                 <p className="text-xs text-stone-400">Nenhuma dieta salva para {sp.commonName}</p>
@@ -813,7 +821,7 @@ export default function FeedingModule() {
                                 <div
                                   key={diet.id}
                                   onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                                  className="px-5 py-4 hover:bg-emerald-50/50 transition-colors border-b border-stone-100 last:border-b-0 cursor-pointer group"
+                                  className="mx-1 px-4 py-3.5 bg-white rounded-xl border border-stone-200/80 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group"
                                 >
                                   <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">

@@ -153,3 +153,6 @@
 - [x] Melhorar visual dos cards de dieta: nome da ave maior, número de aves maior e alinhado
 - [x] Alinhar badges de dietas e aves em colunas fixas nos cards de espécie (layout tabular)
 - [x] Criar separação visual na sidebar entre módulos trabalhados e módulos pendentes
+- [x] Melhorar distinção visual dos cards de dieta quando espécie é expandida (cores, bordas, espaçamento)
+- [x] Sidebar: remover "155 tópicos em 10 módulos" e "39 espécies · Protocolos" do Alimentação
+- [x] Sidebar: melhorar estética geral
