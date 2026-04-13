@@ -46,6 +46,8 @@ export const diets = mysqlTable("diets", {
   birdCount: int("birdCount").notNull().default(1),
   /** Observações adicionais sobre a dieta */
   notes: text("notes"),
+  /** Cor da dieta para identificação visual (hex, ex: #4CAF50) */
+  color: varchar("color", { length: 7 }),
   /** MER calculado (kcal/dia por ave) — armazenado como inteiro * 10 */
   merX10: int("merX10").notNull(),
   /** Total de gramas por ave — armazenado como inteiro * 10 */

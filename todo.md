@@ -162,3 +162,8 @@
 - [x] PDF Calendário: legenda deve conter apenas dietas que aparecem nos meses selecionados
 - [x] PDF: procurar e usar logo MB (símbolo) do criatório nos PDFs
 - [x] Card Dietas: melhorar estética e badges
+- [x] Sistema de cores unificado: adicionar campo de cor na estrutura de dados da dieta
+- [x] Sistema de cores unificado: criar seletor de cor ao salvar dieta
+- [x] Sistema de cores unificado: aplicar cor da dieta no calendário (mesma cor)
+- [x] Sistema de cores unificado: aplicar cor da dieta no PDF da dieta impressa
+- [x] Sistema de cores unificado: aplicar cor da dieta no PDF do calendário

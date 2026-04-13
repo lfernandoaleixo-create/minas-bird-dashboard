@@ -39,7 +39,7 @@ const FERIADOS: Record<string, string> = {
   "12-25": "Natal",
 };
 
-const DIET_COLORS: [number, number, number][] = [
+const FALLBACK_COLORS: [number, number, number][] = [
   [16, 185, 129],   // emerald
   [59, 130, 246],   // blue
   [245, 158, 11],   // amber
@@ -49,6 +49,27 @@ const DIET_COLORS: [number, number, number][] = [
   [249, 115, 22],   // orange
   [236, 72, 153],   // pink
 ];
+
+/** Convert hex color to RGB tuple */
+function hexToRgb(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return [r, g, b];
+}
+
+/** Build color map from diet.color (user-chosen) or fallback */
+function buildDietColorMap(diets: SavedDiet[]): Map<string, [number, number, number]> {
+  const map = new Map<string, [number, number, number]>();
+  diets.forEach((d, i) => {
+    if (d.color) {
+      map.set(d.id, hexToRgb(d.color));
+    } else {
+      map.set(d.id, FALLBACK_COLORS[i % FALLBACK_COLORS.length]);
+    }
+  });
+  return map;
+}
 
 function getDietDisplayName(diet: SavedDiet, lifePeriods: { id: string; label: string }[], enclosureTypes: { id: string; label: string }[]): string {
   const phase = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
@@ -476,10 +497,7 @@ export async function exportCalendarPdf(options: CalendarPdfOptions): Promise<vo
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
 
-  const dietColorMap = new Map<string, [number, number, number]>();
-  diets.forEach((d, i) => {
-    dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]);
-  });
+  const dietColorMap = buildDietColorMap(diets);
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -534,10 +552,7 @@ export async function exportAllCalendarsPdf(
     const dietsForSp = allDiets.filter(d => d.speciesId === sp.id);
     const calForSp = allCalendars[sp.id] || {};
 
-    const dietColorMap = new Map<string, [number, number, number]>();
-    dietsForSp.forEach((d, i) => {
-      dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]);
-    });
+    const dietColorMap = buildDietColorMap(dietsForSp);
 
     drawPage(doc, pageW, pageH, sp.commonName, year, activeMonths, calForSp, dietsForSp, dietColorMap, logoBase64, lifePeriods, enclosureTypes);
   });

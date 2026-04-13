@@ -33,7 +33,31 @@ export async function exportDietPdf(
   const racao = diet.racaoName || "";
 
   // Header using shared brand
-  let y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` · ${racao}` : ""}`);
+  let y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` \u00b7 ${racao}` : ""}`);
+
+  // Color identification band — matches calendar color
+  const dietHex = diet.color || "#10b981";
+  const cr = parseInt(dietHex.slice(1, 3), 16);
+  const cg = parseInt(dietHex.slice(3, 5), 16);
+  const cb = parseInt(dietHex.slice(5, 7), 16);
+  // Thick color stripe below header
+  doc.setFillColor(cr, cg, cb);
+  doc.rect(margin, y, contentW, 4, "F");
+  // Light color band with label
+  doc.setFillColor(cr, cg, cb);
+  doc.rect(margin, y + 4, contentW, 7, "F");
+  doc.setGState(new (doc as any).GState({ opacity: 0.2 }));
+  doc.setFillColor(255, 255, 255);
+  doc.rect(margin, y + 4, contentW, 7, "F");
+  doc.setGState(new (doc as any).GState({ opacity: 1 }));
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(cr, cg, cb);
+  doc.text("COR DE REFER\u00caNCIA DO CALEND\u00c1RIO", margin + 3, y + 9);
+  // Small color swatch
+  doc.setFillColor(cr, cg, cb);
+  doc.roundedRect(pageW - margin - 14, y + 5, 12, 5, 1, 1, "F");
+  y += 14;
 
   // Diet name
   y += 2;

@@ -191,6 +191,7 @@ export default function FeedingModule() {
   // --- Dieta salva nome e notas ---
   const [dietName, setDietName] = useState("");
   const [dietNotes, setDietNotes] = useState("");
+  const [dietColor, setDietColor] = useState("#10b981");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   // --- Calendário interativo por espécie ---
@@ -397,6 +398,7 @@ export default function FeedingModule() {
     setEditingDietId(null);
     setDietName("");
     setDietNotes("");
+    setDietColor("#10b981");
     setShowSaveDialog(false);
 
   }, []);
@@ -427,6 +429,7 @@ export default function FeedingModule() {
     // REGRA PERMANENTE: nome é automático (Espécie — Fase — Ração), sem complemento
     setDietName("");
     setDietNotes(diet.notes || "");
+    setDietColor(diet.color || "#10b981");
 
     setExpandedStep(null);
     setDietMode("editing");
@@ -455,6 +458,7 @@ export default function FeedingModule() {
       enclosureId,
       birdCount,
       notes: dietNotes.trim() || undefined,
+      color: dietColor,
       mer,
       totalGrams: nossaDieta.total.grams,
       totalKcal: nossaDieta.total.kcal,
@@ -498,11 +502,12 @@ export default function FeedingModule() {
       setEditingDietId(null);
       setDietName("");
       setDietNotes("");
+      setDietColor("#10b981");
       setShowSaveDialog(false);
 
       setDietMode("menu");
     }, 600);
-  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietNotes, editingDietId]);
+  }, [selectedSpecies, selectedRacao, nossaDieta, selectedVegetais, selectedFrutas, selectedProteicos, weight, phaseId, enclosureId, birdCount, mer, dietNotes, dietColor, editingDietId]);
 
   // --- Export diet as text ---
   const handleExportDiet = useCallback((diet: SavedDiet) => {
@@ -946,18 +951,35 @@ export default function FeedingModule() {
             "11-2": "Finados", "11-15": "Proclamação da República", "11-20": "Consciência Negra",
             "12-25": "Natal",
           };
-          const DIET_COLORS = [
-            { bg: "bg-emerald-500", text: "text-emerald-800", light: "bg-emerald-100", border: "border-emerald-300", hex: "#10b981" },
-            { bg: "bg-blue-500", text: "text-blue-800", light: "bg-blue-100", border: "border-blue-300", hex: "#3b82f6" },
-            { bg: "bg-amber-500", text: "text-amber-800", light: "bg-amber-100", border: "border-amber-300", hex: "#f59e0b" },
-            { bg: "bg-purple-500", text: "text-purple-800", light: "bg-purple-100", border: "border-purple-300", hex: "#a855f7" },
-            { bg: "bg-red-400", text: "text-red-800", light: "bg-red-100", border: "border-red-300", hex: "#f87171" },
-            { bg: "bg-teal-500", text: "text-teal-800", light: "bg-teal-100", border: "border-teal-300", hex: "#14b8a6" },
+          // Fallback palette for diets without a saved color
+          const FALLBACK_COLORS = [
+            "#10b981", "#3b82f6", "#f59e0b", "#a855f7", "#ef4444", "#14b8a6",
           ];
 
+          /** Convert hex to a color object with Tailwind-like inline styles */
+          function hexToColorObj(hex: string) {
+            // Parse hex to RGB
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return {
+              hex,
+              // Inline styles instead of Tailwind classes (dynamic colors)
+              bgStyle: { backgroundColor: hex },
+              lightStyle: { backgroundColor: `rgba(${r},${g},${b},0.15)` },
+              borderStyle: { borderColor: `rgba(${r},${g},${b},0.4)` },
+              textStyle: { color: hex },
+              darkTextStyle: { color: `rgba(${Math.max(0,r-60)},${Math.max(0,g-60)},${Math.max(0,b-60)},1)` },
+            };
+          }
+
           return Object.entries(groupedSavedDiets).map(([speciesName, dietsForSpecies]) => {
-            const dietColorMap = new Map<string, typeof DIET_COLORS[0]>();
-            dietsForSpecies.forEach((d, i) => dietColorMap.set(d.id, DIET_COLORS[i % DIET_COLORS.length]));
+            // Build color map from diet.color (user-chosen) or fallback
+            const dietColorMap = new Map<string, ReturnType<typeof hexToColorObj>>();
+            dietsForSpecies.forEach((d, i) => {
+              const hex = d.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+              dietColorMap.set(d.id, hexToColorObj(hex));
+            });
 
             const speciesId = dietsForSpecies[0]?.speciesId;
             const allCalendarForSpecies = speciesCalendars[speciesId] || {};
@@ -1056,12 +1078,13 @@ export default function FeedingModule() {
                           className={cn(
                             "flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left",
                             isActive
-                              ? `${color.bg} text-white border-transparent ring-2 ring-offset-1 ring-stone-400 shadow-md`
-                              : `${color.light} ${color.text} ${color.border} hover:shadow-sm`
+                              ? "text-white border-transparent ring-2 ring-offset-1 ring-stone-400 shadow-md"
+                              : "hover:shadow-sm"
                           )}
+                          style={isActive ? { ...color.bgStyle, borderColor: "transparent" } : { ...color.lightStyle, ...color.borderStyle, ...color.darkTextStyle }}
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", isActive ? "bg-white/40" : color.bg)} />
+                            <span className="w-3 h-3 rounded-sm flex-shrink-0" style={isActive ? { backgroundColor: "rgba(255,255,255,0.4)" } : color.bgStyle} />
 <span className="text-xs font-bold">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
                              {assignedCount > 0 && (
                               <span className={cn(
@@ -1114,7 +1137,7 @@ export default function FeedingModule() {
                         <div className="flex items-center gap-2">
                           <CalendarDays className="w-4 h-4 text-blue-600" />
                           <span className="text-sm font-bold text-stone-800">{dayNum} de {monthName}</span>
-                          {color && <span className={cn("w-3 h-3 rounded-sm", color.bg)} />}
+                          {color && <span className="w-3 h-3 rounded-sm" style={color.bgStyle} />}
                           <span className="text-sm font-bold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === dayDetailDiet.phaseId)?.label || dayDetailDiet.phaseId; const rn = dayDetailDiet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
                         </div>
                         <button
@@ -1306,15 +1329,15 @@ export default function FeedingModule() {
                                     })()}
                                     className={cn(
                                       "aspect-square rounded-sm flex items-center justify-center text-[10px] font-semibold relative transition-all",
-                                      assignedColor
-                                        ? `${assignedColor.light} ${assignedColor.text} hover:opacity-80`
-                                        : "text-stone-600 hover:bg-stone-100",
+                                      !assignedColor && "text-stone-600 hover:bg-stone-100",
+                                      assignedColor && "hover:opacity-80",
                                       isToday && "ring-1 ring-emerald-500 font-bold",
                                       isActivePaintTarget && !assignedDietId && "hover:bg-emerald-50 cursor-crosshair",
                                       isActivePaintTarget && assignedDietId && "cursor-crosshair",
                                       isViewingThisDay && "ring-2 ring-blue-500",
                                       feriado && !assignedColor && "text-red-500 font-bold"
                                     )}
+                                    style={assignedColor ? { ...assignedColor.lightStyle, ...assignedColor.darkTextStyle } : undefined}
                                   >
                                     {day}
                                     {feriado && (
@@ -1355,7 +1378,7 @@ export default function FeedingModule() {
                     const color = dietColorMap.get(diet.id)!;
                     return (
                       <span key={diet.id} className="flex items-center gap-1">
-                        <span className={cn("w-2.5 h-2.5 rounded-sm", color.bg)} />
+                        <span className="w-2.5 h-2.5 rounded-sm" style={color.bgStyle} />
                         <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
                       </span>
                     );
@@ -1405,7 +1428,7 @@ export default function FeedingModule() {
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className={cn("w-3 h-3 rounded-sm flex-shrink-0", color.bg)} />
+                              <span className="w-3 h-3 rounded-sm flex-shrink-0" style={color.bgStyle} />
                               <h4 className="text-sm font-bold text-stone-800">
 {(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}
                                </h4>
@@ -2631,6 +2654,42 @@ export default function FeedingModule() {
                         </span>
                       </div>
                       <p className="text-[10px] text-stone-400 mt-1">Nome gerado automaticamente: <span className="font-medium text-stone-600">Espécie — Fase — Ração</span></p>
+                    </div>
+
+                    {/* Seletor de cor da dieta */}
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1.5">Cor da dieta (para calendário e PDF)</label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { hex: "#10b981", label: "Verde" },
+                          { hex: "#3b82f6", label: "Azul" },
+                          { hex: "#f59e0b", label: "Âmbar" },
+                          { hex: "#a855f7", label: "Roxo" },
+                          { hex: "#ef4444", label: "Vermelho" },
+                          { hex: "#14b8a6", label: "Turquesa" },
+                          { hex: "#f97316", label: "Laranja" },
+                          { hex: "#ec4899", label: "Rosa" },
+                          { hex: "#8b5cf6", label: "Violeta" },
+                          { hex: "#06b6d4", label: "Ciano" },
+                          { hex: "#84cc16", label: "Lima" },
+                          { hex: "#78716c", label: "Cinza" },
+                        ].map(c => (
+                          <button
+                            key={c.hex}
+                            type="button"
+                            onClick={() => setDietColor(c.hex)}
+                            className={cn(
+                              "w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center",
+                              dietColor === c.hex ? "border-stone-800 scale-110 shadow-md" : "border-transparent hover:border-stone-300"
+                            )}
+                            style={{ backgroundColor: c.hex }}
+                            title={c.label}
+                          >
+                            {dietColor === c.hex && <Check className="w-4 h-4 text-white drop-shadow" />}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-stone-400 mt-1">Esta cor será usada no calendário e no PDF impresso</p>
                     </div>
 
                     <div className="flex items-center gap-2 pt-1">

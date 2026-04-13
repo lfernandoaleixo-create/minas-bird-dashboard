@@ -32,6 +32,7 @@ export interface SavedDiet {
   enclosureId: string;
   birdCount: number;
   notes: string;
+  color: string;
   mer: number;
   totalGrams: number;
   totalKcal: number;

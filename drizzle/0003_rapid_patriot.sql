@@ -1,0 +1,1 @@
+ALTER TABLE `diets` ADD `color` varchar(7);
