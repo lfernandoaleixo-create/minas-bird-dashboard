@@ -185,3 +185,8 @@
 - [x] ProgressMap: drag-and-drop para reordenar prioridade
 - [x] ProgressMap: persistir ordem no banco de dados
 - [x] ProgressMap: sem senha por enquanto — qualquer pessoa pode reordenar
+- [x] ProgressMap: remover drag-and-drop dos cards (cards ficam fixos na ordem original)
+- [x] ProgressMap: remover escala URGENTE/ALTA/MÉDIA/NORMAL/BAIXA dos cards
+- [x] ProgressMap: adicionar numeração fixa (1, 2, 3...) nos tópicos dentro de cada card
+- [x] ProgressMap: drag-and-drop nativo nos tópicos dentro de cada card para reordenar
+- [x] ProgressMap: persistir ordem dos tópicos (localStorage ou banco)
