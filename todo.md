@@ -179,3 +179,9 @@
 - [x] ProgressMap: letras maiores no descritivo expandido e expansão sem precisar rolar
 - [x] ProgressMap: 9 cards expansíveis — ao clicar no card ele expande mostrando detalhes dos tópicos
 - [x] ProgressMap: todos os cards fechados por padrão (só título), expandem ao clicar
+- [x] ProgressMap: remover botão "Abrir Módulo"
+- [x] ProgressMap: cards em coluna vertical (um abaixo do outro)
+- [x] ProgressMap: escala de prioridade visual (primeiro = mais urgente)
+- [x] ProgressMap: drag-and-drop para reordenar prioridade
+- [x] ProgressMap: persistir ordem no banco de dados
+- [x] ProgressMap: sem senha por enquanto — qualquer pessoa pode reordenar

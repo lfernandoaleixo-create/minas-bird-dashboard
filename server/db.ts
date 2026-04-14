@@ -216,3 +216,28 @@ export async function saveFullCalendarForSpecies(userId: number, speciesId: stri
     await db.insert(calendarEntries).values(entries);
   }
 }
+
+// ===== MODULE ORDER =====
+
+import { moduleOrder } from "../drizzle/schema";
+import { asc } from "drizzle-orm";
+
+export async function getModuleOrder() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(moduleOrder).orderBy(asc(moduleOrder.sortOrder));
+}
+
+export async function saveModuleOrder(orderedModuleIds: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Delete all and re-insert in order
+  await db.delete(moduleOrder);
+  if (orderedModuleIds.length > 0) {
+    const values = orderedModuleIds.map((moduleId, idx) => ({
+      moduleId,
+      sortOrder: idx,
+    }));
+    await db.insert(moduleOrder).values(values);
+  }
+}

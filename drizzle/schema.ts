@@ -96,3 +96,19 @@ export const calendarEntries = mysqlTable("calendar_entries", {
 
 export type CalendarEntry = typeof calendarEntries.$inferSelect;
 export type InsertCalendarEntry = typeof calendarEntries.$inferInsert;
+
+/**
+ * Ordem de prioridade dos módulos no mapa de progresso
+ * Armazena a ordem de exibição dos módulos (menor sortOrder = maior prioridade)
+ */
+export const moduleOrder = mysqlTable("module_order", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID do módulo (ex: '__alimentacao__', 'viveiros-e-matrizes') */
+  moduleId: varchar("moduleId", { length: 128 }).notNull().unique(),
+  /** Ordem de exibição (0 = primeiro/mais prioritário) */
+  sortOrder: int("sortOrder").notNull().default(0),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ModuleOrder = typeof moduleOrder.$inferSelect;
+export type InsertModuleOrder = typeof moduleOrder.$inferInsert;

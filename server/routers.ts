@@ -12,6 +12,8 @@ import {
   upsertCalendarEntry,
   removeCalendarEntry,
   saveFullCalendarForSpecies,
+  getModuleOrder,
+  saveModuleOrder,
 } from "./db";
 
 // Schema para itens de dieta
@@ -223,6 +225,25 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         await saveFullCalendarForSpecies(ctx.user.id, input.speciesId, input.calendar);
+        return { success: true };
+      }),
+  }),
+
+  // ===== MODULE ORDER =====
+  moduleOrder: router({
+    /** Obter ordem dos módulos */
+    get: publicProcedure.query(async () => {
+      const rows = await getModuleOrder();
+      return rows.map(r => r.moduleId);
+    }),
+
+    /** Salvar nova ordem dos módulos */
+    save: publicProcedure
+      .input(z.object({
+        moduleIds: z.array(z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        await saveModuleOrder(input.moduleIds);
         return { success: true };
       }),
   }),
