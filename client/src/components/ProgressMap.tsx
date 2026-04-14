@@ -1,25 +1,17 @@
 /**
- * ProgressMap — Visual dashboard showing all modules and their implementation status
- * First screen when opening the system — clear overview of what's done and what's pending
+ * ProgressMap — 9 module cards in a 3x3 grid
+ * Each card shows the module name + topic groups listed directly
+ * Clicking a topic group expands to show its description and topics
  */
 import { sectors } from "@/data/sectors";
-import type { Sector } from "@/data/sectors";
-import { motion } from "framer-motion";
+import type { Sector, TopicGroup } from "@/data/sectors";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Utensils,
-  Bird,
-  Baby,
-  ShieldCheck,
-  HeartPulse,
-  UtensilsCrossed,
-  Sparkles,
-  FileText,
-  Wrench,
-  CheckCircle2,
-  Clock,
-  ArrowRight,
-  Feather,
-  LayoutGrid,
+  ChevronDown,
+  ChevronRight,
+  Circle,
 } from "lucide-react";
 
 interface ProgressMapProps {
@@ -28,272 +20,192 @@ interface ProgressMapProps {
 
 const FEEDING_ID = "__alimentacao__";
 
-// Module definitions with status
-interface ModuleInfo {
+// Alimentação module (special — not in sectors data)
+const FEEDING_GROUPS = [
+  { id: "dietas", title: "Dietas por Espécie", description: "Criação e gerenciamento de dietas balanceadas para cada espécie do criatório." },
+  { id: "calendario", title: "Calendário Alimentar", description: "Planejamento semanal/mensal de alimentação com sistema de cores." },
+  { id: "calculadora", title: "Calculadora Nutricional", description: "Cálculo automático de quantidades por número de aves e peso." },
+  { id: "pdfs", title: "PDFs Operacionais", description: "Geração de fichas impressas: rotina, lista de compras, guia de preparo." },
+  { id: "cores", title: "Sistema de Cores", description: "Cores unificadas entre calendário e fichas de dieta para fácil identificação." },
+];
+
+interface ModuleCardData {
   id: string;
   number: number;
   title: string;
-  subtitle: string;
   icon: typeof Utensils;
-  status: "active" | "pending";
-  topicCount: number;
-  highlights?: string[];
+  color: string;
+  groups: { id: string; title: string; description: string; topicCount?: number }[];
+  isActive: boolean;
 }
 
-function buildModules(): ModuleInfo[] {
-  const feedingModule: ModuleInfo = {
+function buildModules(): ModuleCardData[] {
+  const feedingModule: ModuleCardData = {
     id: FEEDING_ID,
     number: 1,
     title: "Alimentação",
-    subtitle: "Balanceamento nutricional dinâmico",
     icon: Utensils,
-    status: "active",
-    topicCount: 39,
-    highlights: [
-      "Dietas por espécie",
-      "Calendário alimentar",
-      "Calculadora nutricional",
-      "PDFs operacionais",
-      "Sistema de cores",
-    ],
+    color: "emerald",
+    groups: FEEDING_GROUPS,
+    isActive: true,
   };
 
-  const sectorModules: ModuleInfo[] = sectors.map((s: Sector) => {
-    const totalTopics = s.topicGroups.reduce((sum, g) => sum + g.topics.length, 0);
-    return {
-      id: s.id,
-      number: s.number,
-      title: s.title,
-      subtitle: s.subtitle,
-      icon: s.icon,
-      status: "pending" as const,
-      topicCount: totalTopics,
-      highlights: s.topicGroups.slice(0, 3).map(g => g.title),
-    };
-  });
+  const sectorModules: ModuleCardData[] = sectors.map((s: Sector) => ({
+    id: s.id,
+    number: s.number,
+    title: s.title,
+    icon: s.icon,
+    color: s.color,
+    groups: s.topicGroups.map((g: TopicGroup) => ({
+      id: g.id,
+      title: g.title,
+      description: g.description,
+      topicCount: g.topics.length,
+    })),
+    isActive: false,
+  }));
 
   return [feedingModule, ...sectorModules];
 }
 
+// Color map for module accent
+const MODULE_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; headerBg: string }> = {
+  emerald:  { bg: "bg-emerald-50",  border: "border-emerald-200",  text: "text-emerald-700",  dot: "bg-emerald-400", headerBg: "bg-emerald-600" },
+  sky:      { bg: "bg-sky-50",      border: "border-sky-200",      text: "text-sky-700",      dot: "bg-sky-400",     headerBg: "bg-sky-600" },
+  amber:    { bg: "bg-amber-50",    border: "border-amber-200",    text: "text-amber-700",    dot: "bg-amber-400",   headerBg: "bg-amber-600" },
+  rose:     { bg: "bg-rose-50",     border: "border-rose-200",     text: "text-rose-700",     dot: "bg-rose-400",    headerBg: "bg-rose-600" },
+  violet:   { bg: "bg-violet-50",   border: "border-violet-200",   text: "text-violet-700",   dot: "bg-violet-400",  headerBg: "bg-violet-600" },
+  orange:   { bg: "bg-orange-50",   border: "border-orange-200",   text: "text-orange-700",   dot: "bg-orange-400",  headerBg: "bg-orange-600" },
+  cyan:     { bg: "bg-cyan-50",     border: "border-cyan-200",     text: "text-cyan-700",     dot: "bg-cyan-400",    headerBg: "bg-cyan-600" },
+  slate:    { bg: "bg-slate-50",    border: "border-slate-200",    text: "text-slate-700",    dot: "bg-slate-400",   headerBg: "bg-slate-600" },
+  teal:     { bg: "bg-teal-50",     border: "border-teal-200",     text: "text-teal-700",     dot: "bg-teal-400",    headerBg: "bg-teal-600" },
+  stone:    { bg: "bg-stone-50",    border: "border-stone-200",    text: "text-stone-700",    dot: "bg-stone-400",   headerBg: "bg-stone-600" },
+};
+
+function getColors(color: string) {
+  return MODULE_COLORS[color] || MODULE_COLORS.stone;
+}
+
 export default function ProgressMap({ onNavigate }: ProgressMapProps) {
   const modules = buildModules();
-  const activeModules = modules.filter(m => m.status === "active");
-  const pendingModules = modules.filter(m => m.status === "pending");
-  const totalModules = modules.length;
-  const completedCount = activeModules.length;
-  const totalTopics = modules.reduce((sum, m) => sum + m.topicCount, 0);
-  const activeTopics = activeModules.reduce((sum, m) => sum + m.topicCount, 0);
-  const progressPercent = Math.round((completedCount / totalModules) * 100);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-emerald-700/10 flex items-center justify-center">
-            <LayoutGrid size={20} className="text-emerald-700" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-serif font-bold text-foreground">
-              Mapa de Progresso
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Visão geral de todos os módulos do Manual Operacional
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="max-w-7xl mx-auto">
+      {/* Grid 3x3 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {modules.map((mod, idx) => {
+          const colors = getColors(mod.color);
+          const Icon = mod.icon;
 
-      {/* Progress Overview Bar */}
-      <div className="bg-white rounded-2xl border border-stone-200/60 shadow-sm p-6 mb-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <div>
-            <p className="text-sm font-semibold text-stone-600 mb-1">Progresso Geral</p>
-            <p className="text-3xl font-bold text-foreground">
-              {completedCount}
-              <span className="text-lg text-muted-foreground font-normal"> de {totalModules} módulos</span>
-            </p>
-          </div>
-          <div className="flex gap-6">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-600">{activeTopics}</p>
-              <p className="text-[11px] text-muted-foreground font-medium">Tópicos ativos</p>
-            </div>
-            <div className="w-px bg-stone-200" />
-            <div className="text-center">
-              <p className="text-2xl font-bold text-stone-400">{totalTopics - activeTopics}</p>
-              <p className="text-[11px] text-muted-foreground font-medium">Tópicos pendentes</p>
-            </div>
-            <div className="w-px bg-stone-200" />
-            <div className="text-center">
-              <p className="text-2xl font-bold text-stone-800">{totalTopics}</p>
-              <p className="text-[11px] text-muted-foreground font-medium">Total de tópicos</p>
-            </div>
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="relative h-3 bg-stone-100 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progressPercent}%` }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
-          />
-        </div>
-        <div className="flex justify-between mt-2">
-          <p className="text-[11px] text-muted-foreground">{progressPercent}% concluído</p>
-          <p className="text-[11px] text-muted-foreground">{totalModules - completedCount} módulos restantes</p>
-        </div>
-      </div>
-
-      {/* Active Modules Section */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2.5 mb-4">
-          <CheckCircle2 size={16} className="text-emerald-500" />
-          <h2 className="text-base font-bold text-foreground">Em Andamento</h2>
-          <div className="flex-1 h-px bg-emerald-200/50 ml-2" />
-          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-            {activeModules.length} {activeModules.length === 1 ? "módulo" : "módulos"}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {activeModules.map((mod, i) => (
-            <motion.button
+          return (
+            <motion.div
               key={mod.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.4 }}
-              onClick={() => onNavigate(mod.id)}
-              className="group relative bg-white rounded-2xl border-2 border-emerald-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all duration-300 p-5 text-left overflow-hidden"
+              transition={{ delay: idx * 0.05, duration: 0.35 }}
+              className={`rounded-xl border bg-white shadow-sm overflow-hidden flex flex-col ${
+                mod.isActive ? `${colors.border} border-2` : "border-stone-200/70"
+              }`}
             >
-              {/* Green accent bar */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-emerald-400" />
-
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                  <mod.icon size={22} className="text-white" />
+              {/* Card Header */}
+              <div
+                className={`px-4 py-3 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity ${
+                  mod.isActive ? colors.headerBg : "bg-stone-500"
+                }`}
+                onClick={() => onNavigate(mod.id)}
+              >
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Icon size={16} className="text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      MÓDULO {mod.number}
-                    </span>
-                    <span className="text-[10px] font-semibold text-emerald-500 flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      ATIVO
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white truncate">
+                      {mod.title}
+                    </h3>
+                    {mod.isActive && (
+                      <span className="text-[8px] font-bold bg-white/25 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Ativo
+                      </span>
+                    )}
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mb-0.5 group-hover:text-emerald-700 transition-colors">
-                    {mod.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-3">{mod.subtitle}</p>
-
-                  {/* Highlights */}
-                  {mod.highlights && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {mod.highlights.map((h, idx) => (
-                        <span
-                          key={idx}
-                          className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md"
-                        >
-                          {h}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
-                <div className="flex items-center gap-1 text-emerald-400 group-hover:text-emerald-600 transition-colors flex-shrink-0 mt-2">
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-
-              {/* Topic count */}
-              <div className="mt-3 pt-3 border-t border-emerald-100 flex items-center justify-between">
-                <p className="text-[11px] text-emerald-600 font-medium">
-                  {mod.topicCount} tópicos implementados
-                </p>
-                <span className="text-[10px] text-emerald-500 font-semibold group-hover:underline flex items-center gap-1">
-                  Acessar módulo
-                  <ArrowRight size={10} />
+                <span className="text-[10px] font-bold text-white/60">
+                  {mod.groups.length}
                 </span>
               </div>
-            </motion.button>
-          ))}
-        </div>
-      </div>
 
-      {/* Pending Modules Section */}
-      <div className="mb-12">
-        <div className="flex items-center gap-2.5 mb-4">
-          <Clock size={16} className="text-stone-400" />
-          <h2 className="text-base font-bold text-foreground">A Implementar</h2>
-          <div className="flex-1 h-px bg-stone-200/50 ml-2" />
-          <span className="text-xs font-semibold text-stone-500 bg-stone-100 px-2.5 py-1 rounded-full">
-            {pendingModules.length} módulos
-          </span>
-        </div>
+              {/* Topic Groups List */}
+              <div className="flex-1 px-3 py-2 space-y-0.5 max-h-[320px] overflow-y-auto">
+                {mod.groups.map((group) => {
+                  const groupKey = `${mod.id}::${group.id}`;
+                  const isExpanded = expandedGroups.has(groupKey);
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {pendingModules.map((mod, i) => (
-            <motion.button
-              key={mod.id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.06, duration: 0.35 }}
-              onClick={() => onNavigate(mod.id)}
-              className="group relative bg-white/70 rounded-xl border border-stone-200/60 hover:border-stone-300 hover:bg-white hover:shadow-sm transition-all duration-300 p-4 text-left"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center flex-shrink-0 group-hover:bg-stone-200/70 transition-colors">
-                  <mod.icon size={18} className="text-stone-400 group-hover:text-stone-500 transition-colors" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">
-                      MÓDULO {mod.number}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-stone-700 mb-0.5 group-hover:text-stone-900 transition-colors truncate">
-                    {mod.title}
-                  </h3>
-                  <p className="text-[11px] text-stone-400 truncate">{mod.subtitle}</p>
-                </div>
-                <ArrowRight size={14} className="text-stone-300 group-hover:text-stone-500 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-2" />
-              </div>
-
-              {/* Topic groups preview */}
-              {mod.highlights && mod.highlights.length > 0 && (
-                <div className="mt-3 pt-2.5 border-t border-stone-100">
-                  <div className="flex flex-wrap gap-1">
-                    {mod.highlights.map((h, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[9px] font-medium text-stone-400 bg-stone-50 px-1.5 py-0.5 rounded"
+                  return (
+                    <div key={group.id}>
+                      <button
+                        onClick={() => toggleGroup(groupKey)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all duration-150 hover:bg-stone-50 ${
+                          isExpanded ? "bg-stone-50" : ""
+                        }`}
                       >
-                        {h}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-stone-400 mt-2 font-medium">
-                    {mod.topicCount} tópicos a implementar
-                  </p>
-                </div>
-              )}
-            </motion.button>
-          ))}
-        </div>
-      </div>
+                        <span className="flex-shrink-0">
+                          {isExpanded ? (
+                            <ChevronDown size={12} className="text-stone-400" />
+                          ) : (
+                            <ChevronRight size={12} className="text-stone-300" />
+                          )}
+                        </span>
+                        <Circle size={5} className={`flex-shrink-0 ${mod.isActive ? colors.text : "text-stone-300"} fill-current`} />
+                        <span className={`text-xs font-medium truncate ${
+                          isExpanded ? "text-stone-800" : "text-stone-600"
+                        }`}>
+                          {group.title}
+                        </span>
+                        {group.topicCount !== undefined && group.topicCount > 0 && (
+                          <span className="text-[9px] text-stone-400 ml-auto flex-shrink-0">
+                            {group.topicCount}
+                          </span>
+                        )}
+                      </button>
 
-      {/* Footer note */}
-      <div className="text-center pb-8">
-        <div className="inline-flex items-center gap-2 text-stone-300">
-          <Feather size={12} />
-          <p className="text-[10px] font-medium tracking-wider uppercase">
-            Criatório Minas Bird — Ribeirão Vermelho, MG — {new Date().getFullYear()}
-          </p>
-          <Feather size={12} />
-        </div>
+                      {/* Expanded description */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="ml-7 mr-2 mb-2 px-3 py-2 bg-stone-50 rounded-lg border border-stone-100">
+                              <p className="text-[11px] text-stone-500 leading-relaxed">
+                                {group.description}
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

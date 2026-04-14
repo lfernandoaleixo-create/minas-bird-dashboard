@@ -170,3 +170,5 @@
 - [x] Criar página inicial com mapa visual de progresso de todos os módulos
 - [x] Mostrar claramente módulos em andamento vs a implementar
 - [x] Design impactante e informativo como primeira tela do sistema
+- [x] Refazer página inicial: 9 cards em grid 3x3 com tópicos listados diretamente
+- [x] Cada card mostra módulo + lista de tópicos; expandir tópico mostra descritivo
