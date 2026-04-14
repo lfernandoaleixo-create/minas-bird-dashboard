@@ -1,33 +1,16 @@
 /**
  * ProgressMap — Vertical list of module cards with drag-and-drop priority ordering
  * All cards start CLOSED (only title header visible)
- * Click to expand and see topics
+ * Click to expand and see topics with descriptions
  * Drag to reorder priority (top = highest priority)
+ * Uses native HTML5 Drag & Drop API (no @dnd-kit dependency)
  * Order persisted to database (public, no auth required)
  */
 import { sectors } from "@/data/sectors";
 import type { Sector, TopicGroup } from "@/data/sectors";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Utensils, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 interface ProgressMapProps {
   onNavigate: (moduleId: string) => void;
@@ -107,44 +90,41 @@ function buildModulesMap(): Map<string, ModuleCardData> {
 
 const DEFAULT_ORDER = [FEEDING_ID, ...sectors.map(s => s.id)];
 
-// ===== Sortable Card Component =====
-interface SortableCardProps {
+// ===== Module Card Component =====
+interface ModuleCardProps {
   mod: ModuleCardData;
   priorityIdx: number;
   isExpanded: boolean;
   expandedTopic: string | null;
   onToggleCard: () => void;
   onToggleTopic: (key: string, e: React.MouseEvent) => void;
+  isDragging: boolean;
+  isDragOver: boolean;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDragOver: (e: React.DragEvent, id: string) => void;
+  onDragEnd: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, id: string) => void;
 }
 
-function SortableCard({ mod, priorityIdx, isExpanded, expandedTopic, onToggleCard, onToggleTopic }: SortableCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: mod.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.85 : 1,
-  };
-
+function ModuleCard({
+  mod, priorityIdx, isExpanded, expandedTopic,
+  onToggleCard, onToggleTopic,
+  isDragging, isDragOver,
+  onDragStart, onDragOver, onDragEnd, onDragLeave, onDrop,
+}: ModuleCardProps) {
   const color = VIBRANT_COLORS[mod.colorIdx % VIBRANT_COLORS.length];
   const Icon = mod.icon;
   const priority = PRIORITY_LABELS[Math.min(priorityIdx, PRIORITY_LABELS.length - 1)];
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      className={`rounded-2xl overflow-hidden shadow-md transition-shadow duration-200 ${
-        isDragging ? "shadow-2xl" : isExpanded ? "shadow-lg" : ""
+      className={`rounded-2xl overflow-hidden transition-all duration-200 ${
+        isDragging ? "opacity-50 shadow-2xl scale-[0.98]" : isDragOver ? "shadow-lg ring-2 ring-emerald-400/50" : "shadow-md"
       }`}
+      onDragOver={(e) => onDragOver(e, mod.id)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, mod.id)}
     >
       {/* Header */}
       <div
@@ -153,9 +133,10 @@ function SortableCard({ mod, priorityIdx, isExpanded, expandedTopic, onToggleCar
       >
         {/* Drag handle */}
         <div
-          {...attributes}
-          {...listeners}
-          className="flex items-center justify-center px-3 py-4 cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors"
+          draggable
+          onDragStart={(e) => onDragStart(e, mod.id)}
+          onDragEnd={onDragEnd}
+          className="flex items-center justify-center px-3 py-4 cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors select-none"
           title="Arraste para reordenar"
         >
           <GripVertical size={20} color="rgba(255,255,255,0.6)" />
@@ -192,92 +173,74 @@ function SortableCard({ mod, priorityIdx, isExpanded, expandedTopic, onToggleCar
             {mod.topics.length}
           </span>
 
-          <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <div
+            className="transition-transform duration-200"
+            style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          >
             <ChevronDown size={18} color={color.headerText} />
-          </motion.div>
+          </div>
         </button>
       </div>
 
       {/* Expanded content */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div className="px-5 py-4" style={{ backgroundColor: color.expandBg }}>
-              <p className="text-sm text-stone-400 mb-3">
-                Clique em um tópico para ver os detalhes
-              </p>
+      {isExpanded && (
+        <div className="px-5 py-4" style={{ backgroundColor: color.expandBg }}>
+          <p className="text-sm text-stone-400 mb-3">
+            Clique em um tópico para ver os detalhes
+          </p>
 
-              {/* Topics in 2-column grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                {mod.topics.map((topic, tIdx) => {
-                  const topicKey = `${mod.id}::${tIdx}`;
-                  const isTopicOpen = expandedTopic === topicKey;
+          {/* Topics in 2-column grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {mod.topics.map((topic, tIdx) => {
+              const topicKey = `${mod.id}::${tIdx}`;
+              const isTopicOpen = expandedTopic === topicKey;
 
-                  return (
+              return (
+                <div
+                  key={tIdx}
+                  className={`rounded-xl overflow-hidden transition-all duration-200 ${
+                    isTopicOpen ? "md:col-span-2" : ""
+                  }`}
+                  style={{
+                    backgroundColor: isTopicOpen ? color.topicBg : "#ffffff",
+                    border: `1.5px solid ${isTopicOpen ? color.border : "#e7e5e4"}`,
+                    boxShadow: isTopicOpen ? `0 2px 8px ${color.border}40` : "none",
+                  }}
+                >
+                  <button
+                    onClick={(e) => onToggleTopic(topicKey, e)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50/50 transition-colors"
+                  >
                     <div
-                      key={tIdx}
-                      className={`rounded-xl overflow-hidden transition-all duration-200 ${
-                        isTopicOpen ? "md:col-span-2" : ""
-                      }`}
-                      style={{
-                        backgroundColor: isTopicOpen ? color.topicBg : "#ffffff",
-                        border: `1.5px solid ${isTopicOpen ? color.border : "#e7e5e4"}`,
-                        boxShadow: isTopicOpen ? `0 2px 8px ${color.border}40` : "none",
-                      }}
+                      className="flex-shrink-0 transition-transform duration-150"
+                      style={{ transform: isTopicOpen ? "rotate(90deg)" : "rotate(0deg)" }}
                     >
-                      <button
-                        onClick={(e) => onToggleTopic(topicKey, e)}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50/50 transition-colors"
-                      >
-                        <motion.div
-                          animate={{ rotate: isTopicOpen ? 90 : 0 }}
-                          transition={{ duration: 0.15 }}
-                          className="flex-shrink-0"
-                        >
-                          <ChevronRight size={15} style={{ color: isTopicOpen ? color.header : "#a8a29e" }} />
-                        </motion.div>
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: color.dot }}
-                        />
-                        <span className={`text-sm leading-snug ${
-                          isTopicOpen ? "text-stone-900 font-semibold" : "text-stone-700"
-                        }`}>
-                          {topic.title}
-                        </span>
-                      </button>
-
-                      <AnimatePresence>
-                        {isTopicOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="px-5 pb-3 pt-1 ml-8" style={{ borderTop: `1px solid ${color.border}40` }}>
-                              <p className="text-sm text-stone-600 leading-relaxed">
-                                {topic.description}
-                              </p>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      <ChevronRight size={15} style={{ color: isTopicOpen ? color.header : "#a8a29e" }} />
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: color.dot }}
+                    />
+                    <span className={`text-sm leading-snug ${
+                      isTopicOpen ? "text-stone-900 font-semibold" : "text-stone-700"
+                    }`}>
+                      {topic.title}
+                    </span>
+                  </button>
+
+                  {isTopicOpen && (
+                    <div className="px-5 pb-3 pt-1 ml-8" style={{ borderTop: `1px solid ${color.border}40` }}>
+                      <p className="text-sm text-stone-600 leading-relaxed">
+                        {topic.description}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -289,37 +252,66 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
+  // Drag state
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
   // Load saved order from DB
   const { data: savedOrder } = trpc.moduleOrder.get.useQuery();
   const saveMutation = trpc.moduleOrder.save.useMutation();
 
   useEffect(() => {
     if (savedOrder && savedOrder.length > 0) {
-      // Merge: use saved order first, then append any new modules not in saved order
       const savedSet = new Set(savedOrder);
       const remaining = DEFAULT_ORDER.filter(id => !savedSet.has(id));
       setOrderedIds([...savedOrder, ...remaining]);
     }
   }, [savedOrder]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(id);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverId(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData("text/plain");
+    if (!sourceId || sourceId === targetId) {
+      setDragId(null);
+      setDragOverId(null);
+      return;
+    }
 
     setOrderedIds(prev => {
-      const oldIndex = prev.indexOf(active.id as string);
-      const newIndex = prev.indexOf(over.id as string);
-      const newOrder = arrayMove(prev, oldIndex, newIndex);
-      // Save to DB
+      const newOrder = [...prev];
+      const oldIndex = newOrder.indexOf(sourceId);
+      const newIndex = newOrder.indexOf(targetId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, sourceId);
       saveMutation.mutate({ moduleIds: newOrder });
       return newOrder;
     });
+
+    setDragId(null);
+    setDragOverId(null);
   }, [saveMutation]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragId(null);
+    setDragOverId(null);
+  }, []);
 
   const toggleCard = useCallback((modId: string) => {
     setExpandedCard(prev => {
@@ -362,27 +354,26 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
         </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-3">
-            {orderedModules.map((mod, idx) => (
-              <SortableCard
-                key={mod.id}
-                mod={mod}
-                priorityIdx={idx}
-                isExpanded={expandedCard === mod.id}
-                expandedTopic={expandedTopic}
-                onToggleCard={() => toggleCard(mod.id)}
-                onToggleTopic={toggleTopic}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <div className="flex flex-col gap-3">
+        {orderedModules.map((mod, idx) => (
+          <ModuleCard
+            key={mod.id}
+            mod={mod}
+            priorityIdx={idx}
+            isExpanded={expandedCard === mod.id}
+            expandedTopic={expandedTopic}
+            onToggleCard={() => toggleCard(mod.id)}
+            onToggleTopic={toggleTopic}
+            isDragging={dragId === mod.id}
+            isDragOver={dragOverId === mod.id && dragId !== mod.id}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          />
+        ))}
+      </div>
     </div>
   );
 }
