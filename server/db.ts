@@ -219,7 +219,7 @@ export async function saveFullCalendarForSpecies(userId: number, speciesId: stri
 
 // ===== MODULE ORDER =====
 
-import { moduleOrder } from "../drizzle/schema";
+import { moduleOrder, topicComments } from "../drizzle/schema";
 import { asc } from "drizzle-orm";
 
 export async function getModuleOrder() {
@@ -239,5 +239,23 @@ export async function saveModuleOrder(orderedModuleIds: string[]) {
       sortOrder: idx,
     }));
     await db.insert(moduleOrder).values(values);
+  }
+}
+
+// ===== TOPIC COMMENTS =====
+
+export async function getAllTopicComments() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(topicComments);
+}
+
+export async function upsertTopicComment(topicKey: string, comment: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Delete existing then insert (upsert pattern)
+  await db.delete(topicComments).where(eq(topicComments.topicKey, topicKey));
+  if (comment.trim()) {
+    await db.insert(topicComments).values({ topicKey, comment: comment.trim() });
   }
 }

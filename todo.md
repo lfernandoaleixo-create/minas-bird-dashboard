@@ -190,3 +190,6 @@
 - [x] ProgressMap: adicionar numeração fixa (1, 2, 3...) nos tópicos dentro de cada card
 - [x] ProgressMap: drag-and-drop nativo nos tópicos dentro de cada card para reordenar
 - [x] ProgressMap: persistir ordem dos tópicos (localStorage ou banco)
+- [x] ProgressMap: caixa de texto editável em cada tópico para comentários dos funcionários
+- [x] ProgressMap: persistir comentários dos tópicos no banco de dados
+- [x] ProgressMap: criar schema + rotas tRPC para CRUD de comentários por tópico

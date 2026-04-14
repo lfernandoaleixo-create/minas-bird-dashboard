@@ -112,3 +112,20 @@ export const moduleOrder = mysqlTable("module_order", {
 
 export type ModuleOrder = typeof moduleOrder.$inferSelect;
 export type InsertModuleOrder = typeof moduleOrder.$inferInsert;
+
+/**
+ * Comentários dos funcionários nos tópicos do mapa de progresso
+ * Cada registro é um comentário vinculado a um módulo + tópico
+ * topicKey no formato "moduleId::topicIndex" (ex: "__alimentacao__::0")
+ */
+export const topicComments = mysqlTable("topic_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Chave do tópico: moduleId::topicOriginalIndex */
+  topicKey: varchar("topicKey", { length: 255 }).notNull().unique(),
+  /** Texto do comentário */
+  comment: text("comment").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TopicComment = typeof topicComments.$inferSelect;
+export type InsertTopicComment = typeof topicComments.$inferInsert;

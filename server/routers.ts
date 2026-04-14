@@ -14,6 +14,8 @@ import {
   saveFullCalendarForSpecies,
   getModuleOrder,
   saveModuleOrder,
+  getAllTopicComments,
+  upsertTopicComment,
 } from "./db";
 
 // Schema para itens de dieta
@@ -244,6 +246,30 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await saveModuleOrder(input.moduleIds);
+        return { success: true };
+      }),
+  }),
+
+  // ===== TOPIC COMMENTS =====
+  topicComment: router({
+    /** Obter todos os comentários de tópicos */
+    getAll: publicProcedure.query(async () => {
+      const rows = await getAllTopicComments();
+      const result: Record<string, string> = {};
+      for (const row of rows) {
+        result[row.topicKey] = row.comment;
+      }
+      return result;
+    }),
+
+    /** Salvar/atualizar comentário de um tópico */
+    save: publicProcedure
+      .input(z.object({
+        topicKey: z.string().min(1),
+        comment: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        await upsertTopicComment(input.topicKey, input.comment);
         return { success: true };
       }),
   }),

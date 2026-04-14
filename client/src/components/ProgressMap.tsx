@@ -4,11 +4,13 @@
  * Topics inside each card have fixed numbering (1, 2, 3...)
  * Topics can be reordered via native HTML5 drag-and-drop
  * Topic order persisted to localStorage
+ * Each topic has an editable comment box persisted to database
  */
 import { sectors } from "@/data/sectors";
 import type { Sector, TopicGroup } from "@/data/sectors";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Utensils, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { Utensils, ChevronDown, ChevronRight, GripVertical, MessageSquare, Save, Check } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 interface ProgressMapProps {
   onNavigate: (moduleId: string) => void;
@@ -19,7 +21,7 @@ const FEEDING_ID = "__alimentacao__";
 interface TopicItem {
   title: string;
   description: string;
-  originalIndex: number; // track original position for persistence
+  originalIndex: number;
 }
 
 interface ModuleCardData {
@@ -54,7 +56,6 @@ const VIBRANT_COLORS = [
 
 const STORAGE_KEY = "minas-bird-topic-order";
 
-/** Load topic order from localStorage. Returns map of moduleId -> array of originalIndex in display order */
 function loadTopicOrder(): Record<string, number[]> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -63,7 +64,6 @@ function loadTopicOrder(): Record<string, number[]> {
   return {};
 }
 
-/** Save topic order to localStorage */
 function saveTopicOrder(order: Record<string, number[]>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
@@ -98,6 +98,99 @@ function buildModulesMap(): Map<string, ModuleCardData> {
 
 const FIXED_ORDER = [FEEDING_ID, ...sectors.map(s => s.id)];
 
+// ===== Comment Box Component =====
+interface CommentBoxProps {
+  topicKey: string;
+  savedComment: string;
+  onSave: (topicKey: string, comment: string) => void;
+  accentColor: string;
+  borderColor: string;
+}
+
+function CommentBox({ topicKey, savedComment, onSave, accentColor, borderColor }: CommentBoxProps) {
+  const [localText, setLocalText] = useState(savedComment);
+  const [saved, setSaved] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync with saved comment when it changes from server
+  useEffect(() => {
+    setLocalText(savedComment);
+  }, [savedComment]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setLocalText(val);
+    setSaved(false);
+
+    // Auto-save after 1.5s of inactivity
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onSave(topicKey, val);
+      setSaved(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setSaved(false), 2000);
+    }, 1500);
+  };
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    onSave(topicKey, localText);
+    setSaved(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <MessageSquare size={13} style={{ color: accentColor }} />
+        <span className="text-xs font-semibold" style={{ color: accentColor }}>
+          Comentários da equipe
+        </span>
+        {saved && (
+          <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium ml-auto">
+            <Check size={11} />
+            Salvo
+          </span>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <textarea
+          value={localText}
+          onChange={handleChange}
+          placeholder="Escreva observações, anotações ou sugestões sobre este tópico..."
+          className="flex-1 text-sm rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 transition-all"
+          style={{
+            border: `1.5px solid ${borderColor}`,
+            backgroundColor: "#ffffff",
+            minHeight: "72px",
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = accentColor;
+            e.currentTarget.style.boxShadow = `0 0 0 2px ${accentColor}30`;
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = borderColor;
+            e.currentTarget.style.boxShadow = "none";
+          }}
+          rows={3}
+        />
+        <button
+          onClick={handleSaveClick}
+          className="self-end px-3 py-2 rounded-lg text-white text-xs font-semibold flex items-center gap-1.5 hover:brightness-110 transition-all"
+          style={{ backgroundColor: accentColor }}
+          title="Salvar comentário"
+        >
+          <Save size={13} />
+          Salvar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ===== Module Card Component =====
 interface ModuleCardProps {
   mod: ModuleCardData;
@@ -105,14 +198,17 @@ interface ModuleCardProps {
   expandedTopic: string | null;
   onToggleCard: () => void;
   onToggleTopic: (key: string, e: React.MouseEvent) => void;
-  topicOrder: number[]; // array of originalIndex in display order
+  topicOrder: number[];
   onTopicReorder: (moduleId: string, newOrder: number[]) => void;
+  comments: Record<string, string>;
+  onSaveComment: (topicKey: string, comment: string) => void;
 }
 
 function ModuleCard({
   mod, isExpanded, expandedTopic,
   onToggleCard, onToggleTopic,
   topicOrder, onTopicReorder,
+  comments, onSaveComment,
 }: ModuleCardProps) {
   const color = VIBRANT_COLORS[mod.colorIdx % VIBRANT_COLORS.length];
   const Icon = mod.icon;
@@ -121,7 +217,6 @@ function ModuleCard({
   const [dragTopicIdx, setDragTopicIdx] = useState<number | null>(null);
   const [dragOverTopicIdx, setDragOverTopicIdx] = useState<number | null>(null);
 
-  // Get ordered topics based on topicOrder
   const orderedTopics = topicOrder.map(origIdx => mod.topics.find(t => t.originalIndex === origIdx)!).filter(Boolean);
 
   const handleTopicDragStart = (e: React.DragEvent, displayIdx: number) => {
@@ -166,9 +261,15 @@ function ModuleCard({
     setDragOverTopicIdx(null);
   };
 
+  // Count comments for this module
+  const commentCount = orderedTopics.filter(t => {
+    const key = `${mod.id}::${t.originalIndex}`;
+    return comments[key] && comments[key].trim().length > 0;
+  }).length;
+
   return (
     <div className="rounded-2xl overflow-hidden shadow-md transition-all duration-200">
-      {/* Header — fixed, not draggable */}
+      {/* Header */}
       <button
         onClick={onToggleCard}
         className="w-full flex items-center gap-3 px-5 py-4 hover:brightness-110 transition-all"
@@ -183,6 +284,17 @@ function ModuleCard({
         <h3 className="text-[17px] font-bold flex-1 text-left" style={{ color: color.headerText }}>
           {mod.title}
         </h3>
+
+        {/* Comment count badge */}
+        {commentCount > 0 && (
+          <span
+            className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: "rgba(255,255,255,0.25)", color: color.headerText }}
+          >
+            <MessageSquare size={10} />
+            {commentCount}
+          </span>
+        )}
 
         {/* Topic count */}
         <span
@@ -200,7 +312,7 @@ function ModuleCard({
         </div>
       </button>
 
-      {/* Expanded content with draggable topics */}
+      {/* Expanded content */}
       {isExpanded && (
         <div className="px-5 py-4" style={{ backgroundColor: color.expandBg }}>
           <p className="text-xs text-stone-400 mb-3 flex items-center gap-1.5">
@@ -214,6 +326,7 @@ function ModuleCard({
               const isTopicOpen = expandedTopic === topicKey;
               const isDragging = dragTopicIdx === displayIdx;
               const isDragOver = dragOverTopicIdx === displayIdx && dragTopicIdx !== displayIdx;
+              const hasComment = comments[topicKey] && comments[topicKey].trim().length > 0;
 
               return (
                 <div
@@ -225,7 +338,6 @@ function ModuleCard({
                     backgroundColor: isTopicOpen ? color.topicBg : "#ffffff",
                     border: `1.5px solid ${isTopicOpen ? color.border : isDragOver ? color.header : "#e7e5e4"}`,
                     boxShadow: isTopicOpen ? `0 2px 8px ${color.border}40` : isDragOver ? `0 2px 12px ${color.header}30` : "0 1px 3px rgba(0,0,0,0.04)",
-                    ...(isDragOver ? { ringColor: color.header } : {}),
                   }}
                   onDragOver={(e) => handleTopicDragOver(e, displayIdx)}
                   onDragLeave={handleTopicDragLeave}
@@ -267,14 +379,27 @@ function ModuleCard({
                       }`}>
                         {topic.title}
                       </span>
+                      {/* Small comment indicator when collapsed */}
+                      {!isTopicOpen && hasComment && (
+                        <MessageSquare size={12} style={{ color: color.header }} className="ml-auto mr-2 flex-shrink-0 opacity-60" />
+                      )}
                     </button>
                   </div>
 
                   {isTopicOpen && (
-                    <div className="px-5 pb-3 pt-1 ml-12" style={{ borderTop: `1px solid ${color.border}40` }}>
-                      <p className="text-sm text-stone-600 leading-relaxed">
+                    <div className="px-5 pb-4 pt-1 ml-12" style={{ borderTop: `1px solid ${color.border}40` }}>
+                      <p className="text-sm text-stone-600 leading-relaxed mb-1">
                         {topic.description}
                       </p>
+
+                      {/* Editable comment box */}
+                      <CommentBox
+                        topicKey={topicKey}
+                        savedComment={comments[topicKey] || ""}
+                        onSave={onSaveComment}
+                        accentColor={color.header}
+                        borderColor={color.border}
+                      />
                     </div>
                   )}
                 </div>
@@ -294,10 +419,9 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
-  // Topic order state: moduleId -> array of originalIndex in display order
+  // Topic order state
   const [topicOrders, setTopicOrders] = useState<Record<string, number[]>>(() => {
     const saved = loadTopicOrder();
-    // Initialize default orders for any modules not in saved data
     const result: Record<string, number[]> = {};
     Array.from(modulesMap.entries()).forEach(([id, mod]) => {
       if (saved[id] && saved[id].length === mod.topics.length) {
@@ -308,6 +432,38 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
     });
     return result;
   });
+
+  // Comments state — loaded from DB
+  const { data: serverComments } = trpc.topicComment.getAll.useQuery();
+  const saveMutation = trpc.topicComment.save.useMutation();
+
+  const [localComments, setLocalComments] = useState<Record<string, string>>({});
+
+  // Merge server comments into local state on load
+  useEffect(() => {
+    if (serverComments) {
+      setLocalComments(prev => {
+        // Only update keys that haven't been locally modified
+        const merged = { ...prev };
+        for (const [key, val] of Object.entries(serverComments)) {
+          if (!(key in merged)) {
+            merged[key] = val;
+          }
+        }
+        return merged;
+      });
+    }
+  }, [serverComments]);
+
+  // Use server comments as base, overlay with local edits
+  const mergedComments = useMemo(() => {
+    return { ...(serverComments || {}), ...localComments };
+  }, [serverComments, localComments]);
+
+  const handleSaveComment = useCallback((topicKey: string, comment: string) => {
+    setLocalComments(prev => ({ ...prev, [topicKey]: comment }));
+    saveMutation.mutate({ topicKey, comment });
+  }, [saveMutation]);
 
   const handleTopicReorder = useCallback((moduleId: string, newOrder: number[]) => {
     setTopicOrders(prev => {
@@ -350,6 +506,8 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
             onToggleTopic={toggleTopic}
             topicOrder={topicOrders[mod.id] || mod.topics.map(t => t.originalIndex)}
             onTopicReorder={handleTopicReorder}
+            comments={mergedComments}
+            onSaveComment={handleSaveComment}
           />
         ))}
       </div>
