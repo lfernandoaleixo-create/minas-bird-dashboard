@@ -176,3 +176,4 @@
 - [x] ProgressMap: cores vibrantes e diferenciadas para cada módulo
 - [x] ProgressMap: sem distinção ativo/pendente — todos os cards iguais
 - [x] ProgressMap: tópicos clicáveis que expandem para mostrar descritivo/sugestão do que fazer
+- [x] ProgressMap: letras maiores no descritivo expandido e expansão sem precisar rolar

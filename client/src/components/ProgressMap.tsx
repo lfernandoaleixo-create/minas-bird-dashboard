@@ -1,13 +1,14 @@
 /**
  * ProgressMap — 9 module cards in a 3x3 grid
  * All topics visible immediately, vibrant colors per module
- * Clicking a topic expands to show description/suggestion
+ * Clicking a topic opens a detail panel below the grid (no scroll needed)
+ * Larger fonts for readability
  */
 import { sectors } from "@/data/sectors";
 import type { Sector, TopicGroup } from "@/data/sectors";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Utensils, ChevronRight } from "lucide-react";
+import { Utensils, ChevronRight, X } from "lucide-react";
 
 interface ProgressMapProps {
   onNavigate: (moduleId: string) => void;
@@ -54,15 +55,15 @@ interface ModuleCardData {
 
 // Vibrant color palette — one per module
 const VIBRANT_COLORS = [
-  { header: "#059669", headerText: "#ffffff", dot: "#34d399", accent: "#d1fae5", border: "#6ee7b7", expandBg: "#ecfdf5" },  // Emerald
-  { header: "#2563eb", headerText: "#ffffff", dot: "#60a5fa", accent: "#dbeafe", border: "#93c5fd", expandBg: "#eff6ff" },  // Blue
-  { header: "#d97706", headerText: "#ffffff", dot: "#fbbf24", accent: "#fef3c7", border: "#fcd34d", expandBg: "#fffbeb" },  // Amber
-  { header: "#dc2626", headerText: "#ffffff", dot: "#f87171", accent: "#fee2e2", border: "#fca5a5", expandBg: "#fef2f2" },  // Red
-  { header: "#7c3aed", headerText: "#ffffff", dot: "#a78bfa", accent: "#ede9fe", border: "#c4b5fd", expandBg: "#f5f3ff" },  // Violet
-  { header: "#ea580c", headerText: "#ffffff", dot: "#fb923c", accent: "#fff7ed", border: "#fdba74", expandBg: "#fff7ed" },  // Orange
-  { header: "#0891b2", headerText: "#ffffff", dot: "#22d3ee", accent: "#cffafe", border: "#67e8f9", expandBg: "#ecfeff" },  // Cyan
-  { header: "#4f46e5", headerText: "#ffffff", dot: "#818cf8", accent: "#e0e7ff", border: "#a5b4fc", expandBg: "#eef2ff" },  // Indigo
-  { header: "#be185d", headerText: "#ffffff", dot: "#f472b6", accent: "#fce7f3", border: "#f9a8d4", expandBg: "#fdf2f8" },  // Pink
+  { header: "#059669", headerText: "#ffffff", dot: "#34d399", accent: "#d1fae5", border: "#6ee7b7", expandBg: "#ecfdf5" },
+  { header: "#2563eb", headerText: "#ffffff", dot: "#60a5fa", accent: "#dbeafe", border: "#93c5fd", expandBg: "#eff6ff" },
+  { header: "#d97706", headerText: "#ffffff", dot: "#fbbf24", accent: "#fef3c7", border: "#fcd34d", expandBg: "#fffbeb" },
+  { header: "#dc2626", headerText: "#ffffff", dot: "#f87171", accent: "#fee2e2", border: "#fca5a5", expandBg: "#fef2f2" },
+  { header: "#7c3aed", headerText: "#ffffff", dot: "#a78bfa", accent: "#ede9fe", border: "#c4b5fd", expandBg: "#f5f3ff" },
+  { header: "#ea580c", headerText: "#ffffff", dot: "#fb923c", accent: "#fff7ed", border: "#fdba74", expandBg: "#fff7ed" },
+  { header: "#0891b2", headerText: "#ffffff", dot: "#22d3ee", accent: "#cffafe", border: "#67e8f9", expandBg: "#ecfeff" },
+  { header: "#4f46e5", headerText: "#ffffff", dot: "#818cf8", accent: "#e0e7ff", border: "#a5b4fc", expandBg: "#eef2ff" },
+  { header: "#be185d", headerText: "#ffffff", dot: "#f472b6", accent: "#fce7f3", border: "#f9a8d4", expandBg: "#fdf2f8" },
 ];
 
 function buildModules(): ModuleCardData[] {
@@ -75,7 +76,6 @@ function buildModules(): ModuleCardData[] {
   };
 
   const sectorModules: ModuleCardData[] = sectors.map((s: Sector, i: number) => {
-    // Flatten all topics from all groups, keeping descriptions
     const allTopics: TopicItem[] = [];
     s.topicGroups.forEach((g: TopicGroup) => {
       g.topics.forEach(t => allTopics.push({
@@ -97,20 +97,35 @@ function buildModules(): ModuleCardData[] {
 
 export default function ProgressMap({ onNavigate }: ProgressMapProps) {
   const modules = buildModules();
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+  // Track which topic is expanded: "moduleId::topicIdx" or null
+  const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const toggleTopic = (key: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setExpandedTopics(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
+    setExpandedTopic(prev => prev === key ? null : key);
   };
+
+  // Scroll detail panel into view when it opens
+  useEffect(() => {
+    if (expandedTopic && detailRef.current) {
+      setTimeout(() => {
+        detailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 100);
+    }
+  }, [expandedTopic]);
+
+  // Parse expanded topic info
+  const expandedInfo = expandedTopic ? (() => {
+    const [modId, tIdxStr] = expandedTopic.split("::");
+    const mod = modules.find(m => m.id === modId);
+    if (!mod) return null;
+    const tIdx = parseInt(tIdxStr, 10);
+    const topic = mod.topics[tIdx];
+    if (!topic) return null;
+    const color = VIBRANT_COLORS[mod.colorIdx % VIBRANT_COLORS.length];
+    return { mod, topic, color, tIdx };
+  })() : null;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -130,24 +145,24 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
             >
               {/* Card Header — clickable to navigate */}
               <div
-                className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+                className="px-5 py-3.5 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
                 style={{ backgroundColor: color.header }}
                 onClick={() => onNavigate(mod.id)}
               >
                 <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
                 >
-                  <Icon size={18} style={{ color: color.headerText }} />
+                  <Icon size={20} style={{ color: color.headerText }} />
                 </div>
                 <h3
-                  className="text-sm font-bold flex-1 truncate"
+                  className="text-base font-bold flex-1 truncate"
                   style={{ color: color.headerText }}
                 >
                   {mod.title}
                 </h3>
                 <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  className="text-xs font-bold px-2.5 py-1 rounded-full"
                   style={{ backgroundColor: "rgba(255,255,255,0.25)", color: color.headerText }}
                 >
                   {mod.topics.length}
@@ -155,54 +170,37 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
               </div>
 
               {/* Topics — clickable to expand description */}
-              <div className="px-3 py-2 flex-1 max-h-[400px] overflow-y-auto">
+              <div className="px-3 py-3 flex-1">
                 <ul className="space-y-0.5">
                   {mod.topics.map((topic, tIdx) => {
                     const topicKey = `${mod.id}::${tIdx}`;
-                    const isExpanded = expandedTopics.has(topicKey);
+                    const isExpanded = expandedTopic === topicKey;
 
                     return (
                       <li key={tIdx}>
                         <button
                           onClick={(e) => toggleTopic(topicKey, e)}
-                          className="w-full flex items-start gap-2 px-2 py-1.5 rounded-lg text-left transition-all duration-150 hover:bg-stone-50"
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150 ${
+                            isExpanded
+                              ? "ring-2 shadow-sm"
+                              : "hover:bg-stone-50"
+                          }`}
+                          style={isExpanded ? {
+                            backgroundColor: color.expandBg,
+                            boxShadow: `0 0 0 2px ${color.border}`,
+                          } : undefined}
                         >
-                          <span className="flex-shrink-0 mt-[3px] transition-transform duration-200" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
-                            <ChevronRight size={11} style={{ color: color.dot }} />
+                          <span className="flex-shrink-0 transition-transform duration-200" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+                            <ChevronRight size={14} style={{ color: isExpanded ? color.header : color.dot }} />
                           </span>
                           <span
-                            className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-[5px]"
+                            className="w-2 h-2 rounded-full flex-shrink-0"
                             style={{ backgroundColor: color.dot }}
                           />
-                          <span className={`text-[11px] leading-snug transition-colors ${isExpanded ? "text-stone-900 font-medium" : "text-stone-600"}`}>
+                          <span className={`text-sm leading-snug transition-colors ${isExpanded ? "text-stone-900 font-semibold" : "text-stone-700"}`}>
                             {topic.title}
                           </span>
                         </button>
-
-                        {/* Expanded description */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              <div
-                                className="ml-7 mr-1 mb-1.5 px-3 py-2.5 rounded-lg border"
-                                style={{
-                                  backgroundColor: color.expandBg,
-                                  borderColor: color.border,
-                                }}
-                              >
-                                <p className="text-[11px] text-stone-600 leading-relaxed">
-                                  {topic.description}
-                                </p>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
                       </li>
                     );
                   })}
@@ -212,6 +210,62 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
           );
         })}
       </div>
+
+      {/* Detail panel — opens below the grid, full width, no scroll needed */}
+      <AnimatePresence>
+        {expandedInfo && (
+          <motion.div
+            ref={detailRef}
+            initial={{ opacity: 0, y: 20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: 10, height: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="overflow-hidden mt-5"
+          >
+            <div
+              className="rounded-2xl border-2 shadow-lg overflow-hidden"
+              style={{ borderColor: expandedInfo.color.border }}
+            >
+              {/* Detail header */}
+              <div
+                className="px-6 py-4 flex items-center gap-4"
+                style={{ backgroundColor: expandedInfo.color.header }}
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                >
+                  <expandedInfo.mod.icon size={20} style={{ color: expandedInfo.color.headerText }} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium opacity-70" style={{ color: expandedInfo.color.headerText }}>
+                    {expandedInfo.mod.title}
+                  </p>
+                  <h3 className="text-lg font-bold" style={{ color: expandedInfo.color.headerText }}>
+                    {expandedInfo.topic.title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setExpandedTopic(null)}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors"
+                >
+                  <X size={20} style={{ color: expandedInfo.color.headerText }} />
+                </button>
+              </div>
+
+              {/* Detail content */}
+              <div
+                className="px-6 py-5"
+                style={{ backgroundColor: expandedInfo.color.expandBg }}
+              >
+                <p className="text-base text-stone-700 leading-relaxed">
+                  {expandedInfo.topic.description}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
