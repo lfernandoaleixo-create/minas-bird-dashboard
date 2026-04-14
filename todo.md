@@ -172,3 +172,6 @@
 - [x] Design impactante e informativo como primeira tela do sistema
 - [x] Refazer página inicial: 9 cards em grid 3x3 com tópicos listados diretamente
 - [x] Cada card mostra módulo + lista de tópicos; expandir tópico mostra descritivo
+- [x] ProgressMap: todos os tópicos visíveis sem ocultar, sem expandir
+- [x] ProgressMap: cores vibrantes e diferenciadas para cada módulo
+- [x] ProgressMap: sem distinção ativo/pendente — todos os cards iguais

@@ -2,12 +2,12 @@
  * Sidebar Navigation — Tropical Craft Design
  * DM Serif Display for titles, DM Sans for body
  * Deep forest-green sidebar with golden accents
- * Modules separated into "Em andamento" and "A implementar"
+ * All modules listed equally — no active/pending distinction
  */
 import { sectors } from "@/data/sectors";
-import type { Sector, TopicGroup } from "@/data/sectors";
+import type { Sector } from "@/data/sectors";
 import { cn } from "@/lib/utils";
-import { Menu, X, Feather, Utensils, Settings, CheckCircle2, Clock, LayoutGrid } from "lucide-react";
+import { Menu, X, Feather, Utensils, Settings, LayoutGrid } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -21,57 +21,30 @@ const HOME_ID = "__home__";
 const FEEDING_ID = "__alimentacao__";
 const SETTINGS_ID = "__configuracoes__";
 
-// IDs of modules that are already implemented/working
-const ACTIVE_MODULE_IDS = new Set([FEEDING_ID]);
-// IDs that are special (not modules)
-const SPECIAL_IDS = new Set([HOME_ID, SETTINGS_ID]);
-
 type NavEntry = {
   id: string;
   title: string;
-  subtitle: string;
   icon: typeof Utensils;
 };
 
 export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navItems: NavEntry[] = useMemo(() => {
-    const sectorItems = sectors.map((s: Sector) => ({
-      id: s.id,
-      title: s.title,
-      subtitle: s.subtitle,
-      icon: s.icon,
-    }));
-
-    const homeItem: NavEntry = {
-      id: HOME_ID,
-      title: "Mapa de Progresso",
-      subtitle: "",
-      icon: LayoutGrid,
-    };
-
+  const allModules: NavEntry[] = useMemo(() => {
     const feedingItem: NavEntry = {
       id: FEEDING_ID,
       title: "Alimentação",
-      subtitle: "",
       icon: Utensils,
     };
 
-    const settingsItem: NavEntry = {
-      id: SETTINGS_ID,
-      title: "Configurações",
-      subtitle: "Equipe e acessos",
-      icon: Settings,
-    };
+    const sectorItems = sectors.map((s: Sector) => ({
+      id: s.id,
+      title: s.title,
+      icon: s.icon,
+    }));
 
-    return [homeItem, feedingItem, ...sectorItems, settingsItem];
+    return [feedingItem, ...sectorItems];
   }, []);
-
-  const homeItem = useMemo(() => navItems.find(item => item.id === HOME_ID)!, [navItems]);
-  const activeModules = useMemo(() => navItems.filter(item => ACTIVE_MODULE_IDS.has(item.id)), [navItems]);
-  const pendingModules = useMemo(() => navItems.filter(item => !ACTIVE_MODULE_IDS.has(item.id) && !SPECIAL_IDS.has(item.id)), [navItems]);
-  const settingsItem = useMemo(() => navItems.find(item => item.id === SETTINGS_ID)!, [navItems]);
 
   const handleSelect = (id: string) => {
     onSectorChange(id);
@@ -81,7 +54,6 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
   const renderNavItem = (item: NavEntry) => {
     const Icon = item.icon;
     const isActive = activeSector === item.id;
-    const isImplemented = ACTIVE_MODULE_IDS.has(item.id);
 
     return (
       <li key={item.id}>
@@ -91,9 +63,7 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
             "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 relative",
             isActive
               ? "bg-sidebar-accent text-sidebar-accent-foreground"
-              : isImplemented
-                ? "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/90"
-                : "text-sidebar-foreground/40 hover:bg-sidebar-accent/25 hover:text-sidebar-foreground/65"
+              : "text-sidebar-foreground/55 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/85"
           )}
         >
           {isActive && (
@@ -108,29 +78,17 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
               "flex items-center justify-center w-8 h-8 rounded-lg text-sm transition-all duration-200",
               isActive
                 ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                : isImplemented
-                  ? "bg-sidebar-foreground/8 text-sidebar-foreground/40"
-                  : "bg-sidebar-foreground/5 text-sidebar-foreground/20"
+                : "bg-sidebar-foreground/8 text-sidebar-foreground/35"
             )}
           >
             <Icon size={15} />
           </span>
-          <div className="flex-1 min-w-0">
-            <p className={cn(
-              "text-[13px] truncate transition-all",
-              isActive ? "font-semibold" : "font-medium"
-            )}>
-              {item.title}
-            </p>
-            {item.subtitle && (
-              <p className={cn(
-                "text-[10px] truncate transition-opacity",
-                isActive ? "opacity-50" : "opacity-30"
-              )}>
-                {item.subtitle}
-              </p>
-            )}
-          </div>
+          <p className={cn(
+            "text-[13px] truncate transition-all flex-1",
+            isActive ? "font-semibold" : "font-medium"
+          )}>
+            {item.title}
+          </p>
         </button>
       </li>
     );
@@ -157,12 +115,12 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
         </div>
       </div>
 
-      {/* Navigation — separated into home, active and pending */}
+      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
-        {/* Home / Progress Map */}
-        <div className="mb-3">
+        {/* Home / Mapa */}
+        <div className="mb-2">
           <ul className="space-y-0.5">
-            {renderNavItem(homeItem)}
+            {renderNavItem({ id: HOME_ID, title: "Mapa de Progresso", icon: LayoutGrid })}
           </ul>
         </div>
 
@@ -171,36 +129,16 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
           <div className="h-px bg-sidebar-border/30" />
         </div>
 
-        {/* Active/Working modules */}
-        <div className="mb-3">
+        {/* All modules — equal treatment */}
+        <div className="mb-2">
           <div className="flex items-center gap-2 px-3 mb-2">
-            <CheckCircle2 size={11} className="text-emerald-400" />
-            <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-emerald-400/80">
-              Em andamento
-            </p>
-            <div className="flex-1 h-px bg-emerald-400/15 ml-1" />
-          </div>
-          <ul className="space-y-0.5">
-            {activeModules.map(renderNavItem)}
-          </ul>
-        </div>
-
-        {/* Divider */}
-        <div className="mx-3 mb-3">
-          <div className="h-px bg-sidebar-border/30" />
-        </div>
-
-        {/* Pending modules */}
-        <div>
-          <div className="flex items-center gap-2 px-3 mb-2">
-            <Clock size={11} className="text-sidebar-foreground/25" />
-            <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-sidebar-foreground/25">
-              A implementar
+            <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-sidebar-foreground/30">
+              Módulos
             </p>
             <div className="flex-1 h-px bg-sidebar-foreground/8 ml-1" />
           </div>
           <ul className="space-y-0.5">
-            {pendingModules.map(renderNavItem)}
+            {allModules.map(renderNavItem)}
           </ul>
         </div>
 
@@ -210,7 +148,7 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
             <div className="h-px bg-sidebar-border/20" />
           </div>
           <ul className="space-y-0.5">
-            {renderNavItem(settingsItem)}
+            {renderNavItem({ id: SETTINGS_ID, title: "Configurações", icon: Settings })}
           </ul>
         </div>
       </nav>
