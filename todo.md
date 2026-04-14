@@ -178,3 +178,4 @@
 - [x] ProgressMap: tópicos clicáveis que expandem para mostrar descritivo/sugestão do que fazer
 - [x] ProgressMap: letras maiores no descritivo expandido e expansão sem precisar rolar
 - [x] ProgressMap: 9 cards expansíveis — ao clicar no card ele expande mostrando detalhes dos tópicos
+- [x] ProgressMap: todos os cards fechados por padrão (só título), expandem ao clicar
