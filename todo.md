@@ -167,3 +167,6 @@
 - [x] Sistema de cores unificado: aplicar cor da dieta no calendário (mesma cor)
 - [x] Sistema de cores unificado: aplicar cor da dieta no PDF da dieta impressa
 - [x] Sistema de cores unificado: aplicar cor da dieta no PDF do calendário
+- [x] Criar página inicial com mapa visual de progresso de todos os módulos
+- [x] Mostrar claramente módulos em andamento vs a implementar
+- [x] Design impactante e informativo como primeira tela do sistema

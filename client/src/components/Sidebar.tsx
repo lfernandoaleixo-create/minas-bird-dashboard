@@ -7,7 +7,7 @@
 import { sectors } from "@/data/sectors";
 import type { Sector, TopicGroup } from "@/data/sectors";
 import { cn } from "@/lib/utils";
-import { Menu, X, Feather, Utensils, Settings, CheckCircle2, Clock } from "lucide-react";
+import { Menu, X, Feather, Utensils, Settings, CheckCircle2, Clock, LayoutGrid } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,11 +17,14 @@ interface SidebarProps {
 }
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
+const HOME_ID = "__home__";
 const FEEDING_ID = "__alimentacao__";
 const SETTINGS_ID = "__configuracoes__";
 
 // IDs of modules that are already implemented/working
 const ACTIVE_MODULE_IDS = new Set([FEEDING_ID]);
+// IDs that are special (not modules)
+const SPECIAL_IDS = new Set([HOME_ID, SETTINGS_ID]);
 
 type NavEntry = {
   id: string;
@@ -41,6 +44,13 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
       icon: s.icon,
     }));
 
+    const homeItem: NavEntry = {
+      id: HOME_ID,
+      title: "Mapa de Progresso",
+      subtitle: "",
+      icon: LayoutGrid,
+    };
+
     const feedingItem: NavEntry = {
       id: FEEDING_ID,
       title: "Alimentação",
@@ -55,11 +65,13 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
       icon: Settings,
     };
 
-    return [feedingItem, ...sectorItems, settingsItem];
+    return [homeItem, feedingItem, ...sectorItems, settingsItem];
   }, []);
 
+  const homeItem = useMemo(() => navItems.find(item => item.id === HOME_ID)!, [navItems]);
   const activeModules = useMemo(() => navItems.filter(item => ACTIVE_MODULE_IDS.has(item.id)), [navItems]);
-  const pendingModules = useMemo(() => navItems.filter(item => !ACTIVE_MODULE_IDS.has(item.id)), [navItems]);
+  const pendingModules = useMemo(() => navItems.filter(item => !ACTIVE_MODULE_IDS.has(item.id) && !SPECIAL_IDS.has(item.id)), [navItems]);
+  const settingsItem = useMemo(() => navItems.find(item => item.id === SETTINGS_ID)!, [navItems]);
 
   const handleSelect = (id: string) => {
     onSectorChange(id);
@@ -145,8 +157,20 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
         </div>
       </div>
 
-      {/* Navigation — separated into active and pending */}
+      {/* Navigation — separated into home, active and pending */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
+        {/* Home / Progress Map */}
+        <div className="mb-3">
+          <ul className="space-y-0.5">
+            {renderNavItem(homeItem)}
+          </ul>
+        </div>
+
+        {/* Divider */}
+        <div className="mx-3 mb-2">
+          <div className="h-px bg-sidebar-border/30" />
+        </div>
+
         {/* Active/Working modules */}
         <div className="mb-3">
           <div className="flex items-center gap-2 px-3 mb-2">
@@ -177,6 +201,16 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
           </div>
           <ul className="space-y-0.5">
             {pendingModules.map(renderNavItem)}
+          </ul>
+        </div>
+
+        {/* Settings at bottom */}
+        <div className="mt-3">
+          <div className="mx-0 mb-2">
+            <div className="h-px bg-sidebar-border/20" />
+          </div>
+          <ul className="space-y-0.5">
+            {renderNavItem(settingsItem)}
           </ul>
         </div>
       </nav>

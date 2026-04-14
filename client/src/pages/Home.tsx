@@ -6,13 +6,15 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import SectorContent from "@/components/SectorContent";
 import FeedingModule from "@/components/FeedingModule";
+import ProgressMap from "@/components/ProgressMap";
 import Sidebar from "@/components/Sidebar";
 import SettingsPanel from "@/components/SettingsPanel";
 import { sectors } from "@/data/sectors";
 import { useState, useEffect, useRef } from "react";
-import { BookOpen, ChevronLeft, ChevronRight, Utensils, Settings } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Utensils, Settings, LayoutGrid } from "lucide-react";
 
 // All navigable items: sectors + special modules
+const HOME_ID = "__home__";
 const FEEDING_ID = "__alimentacao__";
 const SETTINGS_ID = "__configuracoes__";
 
@@ -24,6 +26,7 @@ type NavItem = {
 };
 
 const allNavItems: NavItem[] = [
+  { id: HOME_ID, title: "Mapa de Progresso", subtitle: "Visão geral de todos os módulos" },
   { id: FEEDING_ID, title: "Alimentação", subtitle: "39 espécies · Protocolos · Calculadora" },
   ...sectors.map(s => ({ id: s.id, title: s.title, subtitle: s.subtitle })),
   { id: SETTINGS_ID, title: "Configurações", subtitle: "Equipe e acessos" },
@@ -34,10 +37,11 @@ export default function Home() {
   // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
   let { user, loading, error, isAuthenticated, logout } = useAuth();
 
-  const [activeItem, setActiveItem] = useState(FEEDING_ID);
+  const [activeItem, setActiveItem] = useState(HOME_ID);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const currentSector = sectors.find((s) => s.id === activeItem);
+  const isHome = activeItem === HOME_ID;
   const isFeeding = activeItem === FEEDING_ID;
   const isSettings = activeItem === SETTINGS_ID;
   const currentIndex = allNavItems.findIndex((item) => item.id === activeItem);
@@ -75,7 +79,9 @@ export default function Home() {
           <div className="px-6 lg:px-10 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3 ml-12 lg:ml-0">
               <div className="flex items-center gap-2">
-                {isFeeding ? (
+                {isHome ? (
+                  <LayoutGrid size={14} className="text-primary/50" />
+                ) : isFeeding ? (
                   <Utensils size={14} className="text-primary/50" />
                 ) : isSettings ? (
                   <Settings size={14} className="text-primary/50" />
@@ -123,7 +129,9 @@ export default function Home() {
 
         {/* Content */}
         <div className="px-6 lg:px-10 py-8 pb-20">
-          {isFeeding ? (
+          {isHome ? (
+            <ProgressMap onNavigate={setActiveItem} />
+          ) : isFeeding ? (
             <FeedingModule />
           ) : isSettings ? (
             <SettingsPanel />
