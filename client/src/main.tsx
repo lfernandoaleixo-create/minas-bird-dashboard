@@ -10,15 +10,10 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
-const redirectToLoginIfUnauthorized = (error: unknown) => {
-  if (!(error instanceof TRPCClientError)) return;
-  if (typeof window === "undefined") return;
-
-  const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
-  if (!isUnauthorized) return;
-
-  window.location.href = getLoginUrl();
+const redirectToLoginIfUnauthorized = (_error: unknown) => {
+  // Disabled: this app does not require authentication.
+  // Employees should be able to use the dashboard without logging in.
+  return;
 };
 
 queryClient.getQueryCache().subscribe(event => {

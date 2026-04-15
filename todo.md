@@ -193,3 +193,5 @@
 - [x] ProgressMap: caixa de texto editável em cada tópico para comentários dos funcionários
 - [x] ProgressMap: persistir comentários dos tópicos no banco de dados
 - [x] ProgressMap: criar schema + rotas tRPC para CRUD de comentários por tópico
+- [x] BUG: versão publicada redireciona para login Manus após alguns segundos
+- [x] Remover exigência de login para funcionários — site deve funcionar sem autenticação
