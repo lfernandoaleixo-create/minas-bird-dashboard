@@ -924,19 +924,17 @@ export default function FeedingModule() {
 
 
         {/* ═══ SEPARADOR: Calendário de Alimentação ═══ */}
-        {savedDiets.length > 0 && (
-          <div className="flex items-center gap-3 py-2">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
-            <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-200">
-              <CalendarDays className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-bold text-emerald-700 tracking-wide uppercase">Calendário de Alimentação</span>
-            </div>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+        <div className="flex items-center gap-3 py-2">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-200">
+            <CalendarDays className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold text-emerald-700 tracking-wide uppercase">Calendário de Alimentação</span>
           </div>
-        )}
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+        </div>
 
         {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
-        {savedDiets.length > 0 && (() => {
+        {(() => {
           const MONTH_NAMES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
           const FERIADOS_REG: Record<string, string> = {
             "1-1": "Confraternização Universal",
@@ -1529,7 +1527,7 @@ export default function FeedingModule() {
         })()}
 
         {/* Card de exportar calendários em PDF com filtros */}
-        {savedDiets.length > 0 && (() => {
+        {(() => {
           const speciesWithDiets = activeFlockSpecies.filter(sp =>
             savedDiets.some(d => d.speciesId === sp.id) || Object.keys(speciesCalendars[sp.id] || {}).length > 0
           );
@@ -1745,12 +1743,10 @@ export default function FeedingModule() {
         })()}
 
         {/* ===== FERRAMENTAS OPERACIONAIS ===== */}
-        {savedDiets.length > 0 && (
-          <OperationalTools
-            savedDiets={savedDiets}
-            speciesCalendars={speciesCalendars}
-          />
-        )}
+        <OperationalTools
+          savedDiets={savedDiets}
+          speciesCalendars={speciesCalendars}
+        />
 
         {/* ===== REFERÊNCIA BIBLIOGRÁFICA ===== */}
         <ReferenceBooks />

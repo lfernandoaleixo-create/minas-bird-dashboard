@@ -195,3 +195,5 @@
 - [x] ProgressMap: criar schema + rotas tRPC para CRUD de comentários por tópico
 - [x] BUG: versão publicada redireciona para login Manus após alguns segundos
 - [x] Remover exigência de login para funcionários — site deve funcionar sem autenticação
+- [ ] BUG: módulo Alimentação na versão publicada mostra apenas Dietas e Bibliografia, faltam os outros tópicos
+- [ ] BUG: módulo Alimentação publicado não mostra cards de espécies, calendário e ferramentas operacionais — só Dietas e Bibliografia
