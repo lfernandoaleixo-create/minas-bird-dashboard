@@ -100,6 +100,12 @@ export async function getDietsByUser(userId: number) {
   return db.select().from(diets).where(eq(diets.userId, userId));
 }
 
+export async function getAllDiets() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(diets);
+}
+
 export async function getDietByLegacyId(legacyId: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -141,6 +147,12 @@ export async function getCalendarByUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(calendarEntries).where(eq(calendarEntries.userId, userId));
+}
+
+export async function getAllCalendarEntries() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(calendarEntries);
 }
 
 export async function getCalendarForSpecies(userId: number, speciesId: string) {

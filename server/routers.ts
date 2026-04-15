@@ -5,10 +5,12 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import {
   getDietsByUser,
+  getAllDiets,
   createDiet,
   updateDietByLegacyId,
   deleteDietByLegacyId,
   getCalendarByUser,
+  getAllCalendarEntries,
   upsertCalendarEntry,
   removeCalendarEntry,
   saveFullCalendarForSpecies,
@@ -47,9 +49,9 @@ export const appRouter = router({
 
   // ===== DIETAS =====
   diet: router({
-    /** Listar todas as dietas do usuário */
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const rows = await getDietsByUser(ctx.user.id);
+    /** Listar todas as dietas (público, sem exigir login) */
+    list: publicProcedure.query(async () => {
+      const rows = await getAllDiets();
       return rows.map(row => ({
         id: row.legacyId,
         name: row.name,
@@ -179,9 +181,9 @@ export const appRouter = router({
 
   // ===== CALENDÁRIO =====
   calendar: router({
-    /** Obter todo o calendário do usuário (todas as espécies) */
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-      const rows = await getCalendarByUser(ctx.user.id);
+    /** Obter todo o calendário (público, sem exigir login) */
+    getAll: publicProcedure.query(async () => {
+      const rows = await getAllCalendarEntries();
       // Converter para formato { speciesId: { dayKey: dietLegacyId } }
       const result: Record<string, Record<string, string>> = {};
       for (const row of rows) {
