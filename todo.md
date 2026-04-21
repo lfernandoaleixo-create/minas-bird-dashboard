@@ -202,3 +202,7 @@
 - [x] PDF Dieta: adicionar total "Salada" (vegetais + frutas + proteicos) por ave — separado da ração
 - [x] PDF Dieta: manter separação individual (Ração, Vegetais, Frutas, Proteicos) na parte de cima
 - [x] Interface: adicionar total "Salada" no resumo da dieta na tela também (adicionado no PDF)
+- [x] PDF Dieta: corrigir sobreposições de texto (palavras em cima de outras)
+- [x] PDF Dieta: remover emojis/símbolos que não imprimem bem (🥗 etc.)
+- [x] PDF Dieta: revisar espaçamento e alinhamento geral para impressão perfeita
+- [x] PDF Dieta: garantir layout limpo e profissional para uso cotidiano impresso
