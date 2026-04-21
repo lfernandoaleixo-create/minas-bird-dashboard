@@ -206,3 +206,4 @@
 - [x] PDF Dieta: remover emojis/símbolos que não imprimem bem (🥗 etc.)
 - [x] PDF Dieta: revisar espaçamento e alinhamento geral para impressão perfeita
 - [x] PDF Dieta: garantir layout limpo e profissional para uso cotidiano impresso
+- [x] REGRA PERMANENTE: PDF da dieta NUNCA ultrapassa 1 página — comprimir layout se necessário (layout adaptativo implementado)
