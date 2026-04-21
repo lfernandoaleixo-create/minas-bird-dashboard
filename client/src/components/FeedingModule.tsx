@@ -171,6 +171,7 @@ export default function FeedingModule() {
   const [enclosureId, setEnclosureId] = useState("gaiola-externa-inverno");
   const [customWeight, setCustomWeight] = useState<number | null>(null);
   const [weightInputStr, setWeightInputStr] = useState<string>("");
+  const [isWeightFocused, setIsWeightFocused] = useState(false);
   const [phaseExpanded, setPhaseExpanded] = useState(false);
   const [enclosureExpanded, setEnclosureExpanded] = useState(false);
 
@@ -2232,8 +2233,11 @@ export default function FeedingModule() {
                     <label className="text-[10px] text-stone-500 font-medium">Peso (g)</label>
                     <input
                       type="number"
-                      value={weightInputStr !== "" ? weightInputStr : (customWeight ?? birdData.weight)}
-                      onFocus={e => setWeightInputStr(e.target.value)}
+                      value={isWeightFocused ? weightInputStr : (customWeight ?? birdData.weight)}
+                      onFocus={e => {
+                        setIsWeightFocused(true);
+                        setWeightInputStr(String(e.target.value));
+                      }}
                       onChange={e => {
                         const raw = e.target.value;
                         setWeightInputStr(raw);
@@ -2243,10 +2247,11 @@ export default function FeedingModule() {
                         }
                       }}
                       onBlur={() => {
+                        setIsWeightFocused(false);
                         const num = parseFloat(weightInputStr);
                         if (!isNaN(num) && num > 0) {
                           setCustomWeight(num);
-                        } else if (weightInputStr === "" || weightInputStr === "0") {
+                        } else {
                           setCustomWeight(null);
                         }
                         setWeightInputStr("");
