@@ -207,3 +207,5 @@
 - [x] PDF Dieta: revisar espaçamento e alinhamento geral para impressão perfeita
 - [x] PDF Dieta: garantir layout limpo e profissional para uso cotidiano impresso
 - [x] REGRA PERMANENTE: PDF da dieta NUNCA ultrapassa 1 página — comprimir layout se necessário (layout adaptativo implementado)
+- [x] PDF Dieta: remover faixa azul de cor de referência — trocar por texto "Cor da Dieta" + quadradinho colorido
+- [x] PDF Dieta: distribuir espaçamento equilibrado — sem apertar em cima nem espaço vazio embaixo
