@@ -7,13 +7,13 @@ import {
   getDietsByUser,
   getAllDiets,
   createDiet,
-  updateDietByLegacyId,
-  deleteDietByLegacyId,
+  updateDietByLegacyIdPublic,
+  deleteDietByLegacyIdPublic,
   getCalendarByUser,
   getAllCalendarEntries,
-  upsertCalendarEntry,
-  removeCalendarEntry,
-  saveFullCalendarForSpecies,
+  upsertCalendarEntryPublic,
+  removeCalendarEntryPublic,
+  saveFullCalendarForSpeciesPublic,
   getModuleOrder,
   saveModuleOrder,
   getAllTopicComments,
@@ -77,8 +77,8 @@ export const appRouter = router({
       }));
     }),
 
-    /** Criar nova dieta */
-    create: protectedProcedure
+    /** Criar nova dieta (público) */
+    create: publicProcedure
       .input(z.object({
         id: z.string(),
         name: z.string().min(1),
@@ -100,10 +100,10 @@ export const appRouter = router({
         totalKcal: z.number(),
         items: dietItemsSchema,
       }))
-      .mutation(async ({ ctx, input }) => {
+      .mutation(async ({ input }) => {
         const diet = await createDiet({
           legacyId: input.id,
-          userId: ctx.user.id,
+          userId: 0,
           name: input.name,
           speciesId: input.speciesId,
           speciesName: input.speciesName,
@@ -126,8 +126,8 @@ export const appRouter = router({
         return { success: true, diet };
       }),
 
-    /** Atualizar dieta existente */
-    update: protectedProcedure
+    /** Atualizar dieta existente (público) */
+    update: publicProcedure
       .input(z.object({
         id: z.string(),
         name: z.string().min(1).optional(),
@@ -147,7 +147,7 @@ export const appRouter = router({
         totalKcal: z.number().optional(),
         items: dietItemsSchema.optional(),
       }))
-      .mutation(async ({ ctx, input }) => {
+      .mutation(async ({ input }) => {
         const data: Record<string, unknown> = {};
         if (input.name !== undefined) data.name = input.name;
         if (input.racaoId !== undefined) data.racaoId = input.racaoId;
@@ -166,15 +166,15 @@ export const appRouter = router({
         if (input.totalKcal !== undefined) data.totalKcalX10 = Math.round(input.totalKcal * 10);
         if (input.items !== undefined) data.items = input.items;
 
-        const diet = await updateDietByLegacyId(input.id, ctx.user.id, data);
+        const diet = await updateDietByLegacyIdPublic(input.id, data);
         return { success: true, diet };
       }),
 
-    /** Deletar dieta */
-    delete: protectedProcedure
+    /** Deletar dieta (público) */
+    delete: publicProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        await deleteDietByLegacyId(input.id, ctx.user.id);
+      .mutation(async ({ input }) => {
+        await deleteDietByLegacyIdPublic(input.id);
         return { success: true };
       }),
   }),
@@ -193,42 +193,37 @@ export const appRouter = router({
       return result;
     }),
 
-    /** Atribuir dieta a um dia */
-    assignDay: protectedProcedure
+    /** Atribuir dieta a um dia (público) */
+    assignDay: publicProcedure
       .input(z.object({
         speciesId: z.string(),
         dayKey: z.string(),
         dietId: z.string(),
       }))
-      .mutation(async ({ ctx, input }) => {
-        await upsertCalendarEntry({
-          userId: ctx.user.id,
-          speciesId: input.speciesId,
-          dayKey: input.dayKey,
-          dietLegacyId: input.dietId,
-        });
+      .mutation(async ({ input }) => {
+        await upsertCalendarEntryPublic(input.speciesId, input.dayKey, input.dietId);
         return { success: true };
       }),
 
-    /** Remover dieta de um dia */
-    removeDay: protectedProcedure
+    /** Remover dieta de um dia (público) */
+    removeDay: publicProcedure
       .input(z.object({
         speciesId: z.string(),
         dayKey: z.string(),
       }))
-      .mutation(async ({ ctx, input }) => {
-        await removeCalendarEntry(ctx.user.id, input.speciesId, input.dayKey);
+      .mutation(async ({ input }) => {
+        await removeCalendarEntryPublic(input.speciesId, input.dayKey);
         return { success: true };
       }),
 
-    /** Salvar calendário completo de uma espécie */
-    saveForSpecies: protectedProcedure
+    /** Salvar calendário completo de uma espécie (público) */
+    saveForSpecies: publicProcedure
       .input(z.object({
         speciesId: z.string(),
         calendar: z.record(z.string(), z.string()),
       }))
-      .mutation(async ({ ctx, input }) => {
-        await saveFullCalendarForSpecies(ctx.user.id, input.speciesId, input.calendar);
+      .mutation(async ({ input }) => {
+        await saveFullCalendarForSpeciesPublic(input.speciesId, input.calendar);
         return { success: true };
       }),
   }),

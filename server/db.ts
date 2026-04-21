@@ -129,6 +129,15 @@ export async function updateDietByLegacyId(legacyId: string, userId: number, dat
   return getDietByLegacyId(legacyId);
 }
 
+export async function updateDietByLegacyIdPublic(legacyId: string, data: Partial<InsertDiet>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(diets)
+    .set(data)
+    .where(eq(diets.legacyId, legacyId));
+  return getDietByLegacyId(legacyId);
+}
+
 export async function deleteDietByLegacyId(legacyId: string, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -138,6 +147,16 @@ export async function deleteDietByLegacyId(legacyId: string, userId: number) {
   // Deletar a dieta
   await db.delete(diets)
     .where(and(eq(diets.legacyId, legacyId), eq(diets.userId, userId)));
+  return true;
+}
+
+export async function deleteDietByLegacyIdPublic(legacyId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(calendarEntries)
+    .where(eq(calendarEntries.dietLegacyId, legacyId));
+  await db.delete(diets)
+    .where(eq(diets.legacyId, legacyId));
   return true;
 }
 
@@ -175,12 +194,33 @@ export async function upsertCalendarEntry(entry: InsertCalendarEntry) {
   await db.insert(calendarEntries).values(entry);
 }
 
+export async function upsertCalendarEntryPublic(speciesId: string, dayKey: string, dietLegacyId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(calendarEntries)
+    .where(and(
+      eq(calendarEntries.speciesId, speciesId),
+      eq(calendarEntries.dayKey, dayKey)
+    ));
+  await db.insert(calendarEntries).values({ userId: 0, speciesId, dayKey, dietLegacyId });
+}
+
 export async function removeCalendarEntry(userId: number, speciesId: string, dayKey: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(calendarEntries)
     .where(and(
       eq(calendarEntries.userId, userId),
+      eq(calendarEntries.speciesId, speciesId),
+      eq(calendarEntries.dayKey, dayKey)
+    ));
+}
+
+export async function removeCalendarEntryPublic(speciesId: string, dayKey: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(calendarEntries)
+    .where(and(
       eq(calendarEntries.speciesId, speciesId),
       eq(calendarEntries.dayKey, dayKey)
     ));
@@ -220,6 +260,22 @@ export async function saveFullCalendarForSpecies(userId: number, speciesId: stri
   // Insert all new entries
   const entries = Object.entries(calendarMap).map(([dayKey, dietLegacyId]) => ({
     userId,
+    speciesId,
+    dayKey,
+    dietLegacyId,
+  }));
+  if (entries.length > 0) {
+    await db.insert(calendarEntries).values(entries);
+  }
+}
+
+export async function saveFullCalendarForSpeciesPublic(speciesId: string, calendarMap: Record<string, string>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(calendarEntries)
+    .where(eq(calendarEntries.speciesId, speciesId));
+  const entries = Object.entries(calendarMap).map(([dayKey, dietLegacyId]) => ({
+    userId: 0,
     speciesId,
     dayKey,
     dietLegacyId,
