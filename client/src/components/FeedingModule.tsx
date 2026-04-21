@@ -170,6 +170,7 @@ export default function FeedingModule() {
   const [phaseId, setPhaseId] = useState("manutencao");
   const [enclosureId, setEnclosureId] = useState("gaiola-externa-inverno");
   const [customWeight, setCustomWeight] = useState<number | null>(null);
+  const [weightInputStr, setWeightInputStr] = useState<string>("");
   const [phaseExpanded, setPhaseExpanded] = useState(false);
   const [enclosureExpanded, setEnclosureExpanded] = useState(false);
 
@@ -2231,8 +2232,25 @@ export default function FeedingModule() {
                     <label className="text-[10px] text-stone-500 font-medium">Peso (g)</label>
                     <input
                       type="number"
-                      value={customWeight ?? birdData.weight}
-                      onChange={e => setCustomWeight(parseFloat(e.target.value) || null)}
+                      value={weightInputStr !== "" ? weightInputStr : (customWeight ?? birdData.weight)}
+                      onFocus={e => setWeightInputStr(e.target.value)}
+                      onChange={e => {
+                        const raw = e.target.value;
+                        setWeightInputStr(raw);
+                        const num = parseFloat(raw);
+                        if (!isNaN(num) && num > 0) {
+                          setCustomWeight(num);
+                        }
+                      }}
+                      onBlur={() => {
+                        const num = parseFloat(weightInputStr);
+                        if (!isNaN(num) && num > 0) {
+                          setCustomWeight(num);
+                        } else if (weightInputStr === "" || weightInputStr === "0") {
+                          setCustomWeight(null);
+                        }
+                        setWeightInputStr("");
+                      }}
                       className="w-full mt-0.5 px-2 py-1.5 text-sm font-semibold text-stone-800 border border-stone-200 rounded-md focus:outline-none focus:border-emerald-400 bg-white"
                     />
                     <span className="text-[10px] text-stone-400">DietBirdPet: {birdData.weight}g</span>
