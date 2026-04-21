@@ -199,3 +199,6 @@
 - [x] BUG: módulo Alimentação publicado não mostra cards de espécies, calendário e ferramentas operacionais — só Dietas e Bibliografia
 - [x] BUG: erro ao salvar dieta no sistema — rotas diet.create/update/delete e calendar.assignDay/removeDay/saveForSpecies alteradas de protectedProcedure para publicProcedure
 - [x] BUG: campo de peso da ave não permite zerar para digitar número menor ao editar dieta
+- [x] PDF Dieta: adicionar total "Salada" (vegetais + frutas + proteicos) por ave — separado da ração
+- [x] PDF Dieta: manter separação individual (Ração, Vegetais, Frutas, Proteicos) na parte de cima
+- [x] Interface: adicionar total "Salada" no resumo da dieta na tela também (adicionado no PDF)

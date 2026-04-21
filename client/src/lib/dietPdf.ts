@@ -79,6 +79,17 @@ export async function exportDietPdf(
   y += 2;
   const boxW = contentW / 4;
   const boxH = 12;
+
+  // Calculate salad totals (vegetais + frutas + proteicos)
+  const saladGrams = (diet.items.vegetais?.reduce((s, i) => s + i.grams, 0) || 0)
+    + (diet.items.frutas?.reduce((s, i) => s + i.grams, 0) || 0)
+    + (diet.items.proteicos?.reduce((s, i) => s + i.grams, 0) || 0);
+  const saladKcal = (diet.items.vegetais?.reduce((s, i) => s + i.kcal, 0) || 0)
+    + (diet.items.frutas?.reduce((s, i) => s + i.kcal, 0) || 0)
+    + (diet.items.proteicos?.reduce((s, i) => s + i.kcal, 0) || 0);
+  const racaoGrams = diet.items.racao?.reduce((s, i) => s + i.grams, 0) || 0;
+  const racaoKcal = diet.items.racao?.reduce((s, i) => s + i.kcal, 0) || 0;
+
   const infoBoxes = [
     { label: "Peso", value: `${diet.weight}g` },
     { label: "Aves", value: `${diet.birdCount}` },
@@ -98,7 +109,76 @@ export async function exportDietPdf(
     doc.setTextColor(...BRAND.dark);
     doc.text(box.value, bx + 3, y + 9);
   });
-  y += boxH + 6;
+  y += boxH + 4;
+
+  // =============================================
+  // RESUMO RÁPIDO: RAÇÃO vs SALADA (por ave)
+  // =============================================
+  const summaryBoxW = contentW / 2;
+  const summaryBoxH = 14;
+
+  // Ração box
+  doc.setFillColor(...BRAND.amberBg);
+  doc.roundedRect(margin, y, summaryBoxW - 2, summaryBoxH, 2, 2, "F");
+  doc.setDrawColor(...BRAND.amber);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(margin, y, summaryBoxW - 2, summaryBoxH, 2, 2, "S");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.amber);
+  doc.text("RAÇÃO (por ave)", margin + 3, y + 5);
+  doc.setFontSize(11);
+  doc.text(fmtWeight(racaoGrams), margin + 3, y + 11.5);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.muted);
+  doc.text(`${racaoKcal.toFixed(1)} kcal`, margin + summaryBoxW - 20, y + 11.5);
+
+  // Salada box
+  const saladX = margin + summaryBoxW;
+  doc.setFillColor(...BRAND.greenBg);
+  doc.roundedRect(saladX, y, summaryBoxW - 2, summaryBoxH, 2, 2, "F");
+  doc.setDrawColor(...BRAND.green);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(saladX, y, summaryBoxW - 2, summaryBoxH, 2, 2, "S");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.green);
+  doc.text("SALADA (por ave)", saladX + 3, y + 5);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.muted);
+  doc.text("Vegetais + Frutas + Proteicos", saladX + 3 + doc.getTextWidth("SALADA (por ave)") + 2, y + 5);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.green);
+  doc.text(saladGrams > 0 ? fmtWeight(saladGrams) : "—", saladX + 3, y + 11.5);
+  if (saladGrams > 0) {
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.muted);
+    doc.text(`${saladKcal.toFixed(1)} kcal`, saladX + summaryBoxW - 20, y + 11.5);
+  }
+
+  y += summaryBoxH + 4;
+
+  // If multiple birds, show total ração + salada for all birds
+  if (diet.birdCount > 1) {
+    const totalSummaryH = 10;
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(margin, y, contentW, totalSummaryH, 2, 2, "F");
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.dark);
+    doc.text(`PARA ${diet.birdCount} AVES:`, margin + 3, y + 6.5);
+    doc.setTextColor(...BRAND.amber);
+    doc.text(`Ração: ${fmtWeight(racaoGrams * diet.birdCount)}`, margin + 40, y + 6.5);
+    doc.setTextColor(...BRAND.green);
+    doc.text(`Salada: ${saladGrams > 0 ? fmtWeight(saladGrams * diet.birdCount) : "—"}`, margin + 85, y + 6.5);
+    doc.setTextColor(...BRAND.blue);
+    doc.text(`Total: ${fmtWeight(diet.totalGrams * diet.birdCount)}`, margin + 135, y + 6.5);
+    y += totalSummaryH + 2;
+  }
 
   // Notes
   if (diet.notes) {
@@ -162,7 +242,30 @@ export async function exportDietPdf(
   drawFoodSection("FRUTAS", diet.items.frutas, BRAND.redBg, BRAND.red);
   drawFoodSection("SEMENTES E PROTEICOS", diet.items.proteicos, BRAND.yellowBg, BRAND.yellow);
 
-  // Total per bird
+  // =============================================
+  // SUBTOTAL SALADA (vegetais + frutas + proteicos) por ave
+  // =============================================
+  if (saladGrams > 0) {
+    if (y > pageH - 30) {
+      drawBrandFooter(doc, pageW, pageH);
+      doc.addPage();
+      y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` · ${racao}` : ""}`);
+      y += 4;
+    }
+    doc.setFillColor(220, 245, 230);
+    doc.roundedRect(margin, y, contentW, 8, 1.5, 1.5, "F");
+    doc.setDrawColor(...BRAND.green);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(margin, y, contentW, 8, 1.5, 1.5, "S");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.green);
+    doc.text("\u{1F957} Subtotal SALADA (Vegetais + Frutas + Proteicos)", margin + 3, y + 5.5);
+    doc.text(`${fmtWeight(saladGrams)}  ·  ${saladKcal.toFixed(1)} kcal`, pageW - margin - 3, y + 5.5, { align: "right" });
+    y += 12;
+  }
+
+  // Total per bird (Ração + Salada)
   if (y > pageH - 30) {
     drawBrandFooter(doc, pageW, pageH);
     doc.addPage();
@@ -229,6 +332,27 @@ export async function exportDietPdf(
     drawTotalSection("VEGETAIS", diet.items.vegetais, BRAND.greenBg, BRAND.green);
     drawTotalSection("FRUTAS", diet.items.frutas, BRAND.redBg, BRAND.red);
     drawTotalSection("PROTEICOS", diet.items.proteicos, BRAND.yellowBg, BRAND.yellow);
+
+    // Subtotal Salada for all birds
+    if (saladGrams > 0) {
+      if (y > pageH - 20) {
+        drawBrandFooter(doc, pageW, pageH);
+        doc.addPage();
+        y = drawBrandHeader(doc, pageW, logo, diet.speciesName, `${phaseLabel}${racao ? ` · ${racao}` : ""}`);
+        y += 4;
+      }
+      doc.setFillColor(220, 245, 230);
+      doc.roundedRect(margin, y, contentW, 8, 1.5, 1.5, "F");
+      doc.setDrawColor(...BRAND.green);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(margin, y, contentW, 8, 1.5, 1.5, "S");
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BRAND.green);
+      doc.text(`\u{1F957} Subtotal SALADA (${diet.birdCount} aves)`, margin + 3, y + 5.5);
+      doc.text(`${fmtWeight(saladGrams * diet.birdCount)}  ·  ${(saladKcal * diet.birdCount).toFixed(1)} kcal`, pageW - margin - 3, y + 5.5, { align: "right" });
+      y += 12;
+    }
 
     // Grand total
     doc.setFillColor(...BRAND.blueBg);
