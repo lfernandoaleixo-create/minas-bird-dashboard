@@ -215,3 +215,6 @@
 - [x] Dieta: cálculo nutricional individual por ração (kcal/g de cada ração × gramas proporcionais)
 - [x] Dieta: atualizar schema/banco para suportar 2ª ração e porcentagens
 - [x] Dieta: atualizar PDF para mostrar 2 rações separadas com gramas e kcal individuais
+- [x] Testar fluxo completo de criar dieta com 2 rações na versão publicada (testado no dev — funciona: 2 rações, porcentagens, cálculos individuais)
+- [x] Nome da dieta: mostrar 2 rações com porcentagens (ex: "Omega 75% + Megazoo 25%") em todos os locais
+- [x] PDF Dieta: adicionar campo "Turno" (manhã = ração, tarde = salada) para orientar funcionários

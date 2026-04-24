@@ -467,8 +467,11 @@ export default function FeedingModule() {
     if (!selectedSpecies || !selectedRacao || !nossaDieta) return;
 
     const phaseLabel = lifePeriods.find(p => p.id === phaseId)?.label || phaseId;
-    const racaoLabel = selectedRacao.name;
     // REGRA PERMANENTE: nome = "Espécie — Fase — Ração" (sem recinto, sem complemento)
+    let racaoLabel = selectedRacao.name;
+    if (selectedRacao2 && racao1Pct < 100) {
+      racaoLabel = `${selectedRacao.name} ${racao1Pct}% + ${selectedRacao2.name} ${100 - racao1Pct}%`;
+    }
     const name = `${selectedSpecies.commonName} — ${phaseLabel} — ${racaoLabel}`;
 
     const dietData = {
@@ -2738,10 +2741,10 @@ export default function FeedingModule() {
                       <label className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Nome da dieta</label>
                       <div className="rounded-md border border-emerald-300 bg-stone-100 px-3 py-2">
                         <span className="text-sm font-semibold text-stone-700">
-                          {selectedSpecies?.commonName || "Espécie"} — {lifePeriods.find(p => p.id === phaseId)?.label || phaseId} — {selectedRacao?.name || "Ração"}
+                          {selectedSpecies?.commonName || "Espécie"} — {lifePeriods.find(p => p.id === phaseId)?.label || phaseId} — {selectedRacao2 && racao1Pct < 100 ? `${selectedRacao?.name || "Ração"} ${racao1Pct}% + ${selectedRacao2.name} ${100 - racao1Pct}%` : (selectedRacao?.name || "Ração")}
                         </span>
                       </div>
-                      <p className="text-[10px] text-stone-400 mt-1">Nome gerado automaticamente: <span className="font-medium text-stone-600">Espécie — Fase — Ração</span></p>
+                      <p className="text-[10px] text-stone-400 mt-1">Nome gerado automaticamente: <span className="font-medium text-stone-600">Espécie — Fase — Ração{selectedRacao2 ? " (com porcentagens)" : ""}</span></p>
                     </div>
 
                     {/* Seletor de cor da dieta */}

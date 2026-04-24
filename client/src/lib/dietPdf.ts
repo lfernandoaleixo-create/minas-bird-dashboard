@@ -59,7 +59,7 @@ export async function exportDietPdf(
   //   + multiBirdBar(11) + multiBirdSeparator+title(9) + multiBirdSubtotal(9) + grandTotal(9) = 38mm extra
   //   + notes(9) if present
   // Section headers: 4 sections * (sectionHeaderH-1 + sectionHeaderH) per set
-  const fixedBase = 97;
+  const fixedBase = 108; // 97 base + 11 for Turno boxes
   const fixedMultiBird = hasMultipleBirds ? 38 : 0;
   const fixedNotes = diet.notes ? 9 : 0;
   // Each section with items has a header (sectionHeaderH) + sectionGap after
@@ -200,7 +200,49 @@ export async function exportDietPdf(
   y += summaryBoxH + 3;
 
   // =============================================
-  // TOTAL PARA X AVES (summary bar — only if multiple birds)
+  // TURNO: Manhã = Ração, Tarde = Salada
+  // =============================================
+  const turnoH = 8;
+  const turnoW = (contentW - 4) / 2;
+  // Manhã box
+  doc.setFillColor(255, 251, 235); // amber-50
+  doc.roundedRect(margin, y, turnoW, turnoH, 1.5, 1.5, "F");
+  doc.setDrawColor(217, 119, 6); // amber-600
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, turnoW, turnoH, 1.5, 1.5, "S");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(217, 119, 6);
+  doc.text("MANHA", margin + 3, y + 3.5);
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.dark);
+  doc.text("Racao", margin + 3, y + 6.5);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.muted);
+  doc.text(fmtWeight(racaoGrams) + "/ave", margin + turnoW - 3, y + 5, { align: "right" });
+  // Tarde box
+  const tardeX = margin + turnoW + 4;
+  doc.setFillColor(236, 253, 245); // emerald-50
+  doc.roundedRect(tardeX, y, turnoW, turnoH, 1.5, 1.5, "F");
+  doc.setDrawColor(5, 150, 105); // emerald-600
+  doc.setLineWidth(0.2);
+  doc.roundedRect(tardeX, y, turnoW, turnoH, 1.5, 1.5, "S");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(5, 150, 105);
+  doc.text("TARDE", tardeX + 3, y + 3.5);
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.dark);
+  doc.text("Salada", tardeX + 3, y + 6.5);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.muted);
+  doc.text(saladGrams > 0 ? fmtWeight(saladGrams) + "/ave" : "\u2014", tardeX + turnoW - 3, y + 5, { align: "right" });
+  y += turnoH + 3;
+
+  // =============================================
+  // TOTAL PARA X AVES (summary bar \u2014 only if multiple birds)
   // =============================================
   if (hasMultipleBirds) {
     doc.setFillColor(245, 245, 245);
