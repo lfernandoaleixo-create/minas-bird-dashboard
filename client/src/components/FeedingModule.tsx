@@ -2628,11 +2628,7 @@ export default function FeedingModule() {
                   // Já tem 2, substituir a segunda
                   setSelectedRacao2(food);
                 }
-                if (!selectedRacao2 && !selectedRacao) {
-                  // Avançar só se acabou de selecionar a primeira
-                } else {
-                  setExpandedStep("vegetais");
-                }
+                // Não avançar automaticamente — manter card expandido para ajustar porcentagens
               }}
               nossaDieta={nossaDieta}
               idealDiet={idealDiet}
@@ -3081,6 +3077,13 @@ function FoodStepCard({
                           {racao1Pct}%
                         </span>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onSelectSingle?.(selectedSingle); }}
+                        className="p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+                        title="Remover ração"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-amber-700">

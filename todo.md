@@ -218,3 +218,5 @@
 - [x] Testar fluxo completo de criar dieta com 2 rações na versão publicada (testado no dev — funciona: 2 rações, porcentagens, cálculos individuais)
 - [x] Nome da dieta: mostrar 2 rações com porcentagens (ex: "Omega 75% + Megazoo 25%") em todos os locais
 - [x] PDF Dieta: adicionar campo "Turno" (manhã = ração, tarde = salada) para orientar funcionários
+- [x] Ração: adicionar botão de excluir ração selecionada (para corrigir seleção errada)
+- [x] Ração: manter card expandido ao selecionar 2ª ração (não fechar automaticamente)
