@@ -33,6 +33,11 @@ export const diets = mysqlTable("diets", {
   speciesName: varchar("speciesName", { length: 255 }).notNull(),
   racaoId: varchar("racaoId", { length: 128 }).notNull(),
   racaoName: varchar("racaoName", { length: 255 }).notNull(),
+  /** Segunda ração (opcional) — ID e nome */
+  racao2Id: varchar("racao2Id", { length: 128 }),
+  racao2Name: varchar("racao2Name", { length: 255 }),
+  /** Porcentagem da 1ª ração (25, 50, 75 ou 100). A 2ª ração recebe 100 - racao1Pct */
+  racao1Pct: int("racao1Pct").notNull().default(100),
   /** IDs dos vegetais selecionados */
   vegetaisIds: json("vegetaisIds").$type<string[]>().notNull(),
   /** IDs das frutas selecionadas */

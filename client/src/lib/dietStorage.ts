@@ -24,6 +24,11 @@ export interface SavedDiet {
   speciesName: string;
   racaoId: string;
   racaoName: string;
+  /** Segunda ração (opcional) */
+  racao2Id: string | null;
+  racao2Name: string | null;
+  /** Porcentagem da 1ª ração (25, 50, 75 ou 100) */
+  racao1Pct: number;
   vegetaisIds: string[];
   frutasIds: string[];
   proteicosIds: string[];

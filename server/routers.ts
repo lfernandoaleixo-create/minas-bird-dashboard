@@ -59,6 +59,9 @@ export const appRouter = router({
         speciesName: row.speciesName,
         racaoId: row.racaoId,
         racaoName: row.racaoName,
+        racao2Id: row.racao2Id ?? null,
+        racao2Name: row.racao2Name ?? null,
+        racao1Pct: row.racao1Pct ?? 100,
         vegetaisIds: row.vegetaisIds,
         frutasIds: row.frutasIds,
         proteicosIds: row.proteicosIds,
@@ -86,6 +89,9 @@ export const appRouter = router({
         speciesName: z.string(),
         racaoId: z.string(),
         racaoName: z.string(),
+        racao2Id: z.string().nullable().optional(),
+        racao2Name: z.string().nullable().optional(),
+        racao1Pct: z.number().int().min(25).max(100).optional(),
         vegetaisIds: z.array(z.string()),
         frutasIds: z.array(z.string()),
         proteicosIds: z.array(z.string()),
@@ -109,6 +115,9 @@ export const appRouter = router({
           speciesName: input.speciesName,
           racaoId: input.racaoId,
           racaoName: input.racaoName,
+          racao2Id: input.racao2Id ?? null,
+          racao2Name: input.racao2Name ?? null,
+          racao1Pct: input.racao1Pct ?? 100,
           vegetaisIds: input.vegetaisIds,
           frutasIds: input.frutasIds,
           proteicosIds: input.proteicosIds,
@@ -133,6 +142,9 @@ export const appRouter = router({
         name: z.string().min(1).optional(),
         racaoId: z.string().optional(),
         racaoName: z.string().optional(),
+        racao2Id: z.string().nullable().optional(),
+        racao2Name: z.string().nullable().optional(),
+        racao1Pct: z.number().int().min(25).max(100).optional(),
         vegetaisIds: z.array(z.string()).optional(),
         frutasIds: z.array(z.string()).optional(),
         proteicosIds: z.array(z.string()).optional(),
@@ -152,6 +164,9 @@ export const appRouter = router({
         if (input.name !== undefined) data.name = input.name;
         if (input.racaoId !== undefined) data.racaoId = input.racaoId;
         if (input.racaoName !== undefined) data.racaoName = input.racaoName;
+        if (input.racao2Id !== undefined) data.racao2Id = input.racao2Id;
+        if (input.racao2Name !== undefined) data.racao2Name = input.racao2Name;
+        if (input.racao1Pct !== undefined) data.racao1Pct = input.racao1Pct;
         if (input.vegetaisIds !== undefined) data.vegetaisIds = input.vegetaisIds;
         if (input.frutasIds !== undefined) data.frutasIds = input.frutasIds;
         if (input.proteicosIds !== undefined) data.proteicosIds = input.proteicosIds;

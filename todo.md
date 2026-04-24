@@ -209,3 +209,9 @@
 - [x] REGRA PERMANENTE: PDF da dieta NUNCA ultrapassa 1 página — comprimir layout se necessário (layout adaptativo implementado)
 - [x] PDF Dieta: remover faixa azul de cor de referência — trocar por texto "Cor da Dieta" + quadradinho colorido
 - [x] PDF Dieta: distribuir espaçamento equilibrado — sem apertar em cima nem espaço vazio embaixo
+- [x] Dieta: permitir seleção de até 2 rações ao criar/editar dieta
+- [x] Dieta: campo de porcentagem (25%, 50%, 75%) ao lado de cada ração quando 2 selecionadas
+- [x] Dieta: soma das porcentagens sempre = 100% (complementar automaticamente)
+- [x] Dieta: cálculo nutricional individual por ração (kcal/g de cada ração × gramas proporcionais)
+- [x] Dieta: atualizar schema/banco para suportar 2ª ração e porcentagens
+- [x] Dieta: atualizar PDF para mostrar 2 rações separadas com gramas e kcal individuais

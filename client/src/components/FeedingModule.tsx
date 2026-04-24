@@ -176,6 +176,8 @@ export default function FeedingModule() {
   const [enclosureExpanded, setEnclosureExpanded] = useState(false);
 
   const [selectedRacao, setSelectedRacao] = useState<FoodItem | null>(null);
+  const [selectedRacao2, setSelectedRacao2] = useState<FoodItem | null>(null);
+  const [racao1Pct, setRacao1Pct] = useState<number>(100); // 25, 50, 75 ou 100
   const [selectedVegetais, setSelectedVegetais] = useState<FoodItem[]>([]);
   const [selectedFrutas, setSelectedFrutas] = useState<FoodItem[]>([]);
   const [selectedProteicos, setSelectedProteicos] = useState<FoodItem[]>([]);
@@ -309,7 +311,16 @@ export default function FeedingModule() {
       });
     }
 
-    const racaoGrams = kcalToGrams(racaoKcal, selectedRacao.energyKcal);
+    // Split ração between 1 and 2 based on percentage
+    const racao1Frac = racao1Pct / 100;
+    const racao2Frac = selectedRacao2 ? (1 - racao1Frac) : 0;
+
+    const racao1Kcal = racaoKcal * racao1Frac;
+    const racao2Kcal = selectedRacao2 ? racaoKcal * racao2Frac : 0;
+
+    const racao1Grams = kcalToGrams(racao1Kcal, selectedRacao.energyKcal);
+    const racao2Grams = selectedRacao2 ? kcalToGrams(racao2Kcal, selectedRacao2.energyKcal) : 0;
+    const racaoGrams = racao1Grams + racao2Grams;
 
     const vegItems: SelectedFood[] = selectedVegetais.map(v => {
       const perItemKcal = vegKcal / selectedVegetais.length;
@@ -349,14 +360,19 @@ export default function FeedingModule() {
     }
 
     return {
-      racao:     { grams: racaoGrams,    kcal: racaoKcal, pctKcal: racaoPctKcal, items: [{ food: selectedRacao, grams: racaoGrams }] },
+      racao:     {
+        grams: racaoGrams, kcal: racaoKcal, pctKcal: racaoPctKcal,
+        items: selectedRacao2
+          ? [{ food: selectedRacao, grams: racao1Grams }, { food: selectedRacao2, grams: racao2Grams }]
+          : [{ food: selectedRacao, grams: racaoGrams }],
+      },
       vegetais:  { grams: totalVegGrams,  kcal: vegKcal,   pctKcal: vegPctKcal,   items: vegItems },
       frutas:    { grams: totalFrtGrams,  kcal: frtKcal,   pctKcal: frtPctKcal,   items: frtItems },
       proteicos: { grams: totalProGrams,  kcal: proKcal,   pctKcal: proPctKcal,   items: proItems },
       total:     { grams: totalGrams, kcal: totalKcal },
       comment,
     };
-  }, [selectedRacao, selectedVegetais, selectedFrutas, selectedProteicos, mer, breakdown]);
+  }, [selectedRacao, selectedRacao2, racao1Pct, selectedVegetais, selectedFrutas, selectedProteicos, mer, breakdown]);
 
   // Which steps are unlocked
   const unlockedSteps = useMemo(() => {
@@ -373,6 +389,8 @@ export default function FeedingModule() {
     setSpeciesSearch("");
     setCustomWeight(null);
     setSelectedRacao(null);
+    setSelectedRacao2(null);
+    setRacao1Pct(100);
     setSelectedVegetais([]);
     setSelectedFrutas([]);
     setSelectedProteicos([]);
@@ -388,15 +406,17 @@ export default function FeedingModule() {
   const handleResetAll = useCallback(() => {
     setSelectedSpeciesId(null);
     setSelectedRacao(null);
+    setSelectedRacao2(null);
+    setRacao1Pct(100);
     setSelectedVegetais([]);
     setSelectedFrutas([]);
     setSelectedProteicos([]);
     setCustomWeight(null);
     setExpandedStep(null);
     setPhaseId("manutencao");
-      setEnclosureId("gaiola-externa-inverno");
-      setBirdCount(1);
-      setDietMode("menu");
+    setEnclosureId("gaiola-externa-inverno");
+    setBirdCount(1);
+    setDietMode("menu");
     setEditingDietId(null);
     setDietName("");
     setDietNotes("");
@@ -417,6 +437,11 @@ export default function FeedingModule() {
     const allRacoes = racoes;
     const racao = allRacoes.find(r => r.id === diet.racaoId) || null;
     setSelectedRacao(racao);
+
+    // Load second ração if present
+    const racao2 = diet.racao2Id ? allRacoes.find(r => r.id === diet.racao2Id) || null : null;
+    setSelectedRacao2(racao2);
+    setRacao1Pct(diet.racao1Pct ?? 100);
 
     const veg = diet.vegetaisIds.map(id => vegetais.find(v => v.id === id)).filter(Boolean) as FoodItem[];
     setSelectedVegetais(veg);
@@ -452,6 +477,9 @@ export default function FeedingModule() {
       speciesName: selectedSpecies.commonName,
       racaoId: selectedRacao.id,
       racaoName: selectedRacao.name,
+      racao2Id: selectedRacao2?.id ?? null,
+      racao2Name: selectedRacao2?.name ?? null,
+      racao1Pct: selectedRacao2 ? racao1Pct : 100,
       vegetaisIds: selectedVegetais.map(v => v.id),
       frutasIds: selectedFrutas.map(f => f.id),
       proteicosIds: selectedProteicos.map(p => p.id),
@@ -465,7 +493,11 @@ export default function FeedingModule() {
       totalGrams: nossaDieta.total.grams,
       totalKcal: nossaDieta.total.kcal,
       items: {
-        racao: nossaDieta.racao.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.racao.kcal, energyKcalPerKg: i.food.energyKcal })),
+        racao: nossaDieta.racao.items.map(i => {
+          // Calcular kcal individual baseado na densidade calórica de cada ração
+          const itemKcal = i.grams * (i.food.energyKcal / 1000);
+          return { foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: itemKcal, energyKcalPerKg: i.food.energyKcal };
+        }),
         vegetais: nossaDieta.vegetais.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.vegetais.kcal / Math.max(1, selectedVegetais.length), energyKcalPerKg: i.food.energyKcal })),
         frutas: nossaDieta.frutas.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.frutas.kcal / Math.max(1, selectedFrutas.length), energyKcalPerKg: i.food.energyKcal })),
         proteicos: nossaDieta.proteicos.items.map(i => ({ foodId: i.food.id, foodName: i.food.name, grams: i.grams, kcal: nossaDieta.proteicos.kcal / Math.max(1, selectedProteicos.length), energyKcalPerKg: i.food.energyKcal })),
@@ -493,6 +525,8 @@ export default function FeedingModule() {
     setTimeout(() => {
       setSelectedSpeciesId(null);
       setSelectedRacao(null);
+      setSelectedRacao2(null);
+      setRacao1Pct(100);
       setSelectedVegetais([]);
       setSelectedFrutas([]);
       setSelectedProteicos([]);
@@ -2556,7 +2590,7 @@ export default function FeedingModule() {
       {/* ===== FOOD SELECTION STEPS — CARDS SEPARADOS ===== */}
       {(dietMode === "creating" || dietMode === "editing") && (
         <div className="space-y-3">
-          {/* STEP 2: RAÇÃO */}
+          {/* STEP 2: RAÇÃO (até 2 rações) */}
           <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden border-l-4 border-l-amber-500">
             <FoodStepCard
               step="racao" stepNumber={2}
@@ -2566,11 +2600,46 @@ export default function FeedingModule() {
               foods={sortFoods(filteredRacoes, getRecommendedFoodNames(selectedSpecies?.group))}
               search={racaoSearch} onSearchChange={setRacaoSearch}
               selectedSingle={selectedRacao}
-              onSelectSingle={(food) => { setSelectedRacao(food); setExpandedStep("vegetais"); }}
+              onSelectSingle={(food) => {
+                if (!selectedRacao) {
+                  // Primeira ração
+                  setSelectedRacao(food);
+                  setRacao1Pct(100);
+                  setSelectedRacao2(null);
+                } else if (!selectedRacao2 && food.id !== selectedRacao.id) {
+                  // Segunda ração (diferente da primeira)
+                  setSelectedRacao2(food);
+                  setRacao1Pct(75); // Padrão: 75% primeira, 25% segunda
+                } else if (food.id === selectedRacao.id) {
+                  // Clicou na mesma ração 1 — desselecionar tudo
+                  setSelectedRacao(null);
+                  setSelectedRacao2(null);
+                  setRacao1Pct(100);
+                  return;
+                } else if (selectedRacao2 && food.id === selectedRacao2.id) {
+                  // Clicou na ração 2 — remover segunda
+                  setSelectedRacao2(null);
+                  setRacao1Pct(100);
+                  return;
+                } else {
+                  // Já tem 2, substituir a segunda
+                  setSelectedRacao2(food);
+                }
+                if (!selectedRacao2 && !selectedRacao) {
+                  // Avançar só se acabou de selecionar a primeira
+                } else {
+                  setExpandedStep("vegetais");
+                }
+              }}
               nossaDieta={nossaDieta}
               idealDiet={idealDiet}
               groupKey="ap"
               recommendedNames={getRecommendedFoodNames(selectedSpecies?.group)}
+              // Props extras para 2ª ração
+              selectedRacao2={selectedRacao2}
+              racao1Pct={racao1Pct}
+              onRacao1PctChange={setRacao1Pct}
+              onRemoveRacao2={() => { setSelectedRacao2(null); setRacao1Pct(100); }}
             />
           </div>
 
@@ -2838,6 +2907,11 @@ interface FoodStepCardProps {
   nextStepLabel?: string;
   onAdvance?: () => void;
   recommendedNames?: string[];
+  // Props para 2ª ração (só usadas no step racao)
+  selectedRacao2?: FoodItem | null;
+  racao1Pct?: number;
+  onRacao1PctChange?: (pct: number) => void;
+  onRemoveRacao2?: () => void;
 }
 
 function FoodStepCard({
@@ -2848,11 +2922,12 @@ function FoodStepCard({
   nossaDieta, idealDiet, groupKey,
   nextStepLabel, onAdvance,
   recommendedNames = [],
+  selectedRacao2, racao1Pct = 100, onRacao1PctChange, onRemoveRacao2,
 }: FoodStepCardProps) {
   const config = STEP_CONFIG[step];
   const Icon = config.icon;
   const isMulti = !!onToggleMultiple;
-  const selectedCount = isMulti ? (selectedMultiple?.length || 0) : (selectedSingle ? 1 : 0);
+  const selectedCount = isMulti ? (selectedMultiple?.length || 0) : ((selectedSingle ? 1 : 0) + (selectedRacao2 ? 1 : 0));
 
   // Get grams from nossaDieta
   const dietGroup = nossaDieta ? (nossaDieta as any)[step === "racao" ? "racao" : step] : null;
@@ -2983,24 +3058,87 @@ function FoodStepCard({
                 </div>
               )}
 
-              {/* Single selected (ração) */}
+              {/* Rações selecionadas (1 ou 2) */}
               {!isMulti && selectedSingle && totalGroupGrams > 0 && (
                 <div className="mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-2 text-amber-700 flex items-center gap-1.5">
                     <Check className="w-3 h-3" />
-                    Ração selecionada
+                    {selectedRacao2 ? "Rações selecionadas (2)" : "Ração selecionada"}
+                    {!selectedRacao2 && <span className="text-[9px] font-normal text-stone-400 ml-1">— clique em outra para adicionar 2ª ração</span>}
                   </p>
+
+                  {/* Ração 1 */}
                   <div className="flex items-center justify-between px-3 py-2.5 bg-amber-50 rounded-lg border border-amber-200">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-amber-600" />
                       <span className="text-sm font-medium text-stone-700">{selectedSingle.name}</span>
                       {classificationBadge(selectedSingle.classification)}
+                      {selectedRacao2 && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-200 text-amber-800">
+                          {racao1Pct}%
+                        </span>
+                      )}
                     </div>
                     <div className="text-right">
-                      <span className="font-bold text-amber-700">{fmtG(totalGroupGrams)}</span>
+                      <span className="font-bold text-amber-700">
+                        {fmtG((groupItems as any)[0]?.grams || totalGroupGrams)}
+                      </span>
                       <span className="text-[10px] text-stone-500 ml-1">({selectedSingle.energyKcal} kcal/kg)</span>
                     </div>
                   </div>
+
+                  {/* Ração 2 */}
+                  {selectedRacao2 && (
+                    <div className="mt-2 flex items-center justify-between px-3 py-2.5 bg-orange-50 rounded-lg border border-orange-200">
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-orange-600" />
+                        <span className="text-sm font-medium text-stone-700">{selectedRacao2.name}</span>
+                        {classificationBadge(selectedRacao2.classification)}
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-orange-200 text-orange-800">
+                          {100 - racao1Pct}%
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onRemoveRacao2?.(); }}
+                          className="p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+                          title="Remover 2ª ração"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold text-orange-700">
+                          {fmtG((groupItems as any)[1]?.grams || 0)}
+                        </span>
+                        <span className="text-[10px] text-stone-500 ml-1">({selectedRacao2.energyKcal} kcal/kg)</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Seletor de porcentagem — só aparece com 2 rações */}
+                  {selectedRacao2 && onRacao1PctChange && (
+                    <div className="mt-3 p-3 bg-stone-50 rounded-lg border border-stone-200">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-2">Proporção entre rações</p>
+                      <div className="flex gap-2">
+                        {[75, 50, 25].map(pct => (
+                          <button
+                            key={pct}
+                            onClick={(e) => { e.stopPropagation(); onRacao1PctChange(pct); }}
+                            className={cn(
+                              "flex-1 py-2 rounded-lg text-center text-xs font-bold transition-all border",
+                              racao1Pct === pct
+                                ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                                : "bg-white text-stone-600 border-stone-200 hover:border-amber-300 hover:bg-amber-50"
+                            )}
+                          >
+                            <div>{pct}% / {100 - pct}%</div>
+                            <div className="text-[9px] font-normal mt-0.5 opacity-70">
+                              {selectedSingle.name.split(" ")[0]} / {selectedRacao2.name.split(" ")[0]}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3029,7 +3167,7 @@ function FoodStepCard({
                 {filteredFoods.map((food, idx) => {
                   const isSelected = isMulti
                     ? selectedMultiple?.some(s => s.id === food.id)
-                    : selectedSingle?.id === food.id;
+                    : (selectedSingle?.id === food.id || selectedRacao2?.id === food.id);
                   const isRecommended = isFoodRecommended(food, recommendedNames);
                   const prevFood = idx > 0 ? filteredFoods[idx - 1] : null;
                   const prevIsRecommended = prevFood ? isFoodRecommended(prevFood, recommendedNames) : false;

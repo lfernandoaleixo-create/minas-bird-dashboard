@@ -30,6 +30,9 @@ export async function exportDietPdf(
 
   const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
   const racao = diet.racaoName || "";
+  const racao2 = (diet as any).racao2Name || "";
+  const racao1Pct = (diet as any).racao1Pct ?? 100;
+  const hasDualRacao = !!racao2 && racao1Pct < 100;
   const hasMultipleBirds = diet.birdCount > 1;
 
   // Calculate totals
@@ -107,7 +110,12 @@ export async function exportDietPdf(
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.muted);
-  const infoRight = racao ? `${phaseLabel}  |  Ra\u00e7\u00e3o: ${racao}` : phaseLabel;
+  let infoRight = phaseLabel;
+  if (hasDualRacao) {
+    infoRight += `  |  ${racao} (${racao1Pct}%) + ${racao2} (${100 - racao1Pct}%)`;
+  } else if (racao) {
+    infoRight += `  |  Racao: ${racao}`;
+  }
   doc.text(infoRight, pageW - margin, y + 0.5, { align: "right" });
   y += 7;
 
@@ -152,7 +160,11 @@ export async function exportDietPdf(
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.amber);
-  doc.text("RACAO (por ave)", margin + 3, y + 5);
+  if (hasDualRacao) {
+    doc.text("RACAO (2 tipos)", margin + 3, y + 5);
+  } else {
+    doc.text("RACAO (por ave)", margin + 3, y + 5);
+  }
   doc.setFontSize(12);
   doc.text(fmtWeight(racaoGrams), margin + 3, y + 11.5);
   doc.setFontSize(7);
