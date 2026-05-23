@@ -224,3 +224,7 @@
 - [x] Duplicar componente FeedingModule como FeedingModuleTest
 - [x] Alimentação Teste: criar card de calendário mensal com seletor de alimentos (legumes, vegetais, oleaginosas)
 - [x] Alimentação Teste: checkboxes abaixo de cada dia do mês para ticar quando alimento selecionado
+- [x] FoodCalendarCard: refazer como tabela Alimentos × Dias (linhas=alimentos adicionados, colunas=dias do mês)
+- [x] FoodCalendarCard: permitir adicionar múltiplos alimentos de qualquer categoria à tabela
+- [x] FoodCalendarCard: marcar X nos dias em que cada alimento foi usado (combinações livres)
+- [x] FoodCalendarCard: tabela fixa durante o mês todo, preenchida dia a dia
