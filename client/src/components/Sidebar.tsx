@@ -19,6 +19,7 @@ interface SidebarProps {
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
 const HOME_ID = "__home__";
 const FEEDING_ID = "__alimentacao__";
+const FEEDING_TEST_ID = "__alimentacao_teste__";
 const SETTINGS_ID = "__configuracoes__";
 
 type NavEntry = {
@@ -37,13 +38,19 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
       icon: Utensils,
     };
 
+    const feedingTestItem: NavEntry = {
+      id: FEEDING_TEST_ID,
+      title: "Alimentação Teste",
+      icon: Utensils,
+    };
+
     const sectorItems = sectors.map((s: Sector) => ({
       id: s.id,
       title: s.title,
       icon: s.icon,
     }));
 
-    return [feedingItem, ...sectorItems];
+    return [feedingItem, feedingTestItem, ...sectorItems];
   }, []);
 
   const handleSelect = (id: string) => {

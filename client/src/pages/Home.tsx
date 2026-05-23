@@ -5,6 +5,7 @@
  */
 import SectorContent from "@/components/SectorContent";
 import FeedingModule from "@/components/FeedingModule";
+import FeedingModuleTest from "@/components/FeedingModuleTest";
 import ProgressMap from "@/components/ProgressMap";
 import Sidebar from "@/components/Sidebar";
 import SettingsPanel from "@/components/SettingsPanel";
@@ -15,6 +16,7 @@ import { BookOpen, ChevronLeft, ChevronRight, Utensils, Settings, LayoutGrid } f
 // All navigable items: sectors + special modules
 const HOME_ID = "__home__";
 const FEEDING_ID = "__alimentacao__";
+const FEEDING_TEST_ID = "__alimentacao_teste__";
 const SETTINGS_ID = "__configuracoes__";
 
 type NavItem = {
@@ -27,6 +29,7 @@ type NavItem = {
 const allNavItems: NavItem[] = [
   { id: HOME_ID, title: "Mapa de Progresso", subtitle: "Visão geral de todos os módulos" },
   { id: FEEDING_ID, title: "Alimentação", subtitle: "39 espécies · Protocolos · Calculadora" },
+  { id: FEEDING_TEST_ID, title: "Alimentação Teste", subtitle: "Versão de teste para mudanças" },
   ...sectors.map(s => ({ id: s.id, title: s.title, subtitle: s.subtitle })),
   { id: SETTINGS_ID, title: "Configurações", subtitle: "Equipe e acessos" },
 ];
@@ -38,6 +41,7 @@ export default function Home() {
   const currentSector = sectors.find((s) => s.id === activeItem);
   const isHome = activeItem === HOME_ID;
   const isFeeding = activeItem === FEEDING_ID;
+  const isFeedingTest = activeItem === FEEDING_TEST_ID;
   const isSettings = activeItem === SETTINGS_ID;
   const currentIndex = allNavItems.findIndex((item) => item.id === activeItem);
   const currentNav = allNavItems[currentIndex];
@@ -128,6 +132,8 @@ export default function Home() {
             <ProgressMap onNavigate={setActiveItem} />
           ) : isFeeding ? (
             <FeedingModule />
+          ) : isFeedingTest ? (
+            <FeedingModuleTest />
           ) : isSettings ? (
             <SettingsPanel />
           ) : currentSector ? (

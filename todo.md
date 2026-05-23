@@ -220,3 +220,5 @@
 - [x] PDF Dieta: adicionar campo "Turno" (manhã = ração, tarde = salada) para orientar funcionários
 - [x] Ração: adicionar botão de excluir ração selecionada (para corrigir seleção errada)
 - [x] Ração: manter card expandido ao selecionar 2ª ração (não fechar automaticamente)
+- [x] Criar aba "Alimentação Teste" na sidebar logo abaixo de Alimentação
+- [x] Duplicar componente FeedingModule como FeedingModuleTest
