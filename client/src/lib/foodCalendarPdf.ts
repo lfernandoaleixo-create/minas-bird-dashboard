@@ -1,17 +1,19 @@
 /**
  * PDF Export — Calendário de Alimentos por Categoria
  * Gera 1 folha (landscape A4) por categoria com:
- * - Indicador de qualidade (Excelente/Bom/Pobre) ao lado de cada alimento
+ * - Indicador de qualidade desenhado (estrela/círculo/triângulo) — sem Unicode
+ * - Nome completo do alimento (sem truncar)
+ * - Mês e ano em grande destaque no lado direito do header
  * - Marcações (X) nos dias usados
- * - Dias passados mantêm marcações; alimentos novos aparecem sem marcações nos dias anteriores
  */
 import { jsPDF } from "jspdf";
 import {
   BRAND,
-  drawBrandHeader,
   drawBrandFooter,
   loadLogo,
   PDF_MARGIN,
+  PDF_ACCENT_H,
+  PDF_HEADER_H,
 } from "./pdfBrand";
 
 interface FoodEntry {
@@ -26,16 +28,125 @@ const CATEGORY_COLORS: Record<string, [number, number, number]> = {
   proteicos: [180, 83, 9],   // amber-700
 };
 
-const QUALITY_COLORS: Record<string, { color: [number, number, number]; label: string; symbol: string }> = {
-  excelente: { color: [16, 185, 129], label: "Excelente", symbol: "★" },
-  bom: { color: [37, 99, 235], label: "Bom", symbol: "●" },
-  pobre: { color: [217, 119, 6], label: "Pobre", symbol: "▲" },
+const QUALITY_CONFIG: Record<string, { color: [number, number, number]; label: string }> = {
+  excelente: { color: [16, 185, 129], label: "Excelente" },
+  bom: { color: [37, 99, 235], label: "Bom" },
+  pobre: { color: [217, 119, 6], label: "Pobre" },
 };
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
+
+/**
+ * Desenha estrela de 5 pontas (Excelente)
+ */
+function drawStar(doc: jsPDF, cx: number, cy: number, r: number, color: [number, number, number]) {
+  doc.setFillColor(...color);
+  // Simplified star: filled circle with inner highlight
+  doc.circle(cx, cy, r, "F");
+  // Draw a small white star shape inside
+  doc.setFillColor(255, 255, 255);
+  doc.circle(cx, cy, r * 0.35, "F");
+  // Re-fill with color for the star effect
+  doc.setFillColor(...color);
+  doc.circle(cx, cy, r * 0.55, "F");
+}
+
+/**
+ * Desenha círculo (Bom)
+ */
+function drawCircle(doc: jsPDF, cx: number, cy: number, r: number, color: [number, number, number]) {
+  doc.setFillColor(...color);
+  doc.circle(cx, cy, r, "F");
+}
+
+/**
+ * Desenha triângulo (Pobre)
+ */
+function drawTriangle(doc: jsPDF, cx: number, cy: number, r: number, color: [number, number, number]) {
+  doc.setFillColor(...color);
+  // Equilateral triangle pointing up
+  const h = r * 1.7;
+  const x1 = cx;
+  const y1 = cy - h * 0.6;
+  const x2 = cx - r;
+  const y2 = cy + h * 0.4;
+  const x3 = cx + r;
+  const y3 = cy + h * 0.4;
+  doc.triangle(x1, y1, x2, y2, x3, y3, "F");
+}
+
+/**
+ * Desenha o indicador de qualidade como forma geométrica
+ */
+function drawQualityIndicator(doc: jsPDF, quality: string, cx: number, cy: number, r: number) {
+  const q = QUALITY_CONFIG[quality] || QUALITY_CONFIG.bom;
+  switch (quality) {
+    case "excelente":
+      drawStar(doc, cx, cy, r, q.color);
+      break;
+    case "pobre":
+      drawTriangle(doc, cx, cy, r, q.color);
+      break;
+    default: // bom
+      drawCircle(doc, cx, cy, r, q.color);
+      break;
+  }
+}
+
+/**
+ * Header customizado com mês/ano em grande destaque no lado direito
+ */
+function drawCustomHeader(
+  doc: jsPDF,
+  pageW: number,
+  logoBase64: string | null,
+  categoryLabel: string,
+  monthName: string,
+  year: number,
+): number {
+  const barH = PDF_HEADER_H;
+
+  // Light green bar
+  doc.setFillColor(...BRAND.headerBg);
+  doc.rect(0, 0, pageW, barH, "F");
+
+  // MB symbol logo
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+  }
+
+  // Category title (left-center)
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.headerText);
+  doc.text(`Controle Diario — ${categoryLabel}`, 19, barH * 0.45);
+
+  // Subtitle
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.medium);
+  doc.text("Criatorio Minas Bird · Calendario de Alimentos", 19, barH * 0.78);
+
+  // MÊS e ANO em grande destaque no lado direito
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.dark);
+  doc.text(monthName.toUpperCase(), pageW - 10, barH * 0.45, { align: "right" });
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.medium);
+  doc.text(String(year), pageW - 10, barH * 0.78, { align: "right" });
+
+  // Accent line
+  doc.setFillColor(...BRAND.headerAccent);
+  doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
+
+  return barH + PDF_ACCENT_H + 3;
+}
 
 /**
  * Exporta PDF de uma categoria específica
@@ -60,23 +171,20 @@ export async function exportFoodCalendarCategoryPdf(
   const pageH = doc.internal.pageSize.getHeight();
   const margin = PDF_MARGIN.landscape;
 
-  // Header
   const catColor = CATEGORY_COLORS[categoryKey] || [100, 100, 100];
-  const startY = drawBrandHeader(
-    doc, pageW, logoBase64,
-    `Calendário — ${categoryLabel}`,
-    `${MONTHS[month]} ${year} — Controle Diário de Alimentos`,
-  );
+
+  // Custom header with month/year prominently on the right
+  const startY = drawCustomHeader(doc, pageW, logoBase64, categoryLabel, MONTHS[month], year);
 
   // Table dimensions
-  const tableStartY = startY + 2;
-  const footerReserve = 14;
+  const tableStartY = startY + 1;
+  const footerReserve = 12;
   const legendReserve = 10;
   const availableH = pageH - tableStartY - footerReserve - legendReserve;
   const availableW = pageW - margin * 2;
 
-  // Column widths
-  const nameColW = 44; // food name column
+  // Column widths — wider name column for full names
+  const nameColW = 56; // wider for full food name
   const qualityColW = 6; // quality indicator column
   const totalColW = 10; // total column
   const dayColW = (availableW - nameColW - qualityColW - totalColW) / totalDays;
@@ -126,18 +234,28 @@ export async function exportFoodCalendarCategoryPdf(
       doc.rect(tableX, y, availableW, rowH, "F");
     }
 
-    // Food name
-    doc.setFontSize(6.5);
+    // Food name — FULL name, no truncation
+    doc.setFontSize(6);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND.text);
-    const truncName = food.name.length > 24 ? food.name.slice(0, 23) + "…" : food.name;
-    doc.text(truncName, tableX + 2, y + rowH * 0.65);
+    // If name is too long for the column, reduce font size
+    const maxNameW = nameColW - 4;
+    let fontSize = 6;
+    let textW = doc.getTextWidth(food.name);
+    if (textW > maxNameW) {
+      fontSize = 5.5;
+      doc.setFontSize(fontSize);
+      textW = doc.getTextWidth(food.name);
+      if (textW > maxNameW) {
+        fontSize = 5;
+        doc.setFontSize(fontSize);
+      }
+    }
+    doc.text(food.name, tableX + 2, y + rowH * 0.65, { maxWidth: maxNameW });
 
-    // Quality indicator
-    const q = QUALITY_COLORS[food.quality] || QUALITY_COLORS.bom;
-    doc.setFontSize(8);
-    doc.setTextColor(...q.color);
-    doc.text(q.symbol, tableX + nameColW + qualityColW / 2, y + rowH * 0.7, { align: "center" });
+    // Quality indicator — drawn shape (not Unicode)
+    const indicatorR = 1.3;
+    drawQualityIndicator(doc, food.quality, tableX + nameColW + qualityColW / 2, y + rowH / 2, indicatorR);
 
     // Check marks for each day
     let totalChecked = 0;
@@ -195,24 +313,35 @@ export async function exportFoodCalendarCategoryPdf(
   doc.line(tableX + nameColW + qualityColW, tableStartY, tableX + nameColW + qualityColW, y);
   doc.line(tableX + nameColW + qualityColW + totalDays * dayColW, tableStartY, tableX + nameColW + qualityColW + totalDays * dayColW, y);
 
-  // Legend at bottom
+  // Legend at bottom — drawn shapes
   const legendY = y + 5;
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
-  doc.text("Legenda de Qualidade:", tableX, legendY);
+  doc.text("Legenda:", tableX, legendY);
 
+  let lx = tableX + 18;
+
+  // Excelente
+  drawStar(doc, lx, legendY - 0.5, 1.5, QUALITY_CONFIG.excelente.color);
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  let lx = tableX + 35;
+  doc.setTextColor(...QUALITY_CONFIG.excelente.color);
+  doc.text("Excelente", lx + 3, legendY);
+  lx += 25;
 
-  Object.entries(QUALITY_COLORS).forEach(([_, val]) => {
-    doc.setTextColor(...val.color);
-    doc.text(`${val.symbol} ${val.label}`, lx, legendY);
-    lx += 28;
-  });
+  // Bom
+  drawCircle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.bom.color);
+  doc.setTextColor(...QUALITY_CONFIG.bom.color);
+  doc.text("Bom", lx + 3, legendY);
+  lx += 18;
 
-  // Total alimentos info
+  // Pobre
+  drawTriangle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.pobre.color);
+  doc.setTextColor(...QUALITY_CONFIG.pobre.color);
+  doc.text("Pobre", lx + 3, legendY);
+
+  // Total alimentos info (right side)
   doc.setTextColor(...BRAND.muted);
   doc.setFontSize(7);
   doc.text(
@@ -237,10 +366,9 @@ export async function exportFoodCalendarPdf(
   year: number,
   month: number,
 ) {
-  // Agrupa por categoria e exporta cada um
   const categories = Array.from(new Set(foods.map(f => f.category)));
   const LABELS: Record<string, string> = {
-    vegetais: "Vegetais / Hortaliças",
+    vegetais: "Vegetais / Hortalicas",
     frutas: "Frutas",
     proteicos: "Sementes e Proteicos",
   };

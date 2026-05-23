@@ -237,3 +237,6 @@
 - [x] FoodCalendarCard: cada tabela com seu próprio botão de exportar PDF (1 folha por categoria)
 - [x] FoodCalendarCard: adicionar indicador de qualidade (Excelente/Bom/Pobre) ao lado de cada alimento
 - [x] FoodCalendarCard: indicador baseado na classificação do petbird.ts com cores para fácil identificação
+- [x] FoodCalendarCard PDF: corrigir símbolos de qualidade (desenhar formas em vez de Unicode)
+- [x] FoodCalendarCard PDF: mostrar nome completo do alimento sem truncar
+- [x] FoodCalendarCard PDF: mês e ano em grande destaque no lado direito do header
