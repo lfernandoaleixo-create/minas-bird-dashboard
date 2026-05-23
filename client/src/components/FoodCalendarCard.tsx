@@ -306,9 +306,12 @@ export default function FoodCalendarCard() {
     }
   };
 
-  // Get all foods for a species: inherited (from general) + exclusive (species-only)
+  // Get all foods for a species: inherited (from general, only if checked at least once) + exclusive (species-only)
   const getSpeciesAllFoods = (speciesId: string): (FoodEntry & { inherited: boolean })[] => {
-    const inherited = foods.map(f => ({ ...f, inherited: true }));
+    // Only inherit foods that have at least 1 day checked in the general cards
+    const inherited = foods
+      .filter(f => Object.keys(checks).some(k => k.startsWith(`${monthKey}|${f.name}|`)))
+      .map(f => ({ ...f, inherited: true }));
     const exclusive = (speciesFoods[speciesId] || []).map(f => ({ ...f, inherited: false }));
     return [...inherited, ...exclusive];
   };
@@ -376,9 +379,13 @@ export default function FoodCalendarCard() {
 
   const getAvailableSpeciesFoods = (speciesId: string, catFilter: string) => {
     const addedNames = new Set((speciesFoods[speciesId] || []).map(f => f.name));
-    // Also exclude foods already in general cards (they're inherited)
-    const generalNames = new Set(foods.map(f => f.name));
-    let items = ALL_FOOD_ITEMS_UNIFIED.filter(item => !addedNames.has(item.name) && !generalNames.has(item.name));
+    // Also exclude foods already checked in general cards (they're inherited)
+    const inheritedNames = new Set(
+      foods
+        .filter(f => Object.keys(checks).some(k => k.startsWith(`${monthKey}|${f.name}|`)))
+        .map(f => f.name)
+    );
+    let items = ALL_FOOD_ITEMS_UNIFIED.filter(item => !addedNames.has(item.name) && !inheritedNames.has(item.name));
     items = items.filter(item => item.category === catFilter);
     if (speciesSearchTerm.trim()) {
       const term = speciesSearchTerm.toLowerCase().trim();
@@ -622,7 +629,7 @@ export default function FoodCalendarCard() {
               <h4 className="text-sm font-bold text-foreground">{sp.commonName}</h4>
               <p className="text-[10px] text-muted-foreground">
                 {sp.currentCount} ave{sp.currentCount !== 1 ? "s" : ""} · {allFoods.length} alimento{allFoods.length !== 1 ? "s" : ""} na tabela
-                {foods.length > 0 && <span className="text-teal-600 ml-1">({foods.length} herdados)</span>}
+                {allFoods.filter(f => f.inherited).length > 0 && <span className="text-teal-600 ml-1">({allFoods.filter(f => f.inherited).length} herdados)</span>}
               </p>
             </div>
           </div>

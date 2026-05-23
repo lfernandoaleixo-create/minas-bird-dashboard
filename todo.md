@@ -251,3 +251,4 @@
 - [x] FoodCalendarCard: herança automática — alimentos marcados nos 3 cards gerais aparecem em TODAS as espécies
 - [x] FoodCalendarCard: alimentos adicionados diretamente no card de espécie são exclusivos (não aparecem em outros)
 - [x] FoodCalendarCard: marcações dos cards gerais herdadas com checkboxes preenchidos para todas as espécies
+- [x] FoodCalendarCard: corrigir herança — alimentos só vão para espécies quando tiverem pelo menos 1 checkbox marcado nos cards gerais (não basta estar na tabela)
