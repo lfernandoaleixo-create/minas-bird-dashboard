@@ -228,3 +228,4 @@
 - [x] FoodCalendarCard: permitir adicionar múltiplos alimentos de qualquer categoria à tabela
 - [x] FoodCalendarCard: marcar X nos dias em que cada alimento foi usado (combinações livres)
 - [x] FoodCalendarCard: tabela fixa durante o mês todo, preenchida dia a dia
+- [x] FoodCalendarCard: usar listas completas do petbird.ts (cópia fiel da aba Alimentação original — 62 rações, 47 vegetais, 38 frutas, 57 proteicos)

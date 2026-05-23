@@ -1,58 +1,58 @@
 /**
  * FoodCalendarCard — Tabela mensal de alimentos
- * Linhas = alimentos adicionados pelo usuário (de qualquer categoria)
+ * Importa diretamente as listas do petbird.ts (cópia fiel da aba Alimentação)
+ * Categorias: Ração/Formulado, Vegetais/Hortaliças, Frutas, Sementes e Proteicos
+ * Linhas = alimentos adicionados pelo usuário
  * Colunas = dias do mês
- * O usuário adiciona alimentos à tabela e marca X nos dias em que cada um foi usado
  * Persistência em localStorage
  */
 import { useState, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Leaf, Carrot, Nut, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Leaf, Apple, Wheat, Check, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { racoes, vegetais, frutas, proteicos } from "@/data/petbird";
 
-// Dados de alimentos por categoria
+// Categorias fiéis à aba Alimentação original
 const FOOD_CATEGORIES = {
-  legumes: {
-    label: "Legumes",
-    icon: Carrot,
+  racoes: {
+    label: "Ração / Formulado",
+    icon: Package,
+    color: "bg-blue-600",
+    colorLight: "bg-blue-50",
+    borderColor: "border-blue-200",
+    textColor: "text-blue-700",
+    dotColor: "bg-blue-500",
+    items: racoes.filter(f => f.name !== "Ração Mediana").map(f => f.name),
+  },
+  vegetais: {
+    label: "Vegetais / Hortaliças",
+    icon: Leaf,
+    color: "bg-green-600",
+    colorLight: "bg-green-50",
+    borderColor: "border-green-200",
+    textColor: "text-green-700",
+    dotColor: "bg-green-500",
+    items: vegetais.filter(f => f.name !== "Hortaliça Mediana").map(f => f.name),
+  },
+  frutas: {
+    label: "Frutas",
+    icon: Apple,
     color: "bg-orange-500",
     colorLight: "bg-orange-50",
     borderColor: "border-orange-200",
     textColor: "text-orange-700",
     dotColor: "bg-orange-400",
-    items: [
-      "Abóbora", "Abobrinha", "Beterraba", "Brócolis", "Cenoura",
-      "Chuchu", "Couve-flor", "Inhame", "Jiló", "Maxixe",
-      "Milho verde", "Pepino", "Pimentão", "Quiabo", "Vagem"
-    ]
+    items: frutas.filter(f => f.name !== "Fruta Mediana").map(f => f.name),
   },
-  vegetais: {
-    label: "Vegetais/Folhas",
-    icon: Leaf,
-    color: "bg-green-500",
-    colorLight: "bg-green-50",
-    borderColor: "border-green-200",
-    textColor: "text-green-700",
-    dotColor: "bg-green-400",
-    items: [
-      "Agrião", "Alface", "Almeirão", "Catalônia", "Chicória",
-      "Couve", "Dente-de-leão", "Espinafre", "Mostarda", "Ora-pro-nóbis",
-      "Rúcula", "Serralha", "Taioba"
-    ]
-  },
-  oleaginosas: {
-    label: "Oleaginosas",
-    icon: Nut,
+  proteicos: {
+    label: "Sementes e Proteicos",
+    icon: Wheat,
     color: "bg-amber-700",
     colorLight: "bg-amber-50",
     borderColor: "border-amber-200",
     textColor: "text-amber-800",
-    dotColor: "bg-amber-500",
-    items: [
-      "Amêndoa", "Amendoim", "Castanha-de-caju", "Castanha-do-pará",
-      "Chia", "Girassol", "Linhaça", "Macadâmia", "Noz", "Pistache",
-      "Semente de abóbora"
-    ]
-  }
+    dotColor: "bg-amber-600",
+    items: proteicos.filter(f => f.name !== "Proteico Mediano").map(f => f.name),
+  },
 } as const;
 
 type CategoryKey = keyof typeof FOOD_CATEGORIES;
@@ -83,7 +83,10 @@ export default function FoodCalendarCard() {
   const [foods, setFoods] = useState<FoodEntry[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_FOODS);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved) as FoodEntry[];
+      // Filter out entries with categories that no longer exist
+      return parsed.filter(f => f.category in FOOD_CATEGORIES);
     } catch { return []; }
   });
 
@@ -98,6 +101,7 @@ export default function FoodCalendarCard() {
   // UI state
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [addCategory, setAddCategory] = useState<CategoryKey | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Persistir
   const saveFoods = useCallback((newFoods: FoodEntry[]) => {
@@ -139,7 +143,7 @@ export default function FoodCalendarCard() {
 
   // Adicionar alimento à tabela
   const addFood = (name: string, category: CategoryKey) => {
-    if (foods.some(f => f.name === name)) return; // já existe
+    if (foods.some(f => f.name === name)) return;
     const newFoods = [...foods, { name, category }];
     saveFoods(newFoods);
   };
@@ -182,20 +186,22 @@ export default function FoodCalendarCard() {
     return Object.keys(checks).filter(k => k.startsWith(`${monthKey}|${foodName}|`)).length;
   };
 
-  // Alimentos disponíveis para adicionar (não já adicionados)
+  // Alimentos disponíveis para adicionar (não já adicionados), com filtro de busca
   const availableFoods = useMemo(() => {
     if (!addCategory) return [];
     const addedNames = new Set(foods.map(f => f.name));
-    return FOOD_CATEGORIES[addCategory].items.filter(item => !addedNames.has(item));
-  }, [addCategory, foods]);
+    let items = FOOD_CATEGORIES[addCategory].items.filter(item => !addedNames.has(item));
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      items = items.filter(item => item.toLowerCase().includes(term));
+    }
+    return items;
+  }, [addCategory, foods, searchTerm]);
 
   // Dia de hoje
   const isToday = (day: number) => {
     return day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
   };
-
-  // Dia da semana do primeiro dia
-  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
 
   return (
     <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
@@ -211,7 +217,7 @@ export default function FoodCalendarCard() {
             </p>
           </div>
           <button
-            onClick={() => setShowAddPanel(!showAddPanel)}
+            onClick={() => { setShowAddPanel(!showAddPanel); setSearchTerm(""); }}
             className={cn(
               "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
               showAddPanel
@@ -237,7 +243,7 @@ export default function FoodCalendarCard() {
               return (
                 <button
                   key={catKey}
-                  onClick={() => setAddCategory(isActive ? null : catKey)}
+                  onClick={() => { setAddCategory(isActive ? null : catKey); setSearchTerm(""); }}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all",
                     isActive
@@ -247,27 +253,45 @@ export default function FoodCalendarCard() {
                 >
                   <Icon size={13} />
                   {cat.label}
+                  <span className="text-[10px] opacity-60">({cat.items.length})</span>
                 </button>
               );
             })}
           </div>
 
+          {/* Busca */}
+          {addCategory && (
+            <div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={`Buscar em ${FOOD_CATEGORIES[addCategory].label}...`}
+                className="w-full px-3 py-2 rounded-lg border border-border/50 bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+              />
+            </div>
+          )}
+
           {/* Alimentos disponíveis */}
           {addCategory && (
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="max-h-48 overflow-y-auto">
               {availableFoods.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">Todos os alimentos desta categoria já foram adicionados.</p>
+                <p className="text-xs text-muted-foreground italic py-2">
+                  {searchTerm ? "Nenhum alimento encontrado com esse termo." : "Todos os alimentos desta categoria já foram adicionados."}
+                </p>
               ) : (
-                availableFoods.map(food => (
-                  <button
-                    key={food}
-                    onClick={() => addFood(food, addCategory)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border/50 bg-background text-foreground/70 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all"
-                  >
-                    <Plus size={10} />
-                    {food}
-                  </button>
-                ))
+                <div className="flex gap-1.5 flex-wrap">
+                  {availableFoods.map(food => (
+                    <button
+                      key={food}
+                      onClick={() => addFood(food, addCategory)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-border/50 bg-background text-foreground/70 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all"
+                    >
+                      <Plus size={9} />
+                      {food}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -308,7 +332,7 @@ export default function FoodCalendarCard() {
             <table className="w-full border-collapse text-[10px] min-w-[700px]">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-card text-left px-2 py-2 border-b border-border/50 min-w-[120px]">
+                  <th className="sticky left-0 z-10 bg-card text-left px-2 py-2 border-b border-border/50 min-w-[140px]">
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Alimento
                     </span>
@@ -350,7 +374,7 @@ export default function FoodCalendarCard() {
                       <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
                         <div className="flex items-center gap-1.5">
                           <div className={cn("w-2 h-2 rounded-full flex-shrink-0", cat.dotColor)} />
-                          <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[90px]">
+                          <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[110px]" title={food.name}>
                             {food.name}
                           </span>
                           <button
