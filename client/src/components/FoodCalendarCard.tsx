@@ -1,15 +1,19 @@
 /**
- * FoodCalendarCard — 3 Tabelas mensais separadas por categoria
- * Cada categoria (Vegetais, Frutas, Sementes/Proteicos) tem sua própria tabela e PDF
+ * FoodCalendarCard — 3 Tabelas mensais separadas por categoria (expansíveis)
+ * + Cards por espécie de ave com seletor unificado (incluindo ração)
  * Indicador de qualidade (Excelente/Bom/Pobre) ao lado de cada alimento
  * Linhas = alimentos adicionados pelo usuário
  * Colunas = dias do mês
  * Persistência em localStorage
  */
 import { useState, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Leaf, Apple, Wheat, Check, FileDown, Star, ThumbsUp, AlertTriangle } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, ChevronDown, Plus, X, Leaf, Apple, Wheat,
+  Check, FileDown, Star, ThumbsUp, AlertTriangle, Bird
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { vegetais, frutas, proteicos } from "@/data/petbird";
+import { vegetais, frutas, proteicos, racoes } from "@/data/petbird";
+import { species } from "@/data/feeding";
 import { exportFoodCalendarCategoryPdf } from "@/lib/foodCalendarPdf";
 
 // Vegetais a excluir (marcados com ⚠️ na aba original)
@@ -21,7 +25,6 @@ function getQuality(classification: string): "excelente" | "bom" | "pobre" {
   if (c === "melhores") return "excelente";
   if (c === "bons" || c === "boas") return "bom";
   if (c === "pobres" || c === "inadequado") return "pobre";
-  // Rações e outros: considerar "bom" por padrão
   return "bom";
 }
 
@@ -33,7 +36,6 @@ const QUALITY_CONFIG = {
     bg: "bg-emerald-50",
     border: "border-emerald-200",
     dotColor: "bg-emerald-500",
-    pdfColor: [16, 185, 129] as [number, number, number],
   },
   bom: {
     label: "Bom",
@@ -42,7 +44,6 @@ const QUALITY_CONFIG = {
     bg: "bg-blue-50",
     border: "border-blue-200",
     dotColor: "bg-blue-500",
-    pdfColor: [37, 99, 235] as [number, number, number],
   },
   pobre: {
     label: "Pobre",
@@ -51,7 +52,6 @@ const QUALITY_CONFIG = {
     bg: "bg-amber-50",
     border: "border-amber-200",
     dotColor: "bg-amber-500",
-    pdfColor: [217, 119, 6] as [number, number, number],
   },
 };
 
@@ -110,11 +110,24 @@ const FOOD_CATEGORIES: Record<string, CategoryConfig> = {
   },
 };
 
+// Categoria unificada para cards de espécie (inclui ração)
+const ALL_FOOD_ITEMS_UNIFIED: { name: string; quality: "excelente" | "bom" | "pobre"; category: string }[] = [
+  ...racoes
+    .filter(f => f.name !== "Ração Mediana")
+    .map(f => ({ name: f.name, quality: getQuality(f.classification), category: "racao" })),
+  ...FOOD_CATEGORIES.vegetais.items.map(f => ({ ...f, category: "vegetais" })),
+  ...FOOD_CATEGORIES.frutas.items.map(f => ({ ...f, category: "frutas" })),
+  ...FOOD_CATEGORIES.proteicos.items.map(f => ({ ...f, category: "proteicos" })),
+];
+
+// Espécies do plantel (com aves)
+const ACTIVE_SPECIES = species.filter(s => s.currentCount > 0);
+
 type CategoryKey = keyof typeof FOOD_CATEGORIES;
 
 interface FoodEntry {
   name: string;
-  category: CategoryKey;
+  category: string;
   quality: "excelente" | "bom" | "pobre";
 }
 
@@ -125,6 +138,8 @@ const MONTHS = [
 
 const STORAGE_KEY_FOODS = "foodCalendarFoods_v3";
 const STORAGE_KEY_CHECKS = "foodCalendarChecks_v2";
+const STORAGE_KEY_SPECIES_FOODS = "foodCalendarSpeciesFoods_v1";
+const STORAGE_KEY_SPECIES_CHECKS = "foodCalendarSpeciesChecks_v1";
 
 function getMonthKey(year: number, month: number) {
   return `${year}-${String(month + 1).padStart(2, "0")}`;
@@ -135,7 +150,7 @@ export default function FoodCalendarCard() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
 
-  // Alimentos adicionados à tabela (persistidos)
+  // === CATEGORY TABLES STATE ===
   const [foods, setFoods] = useState<FoodEntry[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_FOODS);
@@ -145,7 +160,6 @@ export default function FoodCalendarCard() {
     } catch { return []; }
   });
 
-  // Checks: key = "YYYY-MM|foodName|day", value = true
   const [checks, setChecks] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CHECKS);
@@ -153,9 +167,31 @@ export default function FoodCalendarCard() {
     } catch { return {}; }
   });
 
-  // UI state — which category panel is open for adding
+  // === SPECIES TABLES STATE ===
+  // speciesFoods: { [speciesId]: FoodEntry[] }
+  const [speciesFoods, setSpeciesFoods] = useState<Record<string, FoodEntry[]>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SPECIES_FOODS);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  // speciesChecks: { [speciesId]: { "YYYY-MM|foodName|day": true } }
+  const [speciesChecks, setSpeciesChecks] = useState<Record<string, Record<string, boolean>>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SPECIES_CHECKS);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  // UI state
   const [addingCategory, setAddingCategory] = useState<CategoryKey | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [expandedSpecies, setExpandedSpecies] = useState<Record<string, boolean>>({});
+  const [addingSpecies, setAddingSpecies] = useState<string | null>(null);
+  const [speciesSearchTerm, setSpeciesSearchTerm] = useState("");
+  const [speciesFilterCat, setSpeciesFilterCat] = useState<string>("all");
 
   // Persistir
   const saveFoods = useCallback((newFoods: FoodEntry[]) => {
@@ -168,6 +204,16 @@ export default function FoodCalendarCard() {
     localStorage.setItem(STORAGE_KEY_CHECKS, JSON.stringify(newChecks));
   }, []);
 
+  const saveSpeciesFoods = useCallback((newData: Record<string, FoodEntry[]>) => {
+    setSpeciesFoods(newData);
+    localStorage.setItem(STORAGE_KEY_SPECIES_FOODS, JSON.stringify(newData));
+  }, []);
+
+  const saveSpeciesChecks = useCallback((newData: Record<string, Record<string, boolean>>) => {
+    setSpeciesChecks(newData);
+    localStorage.setItem(STORAGE_KEY_SPECIES_CHECKS, JSON.stringify(newData));
+  }, []);
+
   // Dias do mês
   const totalDays = useMemo(() => {
     return new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -175,71 +221,91 @@ export default function FoodCalendarCard() {
 
   const monthKey = getMonthKey(currentYear, currentMonth);
 
-  // Check key
-  const getCheckKey = (foodName: string, day: number) => {
-    return `${monthKey}|${foodName}|${day}`;
-  };
-
-  const isChecked = (foodName: string, day: number) => {
-    return !!checks[getCheckKey(foodName, day)];
-  };
+  // === CATEGORY TABLE HELPERS ===
+  const getCheckKey = (foodName: string, day: number) => `${monthKey}|${foodName}|${day}`;
+  const isChecked = (foodName: string, day: number) => !!checks[getCheckKey(foodName, day)];
 
   const toggleCheck = (foodName: string, day: number) => {
     const key = getCheckKey(foodName, day);
     const newChecks = { ...checks };
-    if (newChecks[key]) {
-      delete newChecks[key];
-    } else {
-      newChecks[key] = true;
-    }
+    if (newChecks[key]) delete newChecks[key];
+    else newChecks[key] = true;
     saveChecks(newChecks);
   };
 
-  // Adicionar alimento à tabela
   const addFood = (name: string, category: CategoryKey, quality: "excelente" | "bom" | "pobre") => {
     if (foods.some(f => f.name === name)) return;
-    const newFoods = [...foods, { name, category, quality }];
-    saveFoods(newFoods);
+    saveFoods([...foods, { name, category, quality }]);
   };
 
-  // Remover alimento da tabela
   const removeFood = (name: string) => {
-    const newFoods = foods.filter(f => f.name !== name);
-    saveFoods(newFoods);
+    saveFoods(foods.filter(f => f.name !== name));
     const newChecks = { ...checks };
-    Object.keys(newChecks).forEach(key => {
-      if (key.includes(`|${name}|`)) {
-        delete newChecks[key];
-      }
-    });
+    Object.keys(newChecks).forEach(key => { if (key.includes(`|${name}|`)) delete newChecks[key]; });
     saveChecks(newChecks);
+  };
+
+  // === SPECIES TABLE HELPERS ===
+  const getSpeciesCheckKey = (foodName: string, day: number) => `${monthKey}|${foodName}|${day}`;
+
+  const isSpeciesChecked = (speciesId: string, foodName: string, day: number) => {
+    return !!(speciesChecks[speciesId]?.[getSpeciesCheckKey(foodName, day)]);
+  };
+
+  const toggleSpeciesCheck = (speciesId: string, foodName: string, day: number) => {
+    const key = getSpeciesCheckKey(foodName, day);
+    const current = { ...speciesChecks };
+    if (!current[speciesId]) current[speciesId] = {};
+    const specChecks = { ...current[speciesId] };
+    if (specChecks[key]) delete specChecks[key];
+    else specChecks[key] = true;
+    current[speciesId] = specChecks;
+    saveSpeciesChecks(current);
+  };
+
+  const addSpeciesFood = (speciesId: string, name: string, category: string, quality: "excelente" | "bom" | "pobre") => {
+    const current = { ...speciesFoods };
+    if (!current[speciesId]) current[speciesId] = [];
+    if (current[speciesId].some(f => f.name === name)) return;
+    current[speciesId] = [...current[speciesId], { name, category, quality }];
+    saveSpeciesFoods(current);
+  };
+
+  const removeSpeciesFood = (speciesId: string, name: string) => {
+    const current = { ...speciesFoods };
+    if (!current[speciesId]) return;
+    current[speciesId] = current[speciesId].filter(f => f.name !== name);
+    saveSpeciesFoods(current);
+    // Remove checks too
+    const currentChecks = { ...speciesChecks };
+    if (currentChecks[speciesId]) {
+      const specChecks = { ...currentChecks[speciesId] };
+      Object.keys(specChecks).forEach(key => { if (key.includes(`|${name}|`)) delete specChecks[key]; });
+      currentChecks[speciesId] = specChecks;
+      saveSpeciesChecks(currentChecks);
+    }
+  };
+
+  const getSpeciesCheckedCount = (speciesId: string, foodName: string) => {
+    if (!speciesChecks[speciesId]) return 0;
+    return Object.keys(speciesChecks[speciesId]).filter(k => k.startsWith(`${monthKey}|${foodName}|`)).length;
   };
 
   // Navegação de mês
   const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1); }
+    else setCurrentMonth(currentMonth - 1);
   };
 
   const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(currentYear + 1); }
+    else setCurrentMonth(currentMonth + 1);
   };
 
-  // Contar checks por alimento no mês
   const getCheckedCount = (foodName: string) => {
     return Object.keys(checks).filter(k => k.startsWith(`${monthKey}|${foodName}|`)).length;
   };
 
-  // Alimentos disponíveis para adicionar (não já adicionados), com filtro de busca
   const getAvailableFoods = (catKey: CategoryKey) => {
     const addedNames = new Set(foods.map(f => f.name));
     let items = FOOD_CATEGORIES[catKey].items.filter(item => !addedNames.has(item.name));
@@ -250,33 +316,54 @@ export default function FoodCalendarCard() {
     return items;
   };
 
-  // Dia de hoje
+  const getAvailableSpeciesFoods = (speciesId: string) => {
+    const addedNames = new Set((speciesFoods[speciesId] || []).map(f => f.name));
+    let items = ALL_FOOD_ITEMS_UNIFIED.filter(item => !addedNames.has(item.name));
+    if (speciesFilterCat !== "all") {
+      items = items.filter(item => item.category === speciesFilterCat);
+    }
+    if (speciesSearchTerm.trim()) {
+      const term = speciesSearchTerm.toLowerCase().trim();
+      items = items.filter(item => item.name.toLowerCase().includes(term));
+    }
+    return items;
+  };
+
   const isToday = (day: number) => {
     return day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
   };
 
-  // Filtrar alimentos por categoria
-  const getFoodsByCategory = (catKey: CategoryKey) => {
-    return foods.filter(f => f.category === catKey);
+  const getFoodsByCategory = (catKey: CategoryKey) => foods.filter(f => f.category === catKey);
+
+  const toggleCategoryExpand = (catKey: string) => {
+    setExpandedCategories(prev => ({ ...prev, [catKey]: !prev[catKey] }));
   };
 
-  // Renderizar uma tabela de categoria
+  const toggleSpeciesExpand = (speciesId: string) => {
+    setExpandedSpecies(prev => ({ ...prev, [speciesId]: !prev[speciesId] }));
+  };
+
+  // === RENDER CATEGORY TABLE (EXPANDABLE) ===
   const renderCategoryTable = (catKey: CategoryKey) => {
     const cat = FOOD_CATEGORIES[catKey];
     const catFoods = getFoodsByCategory(catKey);
     const Icon = cat.icon;
     const isAdding = addingCategory === catKey;
     const available = isAdding ? getAvailableFoods(catKey) : [];
+    const isExpanded = !!expandedCategories[catKey];
 
     return (
       <div key={catKey} className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-        {/* Category Header */}
-        <div className={cn("px-5 py-3.5 flex items-center justify-between", cat.colorLight)}>
+        {/* Category Header — clickable to expand */}
+        <button
+          onClick={() => toggleCategoryExpand(catKey)}
+          className={cn("w-full px-5 py-3.5 flex items-center justify-between cursor-pointer hover:opacity-90 transition-all", cat.colorLight)}
+        >
           <div className="flex items-center gap-2.5">
             <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", cat.color)}>
               <Icon size={16} className="text-white" />
             </div>
-            <div>
+            <div className="text-left">
               <h4 className={cn("text-sm font-bold", cat.textColor)}>{cat.label}</h4>
               <p className="text-[10px] text-muted-foreground">
                 {catFoods.length} alimento{catFoods.length !== 1 ? "s" : ""} na tabela · {cat.items.length} disponíveis
@@ -284,198 +371,349 @@ export default function FoodCalendarCard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => exportFoodCalendarCategoryPdf(catFoods, checks, currentYear, currentMonth, catKey, cat.label)}
-              disabled={catFoods.length === 0}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
-                catFoods.length > 0
-                  ? `${cat.color} text-white hover:opacity-90 shadow-sm`
-                  : "bg-muted/50 text-muted-foreground/40 cursor-not-allowed"
-              )}
-            >
-              <FileDown size={12} />
-              PDF
-            </button>
-            <button
-              onClick={() => { setAddingCategory(isAdding ? null : catKey); setSearchTerm(""); }}
-              className={cn(
-                "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border",
-                isAdding
-                  ? `${cat.colorLight} ${cat.textColor} ${cat.borderColor}`
-                  : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
-              )}
-            >
-              <Plus size={11} />
-              Adicionar
-            </button>
+            {catFoods.length > 0 && !isExpanded && (
+              <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full", cat.colorLight, cat.textColor, cat.borderColor, "border")}>
+                {catFoods.length} itens
+              </span>
+            )}
+            <ChevronDown size={18} className={cn("text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
           </div>
-        </div>
+        </button>
 
-        {/* Add Panel */}
-        {isAdding && (
-          <div className="border-b border-border/50 bg-muted/10 p-4 space-y-3">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`Buscar em ${cat.label}...`}
-              className="w-full px-3 py-2 rounded-lg border border-border/50 bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
-            />
-            {/* Legenda de qualidade */}
-            <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><Star size={10} className="text-emerald-600" /> Excelente</span>
-              <span className="flex items-center gap-1"><ThumbsUp size={10} className="text-blue-600" /> Bom</span>
-              <span className="flex items-center gap-1"><AlertTriangle size={10} className="text-amber-600" /> Pobre</span>
+        {/* Expanded content */}
+        {isExpanded && (
+          <>
+            {/* Action buttons */}
+            <div className={cn("px-5 py-2 flex items-center justify-end gap-2 border-b border-border/30", cat.colorLight)}>
+              <button
+                onClick={(e) => { e.stopPropagation(); exportFoodCalendarCategoryPdf(catFoods, checks, currentYear, currentMonth, catKey, cat.label); }}
+                disabled={catFoods.length === 0}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
+                  catFoods.length > 0
+                    ? `${cat.color} text-white hover:opacity-90 shadow-sm`
+                    : "bg-muted/50 text-muted-foreground/40 cursor-not-allowed"
+                )}
+              >
+                <FileDown size={12} />
+                PDF
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setAddingCategory(isAdding ? null : catKey); setSearchTerm(""); }}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border",
+                  isAdding
+                    ? `${cat.colorLight} ${cat.textColor} ${cat.borderColor}`
+                    : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
+                )}
+              >
+                <Plus size={11} />
+                Adicionar
+              </button>
             </div>
-            <div className="max-h-52 overflow-y-auto">
-              {available.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">
-                  {searchTerm ? "Nenhum alimento encontrado." : "Todos já foram adicionados."}
-                </p>
+
+            {/* Add Panel */}
+            {isAdding && (
+              <div className="border-b border-border/50 bg-muted/10 p-4 space-y-3">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={`Buscar em ${cat.label}...`}
+                  className="w-full px-3 py-2 rounded-lg border border-border/50 bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                />
+                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><Star size={10} className="text-emerald-600" /> Excelente</span>
+                  <span className="flex items-center gap-1"><ThumbsUp size={10} className="text-blue-600" /> Bom</span>
+                  <span className="flex items-center gap-1"><AlertTriangle size={10} className="text-amber-600" /> Pobre</span>
+                </div>
+                <div className="max-h-52 overflow-y-auto">
+                  {available.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic py-2">
+                      {searchTerm ? "Nenhum alimento encontrado." : "Todos já foram adicionados."}
+                    </p>
+                  ) : (
+                    <div className="flex gap-1.5 flex-wrap">
+                      {available.map(food => {
+                        const q = QUALITY_CONFIG[food.quality];
+                        const QIcon = q.icon;
+                        return (
+                          <button
+                            key={food.name}
+                            onClick={() => addFood(food.name, catKey, food.quality)}
+                            className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", q.bg, q.border, q.color)}
+                          >
+                            <QIcon size={10} />
+                            {food.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Table */}
+            <div className="p-4">
+              {catFoods.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Icon size={24} className="mx-auto mb-2 opacity-20" />
+                  <p className="text-xs">Clique em "Adicionar" para incluir alimentos</p>
+                </div>
               ) : (
-                <div className="flex gap-1.5 flex-wrap">
-                  {available.map(food => {
-                    const q = QUALITY_CONFIG[food.quality];
-                    const QIcon = q.icon;
-                    return (
-                      <button
-                        key={food.name}
-                        onClick={() => addFood(food.name, catKey, food.quality)}
-                        className={cn(
-                          "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm",
-                          q.bg, q.border, q.color
-                        )}
-                      >
-                        <QIcon size={10} />
-                        {food.name}
-                      </button>
-                    );
-                  })}
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <table className="w-full border-collapse text-[10px] min-w-[700px]">
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 z-10 bg-card text-left px-2 py-2 border-b border-border/50 min-w-[160px]">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Alimento</span>
+                        </th>
+                        <th className="px-1 py-2 border-b border-border/50 text-center min-w-[20px]">
+                          <span className="text-[9px] font-bold text-muted-foreground">Q</span>
+                        </th>
+                        {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => (
+                          <th key={day} className={cn("px-0 py-2 border-b border-border/50 text-center min-w-[24px]", isToday(day) && "bg-primary/5")}>
+                            <span className={cn("text-[10px] font-semibold", isToday(day) ? "text-primary font-bold" : "text-muted-foreground/70")}>{day}</span>
+                          </th>
+                        ))}
+                        <th className="px-2 py-2 border-b border-border/50 text-center min-w-[30px]">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">Total</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {catFoods.map((food, foodIdx) => {
+                        const count = getCheckedCount(food.name);
+                        const q = QUALITY_CONFIG[food.quality];
+                        const QIcon = q.icon;
+                        return (
+                          <tr key={food.name} className={cn("group hover:bg-muted/20 transition-colors", foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5")}>
+                            <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
+                                <button onClick={() => removeFood(food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
+                              </div>
+                            </td>
+                            <td className="px-0 py-1.5 border-b border-border/30 text-center" title={q.label}><QIcon size={11} className={cn("mx-auto", q.color)} /></td>
+                            {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
+                              const checked = isChecked(food.name, day);
+                              return (
+                                <td key={day} className={cn("px-0 py-1 border-b border-border/30 text-center", isToday(day) && "bg-primary/5")}>
+                                  <button
+                                    onClick={() => toggleCheck(food.name, day)}
+                                    className={cn("w-5 h-5 rounded border flex items-center justify-center mx-auto transition-all", checked ? `${cat.checkColor} border-transparent text-white shadow-sm` : "border-border/40 bg-background hover:border-emerald-300 hover:bg-emerald-50")}
+                                  >
+                                    {checked && <Check size={10} strokeWidth={3} />}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                            <td className="px-2 py-1.5 border-b border-border/30 text-center">
+                              <span className={cn("text-[11px] font-bold", count > 0 ? cat.textColor : "text-muted-foreground/40")}>{count}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
-          </div>
+          </>
         )}
+      </div>
+    );
+  };
 
-        {/* Table */}
-        <div className="p-4">
-          {catFoods.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <Icon size={24} className="mx-auto mb-2 opacity-20" />
-              <p className="text-xs">Clique em "Adicionar" para incluir alimentos</p>
+  // === RENDER SPECIES CARD (EXPANDABLE) ===
+  const renderSpeciesCard = (sp: typeof ACTIVE_SPECIES[0]) => {
+    const isExpanded = !!expandedSpecies[sp.id];
+    const spFoods = speciesFoods[sp.id] || [];
+    const isAdding = addingSpecies === sp.id;
+    const available = isAdding ? getAvailableSpeciesFoods(sp.id) : [];
+
+    return (
+      <div key={sp.id} className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+        {/* Species Header — clickable */}
+        <button
+          onClick={() => toggleSpeciesExpand(sp.id)}
+          className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-muted/10 transition-all"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-teal-600">
+              <Bird size={16} className="text-white" />
             </div>
-          ) : (
-            <div className="overflow-x-auto -mx-4 px-4">
-              <table className="w-full border-collapse text-[10px] min-w-[700px]">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 z-10 bg-card text-left px-2 py-2 border-b border-border/50 min-w-[160px]">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        Alimento
-                      </span>
-                    </th>
-                    <th className="px-1 py-2 border-b border-border/50 text-center min-w-[20px]">
-                      <span className="text-[9px] font-bold text-muted-foreground">Q</span>
-                    </th>
-                    {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => (
-                      <th
-                        key={day}
-                        className={cn(
-                          "px-0 py-2 border-b border-border/50 text-center min-w-[24px]",
-                          isToday(day) && "bg-primary/5"
-                        )}
-                      >
-                        <span className={cn(
-                          "text-[10px] font-semibold",
-                          isToday(day) ? "text-primary font-bold" : "text-muted-foreground/70"
-                        )}>
-                          {day}
-                        </span>
-                      </th>
-                    ))}
-                    <th className="px-2 py-2 border-b border-border/50 text-center min-w-[30px]">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">Total</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {catFoods.map((food, foodIdx) => {
-                    const count = getCheckedCount(food.name);
-                    const q = QUALITY_CONFIG[food.quality];
-                    const QIcon = q.icon;
-                    return (
-                      <tr
-                        key={food.name}
-                        className={cn(
-                          "group hover:bg-muted/20 transition-colors",
-                          foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5"
-                        )}
-                      >
-                        {/* Nome do alimento */}
-                        <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>
-                              {food.name}
-                            </span>
-                            <button
-                              onClick={() => removeFood(food.name)}
-                              className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0"
-                              title="Remover alimento"
-                            >
-                              <X size={10} />
-                            </button>
-                          </div>
-                        </td>
+            <div className="text-left">
+              <h4 className="text-sm font-bold text-foreground">{sp.commonName}</h4>
+              <p className="text-[10px] text-muted-foreground">
+                {sp.currentCount} ave{sp.currentCount !== 1 ? "s" : ""} · {spFoods.length} alimento{spFoods.length !== 1 ? "s" : ""} na tabela
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {spFoods.length > 0 && !isExpanded && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                {spFoods.length} itens
+              </span>
+            )}
+            <ChevronDown size={18} className={cn("text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
+          </div>
+        </button>
 
-                        {/* Qualidade */}
-                        <td className="px-0 py-1.5 border-b border-border/30 text-center" title={q.label}>
-                          <QIcon size={11} className={cn("mx-auto", q.color)} />
-                        </td>
+        {/* Expanded content */}
+        {isExpanded && (
+          <>
+            {/* Action buttons */}
+            <div className="px-5 py-2 flex items-center justify-end gap-2 border-b border-border/30 bg-teal-50/50">
+              <button
+                onClick={(e) => { e.stopPropagation(); setAddingSpecies(isAdding ? null : sp.id); setSpeciesSearchTerm(""); setSpeciesFilterCat("all"); }}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border",
+                  isAdding
+                    ? "bg-teal-50 text-teal-700 border-teal-200"
+                    : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
+                )}
+              >
+                <Plus size={11} />
+                Adicionar
+              </button>
+            </div>
 
-                        {/* Dias */}
-                        {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
-                          const checked = isChecked(food.name, day);
-                          return (
-                            <td
-                              key={day}
-                              className={cn(
-                                "px-0 py-1 border-b border-border/30 text-center",
-                                isToday(day) && "bg-primary/5"
-                              )}
-                            >
-                              <button
-                                onClick={() => toggleCheck(food.name, day)}
-                                className={cn(
-                                  "w-5 h-5 rounded border flex items-center justify-center mx-auto transition-all",
-                                  checked
-                                    ? `${cat.checkColor} border-transparent text-white shadow-sm`
-                                    : "border-border/40 bg-background hover:border-emerald-300 hover:bg-emerald-50"
-                                )}
-                              >
-                                {checked && <Check size={10} strokeWidth={3} />}
-                              </button>
-                            </td>
-                          );
-                        })}
+            {/* Add Panel — unified selector */}
+            {isAdding && (
+              <div className="border-b border-border/50 bg-muted/10 p-4 space-y-3">
+                {/* Category filter */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Filtrar:</span>
+                  {[
+                    { key: "all", label: "Todos" },
+                    { key: "racao", label: "Ração" },
+                    { key: "vegetais", label: "Vegetais" },
+                    { key: "frutas", label: "Frutas" },
+                    { key: "proteicos", label: "Sementes" },
+                  ].map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setSpeciesFilterCat(opt.key)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
+                        speciesFilterCat === opt.key
+                          ? "bg-teal-100 text-teal-700 border-teal-300"
+                          : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={speciesSearchTerm}
+                  onChange={(e) => setSpeciesSearchTerm(e.target.value)}
+                  placeholder="Buscar alimento..."
+                  className="w-full px-3 py-2 rounded-lg border border-border/50 bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-teal-300"
+                />
+                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><Star size={10} className="text-emerald-600" /> Excelente</span>
+                  <span className="flex items-center gap-1"><ThumbsUp size={10} className="text-blue-600" /> Bom</span>
+                  <span className="flex items-center gap-1"><AlertTriangle size={10} className="text-amber-600" /> Pobre</span>
+                </div>
+                <div className="max-h-52 overflow-y-auto">
+                  {available.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic py-2">
+                      {speciesSearchTerm ? "Nenhum alimento encontrado." : "Todos já foram adicionados."}
+                    </p>
+                  ) : (
+                    <div className="flex gap-1.5 flex-wrap">
+                      {available.map(food => {
+                        const q = QUALITY_CONFIG[food.quality];
+                        const QIcon = q.icon;
+                        return (
+                          <button
+                            key={food.name}
+                            onClick={() => addSpeciesFood(sp.id, food.name, food.category, food.quality)}
+                            className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", q.bg, q.border, q.color)}
+                          >
+                            <QIcon size={10} />
+                            {food.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-                        {/* Total */}
-                        <td className="px-2 py-1.5 border-b border-border/30 text-center">
-                          <span className={cn(
-                            "text-[11px] font-bold",
-                            count > 0 ? cat.textColor : "text-muted-foreground/40"
-                          )}>
-                            {count}
-                          </span>
-                        </td>
+            {/* Table */}
+            <div className="p-4">
+              {spFoods.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Bird size={24} className="mx-auto mb-2 opacity-20" />
+                  <p className="text-xs">Clique em "Adicionar" para incluir alimentos para {sp.commonName}</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <table className="w-full border-collapse text-[10px] min-w-[700px]">
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 z-10 bg-card text-left px-2 py-2 border-b border-border/50 min-w-[160px]">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Alimento</span>
+                        </th>
+                        <th className="px-1 py-2 border-b border-border/50 text-center min-w-[20px]">
+                          <span className="text-[9px] font-bold text-muted-foreground">Q</span>
+                        </th>
+                        {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => (
+                          <th key={day} className={cn("px-0 py-2 border-b border-border/50 text-center min-w-[24px]", isToday(day) && "bg-primary/5")}>
+                            <span className={cn("text-[10px] font-semibold", isToday(day) ? "text-primary font-bold" : "text-muted-foreground/70")}>{day}</span>
+                          </th>
+                        ))}
+                        <th className="px-2 py-2 border-b border-border/50 text-center min-w-[30px]">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">Total</span>
+                        </th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {spFoods.map((food, foodIdx) => {
+                        const count = getSpeciesCheckedCount(sp.id, food.name);
+                        const q = QUALITY_CONFIG[food.quality];
+                        const QIcon = q.icon;
+                        return (
+                          <tr key={food.name} className={cn("group hover:bg-muted/20 transition-colors", foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5")}>
+                            <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
+                                <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
+                              </div>
+                            </td>
+                            <td className="px-0 py-1.5 border-b border-border/30 text-center" title={q.label}><QIcon size={11} className={cn("mx-auto", q.color)} /></td>
+                            {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
+                              const checked = isSpeciesChecked(sp.id, food.name, day);
+                              return (
+                                <td key={day} className={cn("px-0 py-1 border-b border-border/30 text-center", isToday(day) && "bg-primary/5")}>
+                                  <button
+                                    onClick={() => toggleSpeciesCheck(sp.id, food.name, day)}
+                                    className={cn("w-5 h-5 rounded border flex items-center justify-center mx-auto transition-all", checked ? "bg-teal-600 border-transparent text-white shadow-sm" : "border-border/40 bg-background hover:border-teal-300 hover:bg-teal-50")}
+                                  >
+                                    {checked && <Check size={10} strokeWidth={3} />}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                            <td className="px-2 py-1.5 border-b border-border/30 text-center">
+                              <span className={cn("text-[11px] font-bold", count > 0 ? "text-teal-700" : "text-muted-foreground/40")}>{count}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     );
   };
@@ -490,23 +728,17 @@ export default function FoodCalendarCard() {
               Calendário de Alimentos
             </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              3 tabelas separadas · Marque os dias em que cada alimento foi servido
+              Marque os dias em que cada alimento foi servido
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={prevMonth}
-              className="p-1.5 rounded-lg hover:bg-muted/50 transition-all"
-            >
+            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-muted/50 transition-all">
               <ChevronLeft size={16} className="text-muted-foreground" />
             </button>
             <h4 className="text-sm font-bold text-foreground min-w-[120px] text-center">
               {MONTHS[currentMonth]} {currentYear}
             </h4>
-            <button
-              onClick={nextMonth}
-              className="p-1.5 rounded-lg hover:bg-muted/50 transition-all"
-            >
+            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-muted/50 transition-all">
               <ChevronRight size={16} className="text-muted-foreground" />
             </button>
           </div>
@@ -514,20 +746,26 @@ export default function FoodCalendarCard() {
         {/* Legenda de qualidade */}
         <div className="flex items-center gap-5 mt-2 pt-2 border-t border-border/30">
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Qualidade:</span>
-          <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
-            <Star size={11} /> Excelente
-          </span>
-          <span className="flex items-center gap-1 text-[11px] text-blue-600 font-medium">
-            <ThumbsUp size={11} /> Bom
-          </span>
-          <span className="flex items-center gap-1 text-[11px] text-amber-600 font-medium">
-            <AlertTriangle size={11} /> Pobre
-          </span>
+          <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium"><Star size={11} /> Excelente</span>
+          <span className="flex items-center gap-1 text-[11px] text-blue-600 font-medium"><ThumbsUp size={11} /> Bom</span>
+          <span className="flex items-center gap-1 text-[11px] text-amber-600 font-medium"><AlertTriangle size={11} /> Pobre</span>
         </div>
       </div>
 
-      {/* 3 Tabelas separadas */}
+      {/* 3 Tabelas por categoria (expansíveis) */}
       {(Object.keys(FOOD_CATEGORIES) as CategoryKey[]).map(catKey => renderCategoryTable(catKey))}
+
+      {/* Separador */}
+      <div className="flex items-center gap-3 pt-4">
+        <div className="flex-1 h-px bg-border/50" />
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Bird size={13} /> Por Espécie
+        </span>
+        <div className="flex-1 h-px bg-border/50" />
+      </div>
+
+      {/* Cards por espécie */}
+      {ACTIVE_SPECIES.map(sp => renderSpeciesCard(sp))}
     </div>
   );
 }

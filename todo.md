@@ -240,3 +240,6 @@
 - [x] FoodCalendarCard PDF: corrigir símbolos de qualidade (desenhar formas em vez de Unicode)
 - [x] FoodCalendarCard PDF: mostrar nome completo do alimento sem truncar
 - [x] FoodCalendarCard PDF: mês e ano em grande destaque no lado direito do header
+- [x] FoodCalendarCard: tornar os 3 cards (Vegetais, Frutas, Sementes/Proteicos) expansíveis (colapsados por padrão)
+- [x] FoodCalendarCard: criar cards por espécie de ave com seletor unificado (incluindo ração) e tabela mensal
+- [x] FoodCalendarCard: cards de espécie com todas as categorias em um único seletor
