@@ -252,3 +252,7 @@
 - [x] FoodCalendarCard: alimentos adicionados diretamente no card de espécie são exclusivos (não aparecem em outros)
 - [x] FoodCalendarCard: marcações dos cards gerais herdadas com checkboxes preenchidos para todas as espécies
 - [x] FoodCalendarCard: corrigir herança — alimentos só vão para espécies quando tiverem pelo menos 1 checkbox marcado nos cards gerais (não basta estar na tabela)
+- [x] FoodCalendarCard espécie: adicionar botão de exportar PDF por espécie (herdados + exclusivos)
+- [x] FoodCalendarCard espécie: cores distintas nos mini cards (Ração, Vegetais, Frutas, Sementes)
+- [x] FoodCalendarCard espécie: ordem fixa — Ração primeiro, Vegetais, Frutas, Sementes
+- [x] FoodCalendarCard espécie: diferenciação visual entre alimentos herdados e exclusivos na tabela

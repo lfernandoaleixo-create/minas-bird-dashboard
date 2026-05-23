@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { vegetais, frutas, proteicos, racoes, lifePeriods } from "@/data/petbird";
 import { species } from "@/data/feeding";
-import { exportFoodCalendarCategoryPdf } from "@/lib/foodCalendarPdf";
+import { exportFoodCalendarCategoryPdf, exportFoodCalendarSpeciesPdf } from "@/lib/foodCalendarPdf";
 
 // Vegetais a excluir (marcados com ⚠️ na aba original)
 const VEGETAIS_EXCLUIDOS = ["Alface Romana, Folha, Crua \u26a0\ufe0f", "Alface Lisa, Folha, Crua \u26a0\ufe0f", "Espinafre Comum, Folha, Crua \u26a0\ufe0f"];
@@ -111,7 +111,7 @@ const FOOD_CATEGORIES: Record<string, CategoryConfig> = {
   },
 };
 
-// Categoria unificada para cards de espécie (inclui ração)
+// Categoria unificada para cards de espécie (inclui ração) — ordem fixa: ração, vegetais, frutas, sementes
 const ALL_FOOD_ITEMS_UNIFIED: { name: string; quality: "excelente" | "bom" | "pobre"; category: string }[] = [
   ...racoes
     .filter(f => f.name !== "Ração Mediana")
@@ -307,13 +307,24 @@ export default function FoodCalendarCard() {
   };
 
   // Get all foods for a species: inherited (from general, only if checked at least once) + exclusive (species-only)
+  // Sorted by category order: racao > vegetais > frutas > proteicos, then inherited before exclusive
+  const CATEGORY_ORDER: Record<string, number> = { racao: 0, vegetais: 1, frutas: 2, proteicos: 3 };
   const getSpeciesAllFoods = (speciesId: string): (FoodEntry & { inherited: boolean })[] => {
     // Only inherit foods that have at least 1 day checked in the general cards
     const inherited = foods
       .filter(f => Object.keys(checks).some(k => k.startsWith(`${monthKey}|${f.name}|`)))
       .map(f => ({ ...f, inherited: true }));
     const exclusive = (speciesFoods[speciesId] || []).map(f => ({ ...f, inherited: false }));
-    return [...inherited, ...exclusive];
+    const all = [...inherited, ...exclusive];
+    // Sort: by category order, then inherited first within same category
+    all.sort((a, b) => {
+      const catA = CATEGORY_ORDER[a.category] ?? 99;
+      const catB = CATEGORY_ORDER[b.category] ?? 99;
+      if (catA !== catB) return catA - catB;
+      if (a.inherited !== b.inherited) return a.inherited ? -1 : 1;
+      return 0;
+    });
+    return all;
   };
 
   const getSpeciesCheckedCount = (speciesId: string, foodName: string) => {
@@ -594,10 +605,10 @@ export default function FoodCalendarCard() {
     const selectedPhase = speciesPhase[sp.id] || LIFE_PHASES[0].id;
 
     const SPECIES_CATEGORIES = [
-      { key: "racao", label: "Ração", icon: Wheat, color: "bg-orange-600", colorLight: "bg-orange-50", borderColor: "border-orange-200", textColor: "text-orange-700" },
-      { key: "vegetais", label: "Vegetais", icon: Leaf, color: "bg-emerald-600", colorLight: "bg-emerald-50", borderColor: "border-emerald-200", textColor: "text-emerald-700" },
-      { key: "frutas", label: "Frutas", icon: Apple, color: "bg-rose-600", colorLight: "bg-rose-50", borderColor: "border-rose-200", textColor: "text-rose-700" },
-      { key: "proteicos", label: "Sementes", icon: Wheat, color: "bg-amber-700", colorLight: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
+      { key: "racao", label: "Ração", icon: Wheat, color: "bg-amber-700", colorLight: "bg-amber-50", borderColor: "border-amber-300", textColor: "text-amber-800" },
+      { key: "vegetais", label: "Vegetais", icon: Leaf, color: "bg-emerald-600", colorLight: "bg-emerald-50", borderColor: "border-emerald-300", textColor: "text-emerald-700" },
+      { key: "frutas", label: "Frutas", icon: Apple, color: "bg-red-600", colorLight: "bg-red-50", borderColor: "border-red-300", textColor: "text-red-700" },
+      { key: "proteicos", label: "Sementes", icon: Wheat, color: "bg-purple-600", colorLight: "bg-purple-50", borderColor: "border-purple-300", textColor: "text-purple-700" },
     ];
 
     const toggleSpeciesCat = (catKey: string) => {
@@ -681,11 +692,13 @@ export default function FoodCalendarCard() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold border transition-all",
                         isOpen
-                          ? `${cat.colorLight} ${cat.textColor} ${cat.borderColor} shadow-sm`
-                          : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
+                          ? `${cat.colorLight} ${cat.textColor} ${cat.borderColor} shadow-sm ring-1 ring-offset-1`
+                          : `${cat.colorLight} ${cat.borderColor} ${cat.textColor} hover:shadow-sm`
                       )}
                     >
-                      <CatIcon size={12} />
+                      <div className={cn("w-4 h-4 rounded flex items-center justify-center", cat.color)}>
+                        <CatIcon size={10} className="text-white" />
+                      </div>
                       {cat.label}
                     </button>
                   );
@@ -730,8 +743,23 @@ export default function FoodCalendarCard() {
               )}
             </div>
 
-            {/* Table */}
+            {/* PDF button + Table */}
             <div className="p-4">
+              {allFoods.length > 0 && (
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-teal-400 border border-teal-500" /> Herdado (geral)</span>
+                    <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-violet-500 border border-violet-600" /> Exclusivo</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); exportFoodCalendarSpeciesPdf(allFoods, checks, speciesChecks[sp.id] || {}, currentYear, currentMonth, sp.commonName, sp.id); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-teal-600 text-white hover:opacity-90 shadow-sm transition-all"
+                  >
+                    <FileDown size={12} />
+                    PDF
+                  </button>
+                </div>
+              )}
               {allFoods.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <Bird size={24} className="mx-auto mb-2 opacity-20" />
@@ -767,10 +795,12 @@ export default function FoodCalendarCard() {
                           <tr key={food.name} className={cn("group hover:bg-muted/20 transition-colors", foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5")}>
                             <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
                               <div className="flex items-center gap-1.5">
-                                {food.inherited && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0" title="Herdado dos cards gerais" />
+                                {food.inherited ? (
+                                  <span className="w-2 h-2 rounded-full bg-teal-400 border border-teal-500 flex-shrink-0" title="Herdado dos cards gerais" />
+                                ) : (
+                                  <span className="w-2 h-2 rounded-sm bg-violet-500 border border-violet-600 flex-shrink-0" title="Exclusivo desta espécie" />
                                 )}
-                                <span className={cn("text-[11px] font-semibold truncate max-w-[120px]", food.inherited ? "text-foreground/60" : "text-foreground/80")} title={food.name}>{food.name}</span>
+                                <span className={cn("text-[11px] font-semibold truncate max-w-[120px]", food.inherited ? "text-foreground/60 italic" : "text-foreground/80 font-bold")} title={food.name}>{food.name}</span>
                                 {!food.inherited && (
                                   <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
                                 )}

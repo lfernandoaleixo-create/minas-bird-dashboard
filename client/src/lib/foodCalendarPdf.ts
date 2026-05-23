@@ -358,6 +358,242 @@ export async function exportFoodCalendarCategoryPdf(
 }
 
 /**
+ * Exporta PDF de uma espécie específica
+ * Inclui alimentos herdados (dos cards gerais) + exclusivos (da espécie)
+ * Com diferenciação visual entre herdados e exclusivos
+ */
+export async function exportFoodCalendarSpeciesPdf(
+  allFoods: { name: string; category: string; quality: string; inherited: boolean }[],
+  generalChecks: Record<string, boolean>,
+  speciesChecks: Record<string, boolean>,
+  year: number,
+  month: number, // 0-indexed
+  speciesName: string,
+  speciesId: string,
+) {
+  if (allFoods.length === 0) return;
+
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const logoBase64 = await loadLogo();
+
+  // Landscape A4
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = PDF_MARGIN.landscape;
+
+  // Custom header with species name + month/year
+  const barH = PDF_HEADER_H;
+  doc.setFillColor(...BRAND.headerBg);
+  doc.rect(0, 0, pageW, barH, "F");
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+  }
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.headerText);
+  doc.text(`Controle Diario — ${speciesName}`, 19, barH * 0.45);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.medium);
+  doc.text("Criatorio Minas Bird · Calendario por Especie", 19, barH * 0.78);
+  // Month/year on the right
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.dark);
+  doc.text(MONTHS[month].toUpperCase(), pageW - 10, barH * 0.45, { align: "right" });
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.medium);
+  doc.text(String(year), pageW - 10, barH * 0.78, { align: "right" });
+  doc.setFillColor(...BRAND.headerAccent);
+  doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
+
+  const startY = barH + PDF_ACCENT_H + 3;
+
+  // Table dimensions
+  const tableStartY = startY + 1;
+  const footerReserve = 12;
+  const legendReserve = 12;
+  const availableH = pageH - tableStartY - footerReserve - legendReserve;
+  const availableW = pageW - margin * 2;
+
+  const nameColW = 56;
+  const qualityColW = 6;
+  const typeColW = 6; // inherited/exclusive indicator
+  const totalColW = 10;
+  const dayColW = (availableW - nameColW - qualityColW - typeColW - totalColW) / totalDays;
+  const rowH = Math.min(availableH / (allFoods.length + 1), 7);
+
+  const tableX = margin;
+  let y = tableStartY;
+
+  // Draw header row
+  doc.setFillColor(...BRAND.headerBg);
+  doc.rect(tableX, y, availableW, rowH, "F");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.dark);
+  doc.text("ALIMENTO", tableX + 2, y + rowH * 0.65);
+  doc.setFontSize(6);
+  doc.text("T", tableX + nameColW + typeColW / 2, y + rowH * 0.65, { align: "center" });
+  doc.text("Q", tableX + nameColW + typeColW + qualityColW / 2, y + rowH * 0.65, { align: "center" });
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.muted);
+  for (let d = 1; d <= totalDays; d++) {
+    const dx = tableX + nameColW + typeColW + qualityColW + (d - 1) * dayColW;
+    doc.text(String(d), dx + dayColW / 2, y + rowH * 0.65, { align: "center" });
+  }
+  doc.text("TOTAL", tableX + nameColW + typeColW + qualityColW + totalDays * dayColW + totalColW / 2, y + rowH * 0.65, { align: "center" });
+  y += rowH;
+  doc.setDrawColor(...BRAND.gridLine);
+  doc.setLineWidth(0.2);
+  doc.line(tableX, y, tableX + availableW, y);
+
+  // Food rows
+  allFoods.forEach((food, idx) => {
+    const isEven = idx % 2 === 0;
+    if (isEven) {
+      doc.setFillColor(250, 250, 250);
+      doc.rect(tableX, y, availableW, rowH, "F");
+    }
+
+    // Food name
+    doc.setFontSize(6);
+    doc.setFont("helvetica", food.inherited ? "italic" : "bold");
+    doc.setTextColor(...BRAND.text);
+    const maxNameW = nameColW - 4;
+    let fontSize = 6;
+    let textW = doc.getTextWidth(food.name);
+    if (textW > maxNameW) { fontSize = 5.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(food.name); }
+    if (textW > maxNameW) { fontSize = 5; doc.setFontSize(fontSize); }
+    doc.text(food.name, tableX + 2, y + rowH * 0.65, { maxWidth: maxNameW });
+
+    // Type indicator (inherited = circle teal, exclusive = square violet)
+    const typeCx = tableX + nameColW + typeColW / 2;
+    const typeCy = y + rowH / 2;
+    if (food.inherited) {
+      doc.setFillColor(45, 212, 191); // teal-400
+      doc.circle(typeCx, typeCy, 1.2, "F");
+    } else {
+      doc.setFillColor(139, 92, 246); // violet-500
+      doc.rect(typeCx - 1.2, typeCy - 1.2, 2.4, 2.4, "F");
+    }
+
+    // Quality indicator
+    const indicatorR = 1.3;
+    drawQualityIndicator(doc, food.quality, tableX + nameColW + typeColW + qualityColW / 2, y + rowH / 2, indicatorR);
+
+    // Check marks for each day
+    let totalChecked = 0;
+    const catColor = CATEGORY_COLORS[food.category] || [100, 100, 100];
+    for (let d = 1; d <= totalDays; d++) {
+      const key = `${monthKey}|${food.name}|${d}`;
+      // For inherited foods, check generalChecks; for exclusive, check speciesChecks
+      const checked = food.inherited ? !!generalChecks[key] : !!speciesChecks[key];
+      if (checked) {
+        totalChecked++;
+        const cx = tableX + nameColW + typeColW + qualityColW + (d - 1) * dayColW + dayColW / 2;
+        const cy = y + rowH / 2;
+        doc.setFillColor(...catColor);
+        doc.roundedRect(cx - 2, cy - 2, 4, 4, 0.5, 0.5, "F");
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.5);
+        doc.line(cx - 1, cy, cx - 0.2, cy + 1);
+        doc.line(cx - 0.2, cy + 1, cx + 1.2, cy - 1);
+        doc.setDrawColor(...BRAND.gridLine);
+        doc.setLineWidth(0.2);
+      } else {
+        const cx = tableX + nameColW + typeColW + qualityColW + (d - 1) * dayColW + dayColW / 2;
+        const cy = y + rowH / 2;
+        doc.setDrawColor(200, 200, 200);
+        doc.roundedRect(cx - 2, cy - 2, 4, 4, 0.5, 0.5, "S");
+        doc.setDrawColor(...BRAND.gridLine);
+      }
+    }
+
+    // Total count
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...(totalChecked > 0 ? catColor : [180, 180, 180] as [number, number, number]));
+    doc.text(
+      String(totalChecked),
+      tableX + nameColW + typeColW + qualityColW + totalDays * dayColW + totalColW / 2,
+      y + rowH * 0.65,
+      { align: "center" }
+    );
+
+    // Row border
+    doc.setDrawColor(...BRAND.gridLine);
+    doc.line(tableX, y + rowH, tableX + availableW, y + rowH);
+    y += rowH;
+  });
+
+  // Vertical lines
+  doc.setDrawColor(...BRAND.gridLine);
+  doc.setLineWidth(0.15);
+  doc.line(tableX + nameColW, tableStartY, tableX + nameColW, y);
+  doc.line(tableX + nameColW + typeColW, tableStartY, tableX + nameColW + typeColW, y);
+  doc.line(tableX + nameColW + typeColW + qualityColW, tableStartY, tableX + nameColW + typeColW + qualityColW, y);
+  doc.line(tableX + nameColW + typeColW + qualityColW + totalDays * dayColW, tableStartY, tableX + nameColW + typeColW + qualityColW + totalDays * dayColW, y);
+
+  // Legend at bottom
+  const legendY = y + 5;
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.dark);
+  doc.text("Legenda:", tableX, legendY);
+
+  let lx = tableX + 18;
+
+  // Inherited indicator
+  doc.setFillColor(45, 212, 191);
+  doc.circle(lx, legendY - 0.5, 1.3, "F");
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.muted);
+  doc.text("Herdado (geral)", lx + 3, legendY);
+  lx += 28;
+
+  // Exclusive indicator
+  doc.setFillColor(139, 92, 246);
+  doc.rect(lx - 1.2, legendY - 1.7, 2.4, 2.4, "F");
+  doc.setTextColor(...BRAND.muted);
+  doc.text("Exclusivo", lx + 3, legendY);
+  lx += 22;
+
+  // Quality indicators
+  drawStar(doc, lx, legendY - 0.5, 1.5, QUALITY_CONFIG.excelente.color);
+  doc.setTextColor(...QUALITY_CONFIG.excelente.color);
+  doc.text("Excelente", lx + 3, legendY);
+  lx += 25;
+  drawCircle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.bom.color);
+  doc.setTextColor(...QUALITY_CONFIG.bom.color);
+  doc.text("Bom", lx + 3, legendY);
+  lx += 15;
+  drawTriangle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.pobre.color);
+  doc.setTextColor(...QUALITY_CONFIG.pobre.color);
+  doc.text("Pobre", lx + 3, legendY);
+
+  // Species info (right side)
+  doc.setTextColor(...BRAND.muted);
+  doc.setFontSize(7);
+  doc.text(
+    `${allFoods.length} alimento${allFoods.length !== 1 ? "s" : ""} · ${speciesName}`,
+    pageW - margin, legendY, { align: "right" }
+  );
+
+  // Footer
+  drawBrandFooter(doc, pageW, pageH, 1, 1);
+
+  // Save
+  const slug = speciesName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  doc.save(`calendario-${slug}-${MONTHS[month].toLowerCase()}-${year}.pdf`);
+}
+
+/**
  * Legacy: exporta todos os alimentos em um único PDF (mantido para compatibilidade)
  */
 export async function exportFoodCalendarPdf(
