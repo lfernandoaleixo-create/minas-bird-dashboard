@@ -247,3 +247,7 @@
 - [x] FoodCalendarCard espécie: remover filtro "Todos" — só Ração, Vegetais, Frutas, Sementes
 - [x] FoodCalendarCard espécie: alimentos aparecem ao clicar no mini card da categoria (toggle — clicar de novo esconde)
 - [x] FoodCalendarCard espécie: só o que for selecionado fica na tabela mensal (mesma dinâmica de cima)
+- [x] FoodCalendarCard espécie: adicionar seletor de 4 fases (Manutenção, Pré-Reprodução, Filhotes, Muda)
+- [x] FoodCalendarCard: herança automática — alimentos marcados nos 3 cards gerais aparecem em TODAS as espécies
+- [x] FoodCalendarCard: alimentos adicionados diretamente no card de espécie são exclusivos (não aparecem em outros)
+- [x] FoodCalendarCard: marcações dos cards gerais herdadas com checkboxes preenchidos para todas as espécies

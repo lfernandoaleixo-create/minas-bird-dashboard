@@ -1,9 +1,10 @@
 /**
  * FoodCalendarCard — 3 Tabelas mensais separadas por categoria (expansíveis)
  * + Cards por espécie de ave com seletor unificado (incluindo ração)
+ * + Seletor de 4 fases da vida da ave
+ * + Herança: alimentos dos 3 cards gerais aparecem automaticamente em TODAS as espécies
+ * + Exclusividade: alimentos adicionados no card da espécie são exclusivos daquela ave
  * Indicador de qualidade (Excelente/Bom/Pobre) ao lado de cada alimento
- * Linhas = alimentos adicionados pelo usuário
- * Colunas = dias do mês
  * Persistência em localStorage
  */
 import { useState, useMemo, useCallback } from "react";
@@ -12,7 +13,7 @@ import {
   Check, FileDown, Star, ThumbsUp, AlertTriangle, Bird
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { vegetais, frutas, proteicos, racoes } from "@/data/petbird";
+import { vegetais, frutas, proteicos, racoes, lifePeriods } from "@/data/petbird";
 import { species } from "@/data/feeding";
 import { exportFoodCalendarCategoryPdf } from "@/lib/foodCalendarPdf";
 
@@ -123,6 +124,9 @@ const ALL_FOOD_ITEMS_UNIFIED: { name: string; quality: "excelente" | "bom" | "po
 // Espécies do plantel (com aves)
 const ACTIVE_SPECIES = species.filter(s => s.currentCount > 0);
 
+// Fases da vida da ave
+const LIFE_PHASES = lifePeriods.map(p => ({ id: p.id, label: p.label }));
+
 type CategoryKey = keyof typeof FOOD_CATEGORIES;
 
 interface FoodEntry {
@@ -140,6 +144,7 @@ const STORAGE_KEY_FOODS = "foodCalendarFoods_v3";
 const STORAGE_KEY_CHECKS = "foodCalendarChecks_v2";
 const STORAGE_KEY_SPECIES_FOODS = "foodCalendarSpeciesFoods_v1";
 const STORAGE_KEY_SPECIES_CHECKS = "foodCalendarSpeciesChecks_v1";
+const STORAGE_KEY_SPECIES_PHASE = "foodCalendarSpeciesPhase_v1";
 
 function getMonthKey(year: number, month: number) {
   return `${year}-${String(month + 1).padStart(2, "0")}`;
@@ -168,7 +173,7 @@ export default function FoodCalendarCard() {
   });
 
   // === SPECIES TABLES STATE ===
-  // speciesFoods: { [speciesId]: FoodEntry[] }
+  // speciesFoods: { [speciesId]: FoodEntry[] } — EXCLUSIVE to that species
   const [speciesFoods, setSpeciesFoods] = useState<Record<string, FoodEntry[]>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SPECIES_FOODS);
@@ -180,6 +185,14 @@ export default function FoodCalendarCard() {
   const [speciesChecks, setSpeciesChecks] = useState<Record<string, Record<string, boolean>>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SPECIES_CHECKS);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  // Per-species selected phase
+  const [speciesPhase, setSpeciesPhase] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SPECIES_PHASE);
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
@@ -212,6 +225,11 @@ export default function FoodCalendarCard() {
   const saveSpeciesChecks = useCallback((newData: Record<string, Record<string, boolean>>) => {
     setSpeciesChecks(newData);
     localStorage.setItem(STORAGE_KEY_SPECIES_CHECKS, JSON.stringify(newData));
+  }, []);
+
+  const saveSpeciesPhase = useCallback((newData: Record<string, string>) => {
+    setSpeciesPhase(newData);
+    localStorage.setItem(STORAGE_KEY_SPECIES_PHASE, JSON.stringify(newData));
   }, []);
 
   // Dias do mês
@@ -267,6 +285,8 @@ export default function FoodCalendarCard() {
     const current = { ...speciesFoods };
     if (!current[speciesId]) current[speciesId] = [];
     if (current[speciesId].some(f => f.name === name)) return;
+    // Don't add if already in general foods (it's inherited)
+    if (foods.some(f => f.name === name)) return;
     current[speciesId] = [...current[speciesId], { name, category, quality }];
     saveSpeciesFoods(current);
   };
@@ -286,7 +306,45 @@ export default function FoodCalendarCard() {
     }
   };
 
+  // Get all foods for a species: inherited (from general) + exclusive (species-only)
+  const getSpeciesAllFoods = (speciesId: string): (FoodEntry & { inherited: boolean })[] => {
+    const inherited = foods.map(f => ({ ...f, inherited: true }));
+    const exclusive = (speciesFoods[speciesId] || []).map(f => ({ ...f, inherited: false }));
+    return [...inherited, ...exclusive];
+  };
+
   const getSpeciesCheckedCount = (speciesId: string, foodName: string) => {
+    // Check in species checks first
+    const specCount = speciesChecks[speciesId]
+      ? Object.keys(speciesChecks[speciesId]).filter(k => k.startsWith(`${monthKey}|${foodName}|`)).length
+      : 0;
+    // For inherited foods, also check the general checks
+    if (foods.some(f => f.name === foodName)) {
+      return Object.keys(checks).filter(k => k.startsWith(`${monthKey}|${foodName}|`)).length;
+    }
+    return specCount;
+  };
+
+  // For inherited foods, use general checks; for exclusive, use species checks
+  const isSpeciesFoodChecked = (speciesId: string, foodName: string, day: number, inherited: boolean) => {
+    if (inherited) {
+      return isChecked(foodName, day);
+    }
+    return isSpeciesChecked(speciesId, foodName, day);
+  };
+
+  const toggleSpeciesFoodCheck = (speciesId: string, foodName: string, day: number, inherited: boolean) => {
+    if (inherited) {
+      toggleCheck(foodName, day);
+    } else {
+      toggleSpeciesCheck(speciesId, foodName, day);
+    }
+  };
+
+  const getSpeciesFoodCheckedCount = (speciesId: string, foodName: string, inherited: boolean) => {
+    if (inherited) {
+      return Object.keys(checks).filter(k => k.startsWith(`${monthKey}|${foodName}|`)).length;
+    }
     if (!speciesChecks[speciesId]) return 0;
     return Object.keys(speciesChecks[speciesId]).filter(k => k.startsWith(`${monthKey}|${foodName}|`)).length;
   };
@@ -318,7 +376,9 @@ export default function FoodCalendarCard() {
 
   const getAvailableSpeciesFoods = (speciesId: string, catFilter: string) => {
     const addedNames = new Set((speciesFoods[speciesId] || []).map(f => f.name));
-    let items = ALL_FOOD_ITEMS_UNIFIED.filter(item => !addedNames.has(item.name));
+    // Also exclude foods already in general cards (they're inherited)
+    const generalNames = new Set(foods.map(f => f.name));
+    let items = ALL_FOOD_ITEMS_UNIFIED.filter(item => !addedNames.has(item.name) && !generalNames.has(item.name));
     items = items.filter(item => item.category === catFilter);
     if (speciesSearchTerm.trim()) {
       const term = speciesSearchTerm.toLowerCase().trim();
@@ -399,33 +459,28 @@ export default function FoodCalendarCard() {
               <button
                 onClick={(e) => { e.stopPropagation(); setAddingCategory(isAdding ? null : catKey); setSearchTerm(""); }}
                 className={cn(
-                  "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
                   isAdding
-                    ? `${cat.colorLight} ${cat.textColor} ${cat.borderColor}`
-                    : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
+                    ? "bg-red-100 text-red-700 hover:bg-red-200"
+                    : `${cat.color} text-white hover:opacity-90 shadow-sm`
                 )}
               >
-                <Plus size={11} />
-                Adicionar
+                {isAdding ? <X size={12} /> : <Plus size={12} />}
+                {isAdding ? "Fechar" : "Adicionar"}
               </button>
             </div>
 
-            {/* Add Panel */}
+            {/* Add panel */}
             {isAdding && (
-              <div className="border-b border-border/50 bg-muted/10 p-4 space-y-3">
+              <div className="px-5 py-3 border-b border-border/30 bg-muted/5">
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={`Buscar em ${cat.label}...`}
-                  className="w-full px-3 py-2 rounded-lg border border-border/50 bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  placeholder="Buscar alimento..."
+                  className="w-full px-3 py-1.5 rounded-lg border border-border/50 bg-background text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
                 />
-                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><Star size={10} className="text-emerald-600" /> Excelente</span>
-                  <span className="flex items-center gap-1"><ThumbsUp size={10} className="text-blue-600" /> Bom</span>
-                  <span className="flex items-center gap-1"><AlertTriangle size={10} className="text-amber-600" /> Pobre</span>
-                </div>
-                <div className="max-h-52 overflow-y-auto">
+                <div className="mt-2 max-h-48 overflow-y-auto">
                   {available.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic py-2">
                       {searchTerm ? "Nenhum alimento encontrado." : "Todos já foram adicionados."}
@@ -455,10 +510,9 @@ export default function FoodCalendarCard() {
             {/* Table */}
             <div className="p-4">
               {catFoods.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  <Icon size={24} className="mx-auto mb-2 opacity-20" />
-                  <p className="text-xs">Clique em "Adicionar" para incluir alimentos</p>
-                </div>
+                <p className="text-xs text-muted-foreground text-center py-4 italic">
+                  Nenhum alimento adicionado. Clique em "Adicionar" para começar.
+                </p>
               ) : (
                 <div className="overflow-x-auto -mx-4 px-4">
                   <table className="w-full border-collapse text-[10px] min-w-[700px]">
@@ -500,7 +554,7 @@ export default function FoodCalendarCard() {
                                 <td key={day} className={cn("px-0 py-1 border-b border-border/30 text-center", isToday(day) && "bg-primary/5")}>
                                   <button
                                     onClick={() => toggleCheck(food.name, day)}
-                                    className={cn("w-5 h-5 rounded border flex items-center justify-center mx-auto transition-all", checked ? `${cat.checkColor} border-transparent text-white shadow-sm` : "border-border/40 bg-background hover:border-emerald-300 hover:bg-emerald-50")}
+                                    className={cn("w-5 h-5 rounded border flex items-center justify-center mx-auto transition-all", checked ? `${cat.checkColor} border-transparent text-white shadow-sm` : "border-border/40 bg-background hover:border-primary/30 hover:bg-primary/5")}
                                   >
                                     {checked && <Check size={10} strokeWidth={3} />}
                                   </button>
@@ -527,8 +581,10 @@ export default function FoodCalendarCard() {
   // === RENDER SPECIES CARD (EXPANDABLE) ===
   const renderSpeciesCard = (sp: typeof ACTIVE_SPECIES[0]) => {
     const isExpanded = !!expandedSpecies[sp.id];
-    const spFoods = speciesFoods[sp.id] || [];
+    const exclusiveFoods = speciesFoods[sp.id] || [];
+    const allFoods = getSpeciesAllFoods(sp.id);
     const openCat = speciesOpenCat[sp.id] || null;
+    const selectedPhase = speciesPhase[sp.id] || LIFE_PHASES[0].id;
 
     const SPECIES_CATEGORIES = [
       { key: "racao", label: "Ração", icon: Wheat, color: "bg-orange-600", colorLight: "bg-orange-50", borderColor: "border-orange-200", textColor: "text-orange-700" },
@@ -547,6 +603,10 @@ export default function FoodCalendarCard() {
 
     const available = openCat ? getAvailableSpeciesFoods(sp.id, openCat) : [];
 
+    const handlePhaseChange = (phaseId: string) => {
+      saveSpeciesPhase({ ...speciesPhase, [sp.id]: phaseId });
+    };
+
     return (
       <div key={sp.id} className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
         {/* Species Header — clickable */}
@@ -561,14 +621,15 @@ export default function FoodCalendarCard() {
             <div className="text-left">
               <h4 className="text-sm font-bold text-foreground">{sp.commonName}</h4>
               <p className="text-[10px] text-muted-foreground">
-                {sp.currentCount} ave{sp.currentCount !== 1 ? "s" : ""} · {spFoods.length} alimento{spFoods.length !== 1 ? "s" : ""} na tabela
+                {sp.currentCount} ave{sp.currentCount !== 1 ? "s" : ""} · {allFoods.length} alimento{allFoods.length !== 1 ? "s" : ""} na tabela
+                {foods.length > 0 && <span className="text-teal-600 ml-1">({foods.length} herdados)</span>}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {spFoods.length > 0 && !isExpanded && (
+            {allFoods.length > 0 && !isExpanded && (
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
-                {spFoods.length} itens
+                {allFoods.length} itens
               </span>
             )}
             <ChevronDown size={18} className={cn("text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
@@ -578,8 +639,30 @@ export default function FoodCalendarCard() {
         {/* Expanded content */}
         {isExpanded && (
           <>
-            {/* Mini category cards (toggle) */}
+            {/* Phase selector */}
+            <div className="px-5 py-2.5 border-b border-border/30 bg-gradient-to-r from-teal-50/50 to-transparent">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">Fase:</span>
+                {LIFE_PHASES.map(phase => (
+                  <button
+                    key={phase.id}
+                    onClick={(e) => { e.stopPropagation(); handlePhaseChange(phase.id); }}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all",
+                      selectedPhase === phase.id
+                        ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                        : "bg-background border-border/50 text-muted-foreground hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700"
+                    )}
+                  >
+                    {phase.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mini category cards (toggle) — for adding EXCLUSIVE foods */}
             <div className="px-5 py-3 border-b border-border/30 bg-muted/5">
+              <p className="text-[10px] text-muted-foreground mb-2 font-medium">Adicionar alimento exclusivo para {sp.commonName}:</p>
               <div className="flex items-center gap-2 flex-wrap">
                 {SPECIES_CATEGORIES.map(cat => {
                   const CatIcon = cat.icon;
@@ -642,10 +725,10 @@ export default function FoodCalendarCard() {
 
             {/* Table */}
             <div className="p-4">
-              {spFoods.length === 0 ? (
+              {allFoods.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <Bird size={24} className="mx-auto mb-2 opacity-20" />
-                  <p className="text-xs">Clique em uma categoria acima para adicionar alimentos</p>
+                  <p className="text-xs">Adicione alimentos nos cards gerais acima (herdam para todas as espécies) ou adicione exclusivos aqui</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto -mx-4 px-4">
@@ -669,25 +752,30 @@ export default function FoodCalendarCard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {spFoods.map((food, foodIdx) => {
-                        const count = getSpeciesCheckedCount(sp.id, food.name);
+                      {allFoods.map((food, foodIdx) => {
+                        const count = getSpeciesFoodCheckedCount(sp.id, food.name, food.inherited);
                         const q = QUALITY_CONFIG[food.quality];
                         const QIcon = q.icon;
                         return (
                           <tr key={food.name} className={cn("group hover:bg-muted/20 transition-colors", foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5")}>
                             <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
-                                <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
+                                {food.inherited && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0" title="Herdado dos cards gerais" />
+                                )}
+                                <span className={cn("text-[11px] font-semibold truncate max-w-[120px]", food.inherited ? "text-foreground/60" : "text-foreground/80")} title={food.name}>{food.name}</span>
+                                {!food.inherited && (
+                                  <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
+                                )}
                               </div>
                             </td>
                             <td className="px-0 py-1.5 border-b border-border/30 text-center" title={q.label}><QIcon size={11} className={cn("mx-auto", q.color)} /></td>
                             {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
-                              const checked = isSpeciesChecked(sp.id, food.name, day);
+                              const checked = isSpeciesFoodChecked(sp.id, food.name, day, food.inherited);
                               return (
                                 <td key={day} className={cn("px-0 py-1 border-b border-border/30 text-center", isToday(day) && "bg-primary/5")}>
                                   <button
-                                    onClick={() => toggleSpeciesCheck(sp.id, food.name, day)}
+                                    onClick={() => toggleSpeciesFoodCheck(sp.id, food.name, day, food.inherited)}
                                     className={cn("w-5 h-5 rounded border flex items-center justify-center mx-auto transition-all", checked ? "bg-teal-600 border-transparent text-white shadow-sm" : "border-border/40 bg-background hover:border-teal-300 hover:bg-teal-50")}
                                   >
                                     {checked && <Check size={10} strokeWidth={3} />}
