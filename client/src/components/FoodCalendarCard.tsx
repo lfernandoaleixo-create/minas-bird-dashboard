@@ -10,7 +10,7 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, X, Leaf, Apple, Wheat,
-  Check, FileDown, Star, ThumbsUp, AlertTriangle, Bird
+  Check, FileDown, Bird
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { vegetais, frutas, proteicos, racoes, lifePeriods } from "@/data/petbird";
@@ -32,26 +32,23 @@ function getQuality(classification: string): "excelente" | "bom" | "pobre" {
 const QUALITY_CONFIG = {
   excelente: {
     label: "Excelente",
-    icon: Star,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
+    color: "text-emerald-700",
+    bg: "bg-emerald-100",
+    border: "border-emerald-300",
     dotColor: "bg-emerald-500",
   },
   bom: {
     label: "Bom",
-    icon: ThumbsUp,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
+    color: "text-blue-700",
+    bg: "bg-blue-100",
+    border: "border-blue-300",
     dotColor: "bg-blue-500",
   },
   pobre: {
     label: "Pobre",
-    icon: AlertTriangle,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
+    color: "text-amber-700",
+    bg: "bg-amber-100",
+    border: "border-amber-300",
     dotColor: "bg-amber-500",
   },
 };
@@ -507,14 +504,13 @@ export default function FoodCalendarCard() {
                     <div className="flex gap-1.5 flex-wrap">
                       {available.map(food => {
                         const q = QUALITY_CONFIG[food.quality];
-                        const QIcon = q.icon;
                         return (
                           <button
                             key={food.name}
                             onClick={() => addFood(food.name, catKey, food.quality)}
                             className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", q.bg, q.border, q.color)}
                           >
-                            <QIcon size={10} />
+                            <span className={cn("w-2 h-2 rounded-full flex-shrink-0", q.dotColor)} />
                             {food.name}
                           </button>
                         );
@@ -539,9 +535,6 @@ export default function FoodCalendarCard() {
                         <th className="sticky left-0 z-10 bg-card text-left px-2 py-2 border-b border-border/50 min-w-[160px]">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Alimento</span>
                         </th>
-                        <th className="px-1 py-2 border-b border-border/50 text-center min-w-[20px]">
-                          <span className="text-[9px] font-bold text-muted-foreground">Q</span>
-                        </th>
                         {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => (
                           <th key={day} className={cn("px-0 py-2 border-b border-border/50 text-center min-w-[24px]", isToday(day) && "bg-primary/5")}>
                             <span className={cn("text-[10px] font-semibold", isToday(day) ? "text-primary font-bold" : "text-muted-foreground/70")}>{day}</span>
@@ -556,16 +549,15 @@ export default function FoodCalendarCard() {
                       {catFoods.map((food, foodIdx) => {
                         const count = getCheckedCount(food.name);
                         const q = QUALITY_CONFIG[food.quality];
-                        const QIcon = q.icon;
                         return (
                           <tr key={food.name} className={cn("group hover:bg-muted/20 transition-colors", foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5")}>
                             <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
+                                <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", q.dotColor)} title={q.label} />
+                                <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[140px]" title={food.name}>{food.name}</span>
                                 <button onClick={() => removeFood(food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
                               </div>
                             </td>
-                            <td className="px-0 py-1.5 border-b border-border/30 text-center" title={q.label}><QIcon size={11} className={cn("mx-auto", q.color)} /></td>
                             {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
                               const checked = isChecked(food.name, day);
                               return (
@@ -724,14 +716,13 @@ export default function FoodCalendarCard() {
                       <div className="flex gap-1.5 flex-wrap">
                         {available.map(food => {
                           const q = QUALITY_CONFIG[food.quality];
-                          const QIcon = q.icon;
                           return (
                             <button
                               key={food.name}
                               onClick={() => addSpeciesFood(sp.id, food.name, food.category, food.quality)}
                               className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", q.bg, q.border, q.color)}
                             >
-                              <QIcon size={10} />
+                              <span className={cn("w-2 h-2 rounded-full flex-shrink-0", q.dotColor)} />
                               {food.name}
                             </button>
                           );
@@ -748,8 +739,7 @@ export default function FoodCalendarCard() {
               {allFoods.length > 0 && (
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-teal-400 border border-teal-500" /> Herdado (geral)</span>
-                    <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-violet-500 border border-violet-600" /> Exclusivo</span>
+                    <span className="flex items-center gap-1">* = exclusivo desta ave</span>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); exportFoodCalendarSpeciesPdf(allFoods, checks, speciesChecks[sp.id] || {}, currentYear, currentMonth, sp.commonName, sp.id); }}
@@ -773,9 +763,6 @@ export default function FoodCalendarCard() {
                         <th className="sticky left-0 z-10 bg-card text-left px-2 py-2 border-b border-border/50 min-w-[160px]">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Alimento</span>
                         </th>
-                        <th className="px-1 py-2 border-b border-border/50 text-center min-w-[20px]">
-                          <span className="text-[9px] font-bold text-muted-foreground">Q</span>
-                        </th>
                         {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => (
                           <th key={day} className={cn("px-0 py-2 border-b border-border/50 text-center min-w-[24px]", isToday(day) && "bg-primary/5")}>
                             <span className={cn("text-[10px] font-semibold", isToday(day) ? "text-primary font-bold" : "text-muted-foreground/70")}>{day}</span>
@@ -790,23 +777,20 @@ export default function FoodCalendarCard() {
                       {allFoods.map((food, foodIdx) => {
                         const count = getSpeciesFoodCheckedCount(sp.id, food.name, food.inherited);
                         const q = QUALITY_CONFIG[food.quality];
-                        const QIcon = q.icon;
                         return (
                           <tr key={food.name} className={cn("group hover:bg-muted/20 transition-colors", foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5")}>
                             <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
                               <div className="flex items-center gap-1.5">
-                                {food.inherited ? (
-                                  <span className="w-2 h-2 rounded-full bg-teal-400 border border-teal-500 flex-shrink-0" title="Herdado dos cards gerais" />
-                                ) : (
-                                  <span className="w-2 h-2 rounded-sm bg-violet-500 border border-violet-600 flex-shrink-0" title="Exclusivo desta espécie" />
+                                <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", q.dotColor)} title={q.label} />
+                                {!food.inherited && (
+                                  <span className="text-[9px] font-bold text-violet-600 flex-shrink-0">*</span>
                                 )}
-                                <span className={cn("text-[11px] font-semibold truncate max-w-[120px]", food.inherited ? "text-foreground/60 italic" : "text-foreground/80 font-bold")} title={food.name}>{food.name}</span>
+                                <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
                                 {!food.inherited && (
                                   <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
                                 )}
                               </div>
                             </td>
-                            <td className="px-0 py-1.5 border-b border-border/30 text-center" title={q.label}><QIcon size={11} className={cn("mx-auto", q.color)} /></td>
                             {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
                               const checked = isSpeciesFoodChecked(sp.id, food.name, day, food.inherited);
                               return (
@@ -864,10 +848,10 @@ export default function FoodCalendarCard() {
         </div>
         {/* Legenda de qualidade */}
         <div className="flex items-center gap-5 mt-2 pt-2 border-t border-border/30">
-          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Qualidade:</span>
-          <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium"><Star size={11} /> Excelente</span>
-          <span className="flex items-center gap-1 text-[11px] text-blue-600 font-medium"><ThumbsUp size={11} /> Bom</span>
-          <span className="flex items-center gap-1 text-[11px] text-amber-600 font-medium"><AlertTriangle size={11} /> Pobre</span>
+          <span className="text-[10px] text-muted-foreground font-medium">Qualidade:</span>
+          <span className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-medium"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Excelente</span>
+          <span className="flex items-center gap-1.5 text-[11px] text-blue-700 font-medium"><span className="w-3 h-3 rounded-full bg-blue-500" /> Bom</span>
+          <span className="flex items-center gap-1.5 text-[11px] text-amber-700 font-medium"><span className="w-3 h-3 rounded-full bg-amber-500" /> Pobre</span>
         </div>
       </div>
 

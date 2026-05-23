@@ -1,10 +1,11 @@
 /**
- * PDF Export — Calendário de Alimentos por Categoria
- * Gera 1 folha (landscape A4) por categoria com:
- * - Indicador de qualidade desenhado (estrela/círculo/triângulo) — sem Unicode
- * - Nome completo do alimento (sem truncar)
- * - Mês e ano em grande destaque no lado direito do header
+ * PDF Export — Calendário de Alimentos
+ * Gera PDFs por categoria e por espécie com:
+ * - Bolinha colorida simples para qualidade (verde=Excelente, azul=Bom, amarelo=Pobre)
+ * - Nome completo do alimento
+ * - Mês e ano em grande destaque no lado direito
  * - Marcações (X) nos dias usados
+ * - Legenda simples e clean
  */
 import { jsPDF } from "jspdf";
 import {
@@ -23,12 +24,13 @@ interface FoodEntry {
 }
 
 const CATEGORY_COLORS: Record<string, [number, number, number]> = {
+  racao: [180, 83, 9],       // amber-700
   vegetais: [22, 163, 74],   // green-600
-  frutas: [249, 115, 22],    // orange-500
-  proteicos: [180, 83, 9],   // amber-700
+  frutas: [220, 38, 38],     // red-600
+  proteicos: [124, 58, 237], // purple-600
 };
 
-const QUALITY_CONFIG: Record<string, { color: [number, number, number]; label: string }> = {
+const QUALITY_COLORS: Record<string, { color: [number, number, number]; label: string }> = {
   excelente: { color: [16, 185, 129], label: "Excelente" },
   bom: { color: [37, 99, 235], label: "Bom" },
   pobre: { color: [217, 119, 6], label: "Pobre" },
@@ -40,60 +42,12 @@ const MONTHS = [
 ];
 
 /**
- * Desenha estrela de 5 pontas (Excelente)
+ * Desenha bolinha colorida de qualidade
  */
-function drawStar(doc: jsPDF, cx: number, cy: number, r: number, color: [number, number, number]) {
-  doc.setFillColor(...color);
-  // Simplified star: filled circle with inner highlight
+function drawQualityDot(doc: jsPDF, cx: number, cy: number, r: number, quality: string) {
+  const q = QUALITY_COLORS[quality] || QUALITY_COLORS.bom;
+  doc.setFillColor(...q.color);
   doc.circle(cx, cy, r, "F");
-  // Draw a small white star shape inside
-  doc.setFillColor(255, 255, 255);
-  doc.circle(cx, cy, r * 0.35, "F");
-  // Re-fill with color for the star effect
-  doc.setFillColor(...color);
-  doc.circle(cx, cy, r * 0.55, "F");
-}
-
-/**
- * Desenha círculo (Bom)
- */
-function drawCircle(doc: jsPDF, cx: number, cy: number, r: number, color: [number, number, number]) {
-  doc.setFillColor(...color);
-  doc.circle(cx, cy, r, "F");
-}
-
-/**
- * Desenha triângulo (Pobre)
- */
-function drawTriangle(doc: jsPDF, cx: number, cy: number, r: number, color: [number, number, number]) {
-  doc.setFillColor(...color);
-  // Equilateral triangle pointing up
-  const h = r * 1.7;
-  const x1 = cx;
-  const y1 = cy - h * 0.6;
-  const x2 = cx - r;
-  const y2 = cy + h * 0.4;
-  const x3 = cx + r;
-  const y3 = cy + h * 0.4;
-  doc.triangle(x1, y1, x2, y2, x3, y3, "F");
-}
-
-/**
- * Desenha o indicador de qualidade como forma geométrica
- */
-function drawQualityIndicator(doc: jsPDF, quality: string, cx: number, cy: number, r: number) {
-  const q = QUALITY_CONFIG[quality] || QUALITY_CONFIG.bom;
-  switch (quality) {
-    case "excelente":
-      drawStar(doc, cx, cy, r, q.color);
-      break;
-    case "pobre":
-      drawTriangle(doc, cx, cy, r, q.color);
-      break;
-    default: // bom
-      drawCircle(doc, cx, cy, r, q.color);
-      break;
-  }
 }
 
 /**
@@ -103,32 +57,31 @@ function drawCustomHeader(
   doc: jsPDF,
   pageW: number,
   logoBase64: string | null,
-  categoryLabel: string,
+  title: string,
+  subtitle: string,
   monthName: string,
   year: number,
 ): number {
   const barH = PDF_HEADER_H;
 
-  // Light green bar
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(0, 0, pageW, barH, "F");
 
-  // MB symbol logo
   if (logoBase64) {
     try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
   }
 
-  // Category title (left-center)
+  // Title (left)
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
-  doc.text(`Controle Diario — ${categoryLabel}`, 19, barH * 0.45);
+  doc.text(title, 19, barH * 0.45);
 
   // Subtitle
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.medium);
-  doc.text("Criatorio Minas Bird · Calendario de Alimentos", 19, barH * 0.78);
+  doc.text(subtitle, 19, barH * 0.78);
 
   // MÊS e ANO em grande destaque no lado direito
   doc.setFontSize(22);
@@ -165,7 +118,6 @@ export async function exportFoodCalendarCategoryPdf(
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
   const logoBase64 = await loadLogo();
 
-  // Landscape A4
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -173,8 +125,12 @@ export async function exportFoodCalendarCategoryPdf(
 
   const catColor = CATEGORY_COLORS[categoryKey] || [100, 100, 100];
 
-  // Custom header with month/year prominently on the right
-  const startY = drawCustomHeader(doc, pageW, logoBase64, categoryLabel, MONTHS[month], year);
+  const startY = drawCustomHeader(
+    doc, pageW, logoBase64,
+    `Controle Diario — ${categoryLabel}`,
+    "Criatorio Minas Bird · Calendario de Alimentos",
+    MONTHS[month], year
+  );
 
   // Table dimensions
   const tableStartY = startY + 1;
@@ -183,95 +139,71 @@ export async function exportFoodCalendarCategoryPdf(
   const availableH = pageH - tableStartY - footerReserve - legendReserve;
   const availableW = pageW - margin * 2;
 
-  // Column widths — wider name column for full names
-  const nameColW = 56; // wider for full food name
-  const qualityColW = 6; // quality indicator column
-  const totalColW = 10; // total column
-  const dayColW = (availableW - nameColW - qualityColW - totalColW) / totalDays;
-  const rowH = Math.min(availableH / (foods.length + 1), 7); // +1 for header row, max 7mm
+  // Column widths — no separate Q column, dot is part of the name cell
+  const nameColW = 60;
+  const totalColW = 10;
+  const dayColW = (availableW - nameColW - totalColW) / totalDays;
+  const rowH = Math.min(availableH / (foods.length + 1), 7);
 
   const tableX = margin;
   let y = tableStartY;
 
-  // Draw header row
+  // Header row
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(tableX, y, availableW, rowH, "F");
-
-  // "Alimento" header
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
-  doc.text("ALIMENTO", tableX + 2, y + rowH * 0.65);
-
-  // "Q" header (quality)
-  doc.setFontSize(6);
-  doc.text("Q", tableX + nameColW + qualityColW / 2, y + rowH * 0.65, { align: "center" });
+  doc.text("ALIMENTO", tableX + 5, y + rowH * 0.65);
 
   // Day numbers
   doc.setFontSize(6.5);
-  doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.muted);
   for (let d = 1; d <= totalDays; d++) {
-    const dx = tableX + nameColW + qualityColW + (d - 1) * dayColW;
+    const dx = tableX + nameColW + (d - 1) * dayColW;
     doc.text(String(d), dx + dayColW / 2, y + rowH * 0.65, { align: "center" });
   }
 
-  // "Total" header
-  doc.text("TOTAL", tableX + nameColW + qualityColW + totalDays * dayColW + totalColW / 2, y + rowH * 0.65, { align: "center" });
+  // Total header
+  doc.text("TOTAL", tableX + nameColW + totalDays * dayColW + totalColW / 2, y + rowH * 0.65, { align: "center" });
 
   y += rowH;
-
-  // Horizontal line after header
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.2);
   doc.line(tableX, y, tableX + availableW, y);
 
   // Food rows
   foods.forEach((food, idx) => {
-    const isEven = idx % 2 === 0;
-    if (isEven) {
+    if (idx % 2 === 0) {
       doc.setFillColor(250, 250, 250);
       doc.rect(tableX, y, availableW, rowH, "F");
     }
 
-    // Food name — FULL name, no truncation
+    // Quality dot
+    drawQualityDot(doc, tableX + 2.5, y + rowH / 2, 1.2, food.quality);
+
+    // Food name
     doc.setFontSize(6);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND.text);
-    // If name is too long for the column, reduce font size
-    const maxNameW = nameColW - 4;
+    const maxNameW = nameColW - 7;
     let fontSize = 6;
     let textW = doc.getTextWidth(food.name);
-    if (textW > maxNameW) {
-      fontSize = 5.5;
-      doc.setFontSize(fontSize);
-      textW = doc.getTextWidth(food.name);
-      if (textW > maxNameW) {
-        fontSize = 5;
-        doc.setFontSize(fontSize);
-      }
-    }
-    doc.text(food.name, tableX + 2, y + rowH * 0.65, { maxWidth: maxNameW });
+    if (textW > maxNameW) { fontSize = 5.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(food.name); }
+    if (textW > maxNameW) { fontSize = 5; doc.setFontSize(fontSize); }
+    doc.text(food.name, tableX + 5, y + rowH * 0.65, { maxWidth: maxNameW });
 
-    // Quality indicator — drawn shape (not Unicode)
-    const indicatorR = 1.3;
-    drawQualityIndicator(doc, food.quality, tableX + nameColW + qualityColW / 2, y + rowH / 2, indicatorR);
-
-    // Check marks for each day
+    // Check marks
     let totalChecked = 0;
     for (let d = 1; d <= totalDays; d++) {
       const key = `${monthKey}|${food.name}|${d}`;
       const checked = !!checks[key];
+      const cx = tableX + nameColW + (d - 1) * dayColW + dayColW / 2;
+      const cy = y + rowH / 2;
       if (checked) {
         totalChecked++;
-        const cx = tableX + nameColW + qualityColW + (d - 1) * dayColW + dayColW / 2;
-        const cy = y + rowH / 2;
-
-        // Draw filled check box
         doc.setFillColor(...catColor);
         doc.roundedRect(cx - 2, cy - 2, 4, 4, 0.5, 0.5, "F");
-
-        // Draw checkmark
         doc.setDrawColor(255, 255, 255);
         doc.setLineWidth(0.5);
         doc.line(cx - 1, cy, cx - 0.2, cy + 1);
@@ -279,9 +211,6 @@ export async function exportFoodCalendarCategoryPdf(
         doc.setDrawColor(...BRAND.gridLine);
         doc.setLineWidth(0.2);
       } else {
-        // Draw empty box
-        const cx = tableX + nameColW + qualityColW + (d - 1) * dayColW + dayColW / 2;
-        const cy = y + rowH / 2;
         doc.setDrawColor(200, 200, 200);
         doc.roundedRect(cx - 2, cy - 2, 4, 4, 0.5, 0.5, "S");
         doc.setDrawColor(...BRAND.gridLine);
@@ -292,56 +221,42 @@ export async function exportFoodCalendarCategoryPdf(
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...(totalChecked > 0 ? catColor : [180, 180, 180] as [number, number, number]));
-    doc.text(
-      String(totalChecked),
-      tableX + nameColW + qualityColW + totalDays * dayColW + totalColW / 2,
-      y + rowH * 0.65,
-      { align: "center" }
-    );
+    doc.text(String(totalChecked), tableX + nameColW + totalDays * dayColW + totalColW / 2, y + rowH * 0.65, { align: "center" });
 
     // Row border
     doc.setDrawColor(...BRAND.gridLine);
     doc.line(tableX, y + rowH, tableX + availableW, y + rowH);
-
     y += rowH;
   });
 
-  // Vertical lines for columns
+  // Vertical lines
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.15);
   doc.line(tableX + nameColW, tableStartY, tableX + nameColW, y);
-  doc.line(tableX + nameColW + qualityColW, tableStartY, tableX + nameColW + qualityColW, y);
-  doc.line(tableX + nameColW + qualityColW + totalDays * dayColW, tableStartY, tableX + nameColW + qualityColW + totalDays * dayColW, y);
+  doc.line(tableX + nameColW + totalDays * dayColW, tableStartY, tableX + nameColW + totalDays * dayColW, y);
 
-  // Legend at bottom — drawn shapes
+  // Legend — simple colored dots
   const legendY = y + 5;
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.dark);
-  doc.text("Legenda:", tableX, legendY);
-
-  let lx = tableX + 18;
-
-  // Excelente
-  drawStar(doc, lx, legendY - 0.5, 1.5, QUALITY_CONFIG.excelente.color);
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...QUALITY_CONFIG.excelente.color);
-  doc.text("Excelente", lx + 3, legendY);
-  lx += 25;
+  let lx = tableX;
 
-  // Bom
-  drawCircle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.bom.color);
-  doc.setTextColor(...QUALITY_CONFIG.bom.color);
-  doc.text("Bom", lx + 3, legendY);
-  lx += 18;
+  // Quality dots legend
+  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "excelente");
+  doc.setTextColor(...QUALITY_COLORS.excelente.color);
+  doc.text("Excelente", lx + 4.5, legendY);
+  lx += 24;
 
-  // Pobre
-  drawTriangle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.pobre.color);
-  doc.setTextColor(...QUALITY_CONFIG.pobre.color);
-  doc.text("Pobre", lx + 3, legendY);
+  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "bom");
+  doc.setTextColor(...QUALITY_COLORS.bom.color);
+  doc.text("Bom", lx + 4.5, legendY);
+  lx += 16;
 
-  // Total alimentos info (right side)
+  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "pobre");
+  doc.setTextColor(...QUALITY_COLORS.pobre.color);
+  doc.text("Pobre", lx + 4.5, legendY);
+
+  // Info (right side)
   doc.setTextColor(...BRAND.muted);
   doc.setFontSize(7);
   doc.text(
@@ -352,7 +267,6 @@ export async function exportFoodCalendarCategoryPdf(
   // Footer
   drawBrandFooter(doc, pageW, pageH, 1, 1);
 
-  // Save
   const catSlug = categoryKey === "proteicos" ? "sementes-proteicos" : categoryKey;
   doc.save(`calendario-${catSlug}-${MONTHS[month].toLowerCase()}-${year}.pdf`);
 }
@@ -360,7 +274,7 @@ export async function exportFoodCalendarCategoryPdf(
 /**
  * Exporta PDF de uma espécie específica
  * Inclui alimentos herdados (dos cards gerais) + exclusivos (da espécie)
- * Com diferenciação visual entre herdados e exclusivos
+ * Diferenciação: exclusivos têm * antes do nome
  */
 export async function exportFoodCalendarSpeciesPdf(
   allFoods: { name: string; category: string; quality: string; inherited: boolean }[],
@@ -377,76 +291,50 @@ export async function exportFoodCalendarSpeciesPdf(
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
   const logoBase64 = await loadLogo();
 
-  // Landscape A4
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = PDF_MARGIN.landscape;
 
-  // Custom header with species name + month/year
-  const barH = PDF_HEADER_H;
-  doc.setFillColor(...BRAND.headerBg);
-  doc.rect(0, 0, pageW, barH, "F");
-  if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
-  }
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.headerText);
-  doc.text(`Controle Diario — ${speciesName}`, 19, barH * 0.45);
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BRAND.medium);
-  doc.text("Criatorio Minas Bird · Calendario por Especie", 19, barH * 0.78);
-  // Month/year on the right
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.dark);
-  doc.text(MONTHS[month].toUpperCase(), pageW - 10, barH * 0.45, { align: "right" });
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BRAND.medium);
-  doc.text(String(year), pageW - 10, barH * 0.78, { align: "right" });
-  doc.setFillColor(...BRAND.headerAccent);
-  doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
-
-  const startY = barH + PDF_ACCENT_H + 3;
+  const startY = drawCustomHeader(
+    doc, pageW, logoBase64,
+    `Controle Diario — ${speciesName}`,
+    "Criatorio Minas Bird · Calendario por Especie",
+    MONTHS[month], year
+  );
 
   // Table dimensions
   const tableStartY = startY + 1;
   const footerReserve = 12;
-  const legendReserve = 12;
+  const legendReserve = 10;
   const availableH = pageH - tableStartY - footerReserve - legendReserve;
   const availableW = pageW - margin * 2;
 
-  const nameColW = 56;
-  const qualityColW = 6;
-  const typeColW = 6; // inherited/exclusive indicator
+  // Column widths — no separate Q/T columns
+  const nameColW = 60;
   const totalColW = 10;
-  const dayColW = (availableW - nameColW - qualityColW - typeColW - totalColW) / totalDays;
+  const dayColW = (availableW - nameColW - totalColW) / totalDays;
   const rowH = Math.min(availableH / (allFoods.length + 1), 7);
 
   const tableX = margin;
   let y = tableStartY;
 
-  // Draw header row
+  // Header row
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(tableX, y, availableW, rowH, "F");
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
-  doc.text("ALIMENTO", tableX + 2, y + rowH * 0.65);
-  doc.setFontSize(6);
-  doc.text("T", tableX + nameColW + typeColW / 2, y + rowH * 0.65, { align: "center" });
-  doc.text("Q", tableX + nameColW + typeColW + qualityColW / 2, y + rowH * 0.65, { align: "center" });
+  doc.text("ALIMENTO", tableX + 5, y + rowH * 0.65);
+
   doc.setFontSize(6.5);
-  doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.muted);
   for (let d = 1; d <= totalDays; d++) {
-    const dx = tableX + nameColW + typeColW + qualityColW + (d - 1) * dayColW;
+    const dx = tableX + nameColW + (d - 1) * dayColW;
     doc.text(String(d), dx + dayColW / 2, y + rowH * 0.65, { align: "center" });
   }
-  doc.text("TOTAL", tableX + nameColW + typeColW + qualityColW + totalDays * dayColW + totalColW / 2, y + rowH * 0.65, { align: "center" });
+  doc.text("TOTAL", tableX + nameColW + totalDays * dayColW + totalColW / 2, y + rowH * 0.65, { align: "center" });
+
   y += rowH;
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.2);
@@ -454,49 +342,36 @@ export async function exportFoodCalendarSpeciesPdf(
 
   // Food rows
   allFoods.forEach((food, idx) => {
-    const isEven = idx % 2 === 0;
-    if (isEven) {
+    if (idx % 2 === 0) {
       doc.setFillColor(250, 250, 250);
       doc.rect(tableX, y, availableW, rowH, "F");
     }
 
-    // Food name
+    // Quality dot
+    drawQualityDot(doc, tableX + 2.5, y + rowH / 2, 1.2, food.quality);
+
+    // Food name — exclusive foods get * prefix
+    const displayName = food.inherited ? food.name : `* ${food.name}`;
     doc.setFontSize(6);
-    doc.setFont("helvetica", food.inherited ? "italic" : "bold");
+    doc.setFont("helvetica", food.inherited ? "normal" : "bold");
     doc.setTextColor(...BRAND.text);
-    const maxNameW = nameColW - 4;
+    const maxNameW = nameColW - 7;
     let fontSize = 6;
-    let textW = doc.getTextWidth(food.name);
-    if (textW > maxNameW) { fontSize = 5.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(food.name); }
+    let textW = doc.getTextWidth(displayName);
+    if (textW > maxNameW) { fontSize = 5.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(displayName); }
     if (textW > maxNameW) { fontSize = 5; doc.setFontSize(fontSize); }
-    doc.text(food.name, tableX + 2, y + rowH * 0.65, { maxWidth: maxNameW });
+    doc.text(displayName, tableX + 5, y + rowH * 0.65, { maxWidth: maxNameW });
 
-    // Type indicator (inherited = circle teal, exclusive = square violet)
-    const typeCx = tableX + nameColW + typeColW / 2;
-    const typeCy = y + rowH / 2;
-    if (food.inherited) {
-      doc.setFillColor(45, 212, 191); // teal-400
-      doc.circle(typeCx, typeCy, 1.2, "F");
-    } else {
-      doc.setFillColor(139, 92, 246); // violet-500
-      doc.rect(typeCx - 1.2, typeCy - 1.2, 2.4, 2.4, "F");
-    }
-
-    // Quality indicator
-    const indicatorR = 1.3;
-    drawQualityIndicator(doc, food.quality, tableX + nameColW + typeColW + qualityColW / 2, y + rowH / 2, indicatorR);
-
-    // Check marks for each day
+    // Check marks
     let totalChecked = 0;
     const catColor = CATEGORY_COLORS[food.category] || [100, 100, 100];
     for (let d = 1; d <= totalDays; d++) {
       const key = `${monthKey}|${food.name}|${d}`;
-      // For inherited foods, check generalChecks; for exclusive, check speciesChecks
       const checked = food.inherited ? !!generalChecks[key] : !!speciesChecks[key];
+      const cx = tableX + nameColW + (d - 1) * dayColW + dayColW / 2;
+      const cy = y + rowH / 2;
       if (checked) {
         totalChecked++;
-        const cx = tableX + nameColW + typeColW + qualityColW + (d - 1) * dayColW + dayColW / 2;
-        const cy = y + rowH / 2;
         doc.setFillColor(...catColor);
         doc.roundedRect(cx - 2, cy - 2, 4, 4, 0.5, 0.5, "F");
         doc.setDrawColor(255, 255, 255);
@@ -506,8 +381,6 @@ export async function exportFoodCalendarSpeciesPdf(
         doc.setDrawColor(...BRAND.gridLine);
         doc.setLineWidth(0.2);
       } else {
-        const cx = tableX + nameColW + typeColW + qualityColW + (d - 1) * dayColW + dayColW / 2;
-        const cy = y + rowH / 2;
         doc.setDrawColor(200, 200, 200);
         doc.roundedRect(cx - 2, cy - 2, 4, 4, 0.5, 0.5, "S");
         doc.setDrawColor(...BRAND.gridLine);
@@ -518,12 +391,7 @@ export async function exportFoodCalendarSpeciesPdf(
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...(totalChecked > 0 ? catColor : [180, 180, 180] as [number, number, number]));
-    doc.text(
-      String(totalChecked),
-      tableX + nameColW + typeColW + qualityColW + totalDays * dayColW + totalColW / 2,
-      y + rowH * 0.65,
-      { align: "center" }
-    );
+    doc.text(String(totalChecked), tableX + nameColW + totalDays * dayColW + totalColW / 2, y + rowH * 0.65, { align: "center" });
 
     // Row border
     doc.setDrawColor(...BRAND.gridLine);
@@ -535,49 +403,35 @@ export async function exportFoodCalendarSpeciesPdf(
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.15);
   doc.line(tableX + nameColW, tableStartY, tableX + nameColW, y);
-  doc.line(tableX + nameColW + typeColW, tableStartY, tableX + nameColW + typeColW, y);
-  doc.line(tableX + nameColW + typeColW + qualityColW, tableStartY, tableX + nameColW + typeColW + qualityColW, y);
-  doc.line(tableX + nameColW + typeColW + qualityColW + totalDays * dayColW, tableStartY, tableX + nameColW + typeColW + qualityColW + totalDays * dayColW, y);
+  doc.line(tableX + nameColW + totalDays * dayColW, tableStartY, tableX + nameColW + totalDays * dayColW, y);
 
-  // Legend at bottom
+  // Legend — simple and clean
   const legendY = y + 5;
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.dark);
-  doc.text("Legenda:", tableX, legendY);
-
-  let lx = tableX + 18;
-
-  // Inherited indicator
-  doc.setFillColor(45, 212, 191);
-  doc.circle(lx, legendY - 0.5, 1.3, "F");
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BRAND.muted);
-  doc.text("Herdado (geral)", lx + 3, legendY);
-  lx += 28;
+  let lx = tableX;
+
+  // Quality dots
+  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "excelente");
+  doc.setTextColor(...QUALITY_COLORS.excelente.color);
+  doc.text("Excelente", lx + 4.5, legendY);
+  lx += 24;
+
+  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "bom");
+  doc.setTextColor(...QUALITY_COLORS.bom.color);
+  doc.text("Bom", lx + 4.5, legendY);
+  lx += 16;
+
+  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "pobre");
+  doc.setTextColor(...QUALITY_COLORS.pobre.color);
+  doc.text("Pobre", lx + 4.5, legendY);
+  lx += 18;
 
   // Exclusive indicator
-  doc.setFillColor(139, 92, 246);
-  doc.rect(lx - 1.2, legendY - 1.7, 2.4, 2.4, "F");
   doc.setTextColor(...BRAND.muted);
-  doc.text("Exclusivo", lx + 3, legendY);
-  lx += 22;
+  doc.text("* = exclusivo desta ave", lx, legendY);
 
-  // Quality indicators
-  drawStar(doc, lx, legendY - 0.5, 1.5, QUALITY_CONFIG.excelente.color);
-  doc.setTextColor(...QUALITY_CONFIG.excelente.color);
-  doc.text("Excelente", lx + 3, legendY);
-  lx += 25;
-  drawCircle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.bom.color);
-  doc.setTextColor(...QUALITY_CONFIG.bom.color);
-  doc.text("Bom", lx + 3, legendY);
-  lx += 15;
-  drawTriangle(doc, lx, legendY - 0.5, 1.3, QUALITY_CONFIG.pobre.color);
-  doc.setTextColor(...QUALITY_CONFIG.pobre.color);
-  doc.text("Pobre", lx + 3, legendY);
-
-  // Species info (right side)
+  // Info (right side)
   doc.setTextColor(...BRAND.muted);
   doc.setFontSize(7);
   doc.text(
@@ -588,7 +442,6 @@ export async function exportFoodCalendarSpeciesPdf(
   // Footer
   drawBrandFooter(doc, pageW, pageH, 1, 1);
 
-  // Save
   const slug = speciesName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
   doc.save(`calendario-${slug}-${MONTHS[month].toLowerCase()}-${year}.pdf`);
 }

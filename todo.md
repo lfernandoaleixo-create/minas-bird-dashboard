@@ -256,3 +256,7 @@
 - [x] FoodCalendarCard espécie: cores distintas nos mini cards (Ração, Vegetais, Frutas, Sementes)
 - [x] FoodCalendarCard espécie: ordem fixa — Ração primeiro, Vegetais, Frutas, Sementes
 - [x] FoodCalendarCard espécie: diferenciação visual entre alimentos herdados e exclusivos na tabela
+- [x] FoodCalendarCard: simplificar indicadores de qualidade — apenas cor de fundo (verde=Excelente, azul=Bom, amarelo=Pobre), sem símbolos/letras
+- [x] FoodCalendarCard: simplificar legendas — texto direto sem abreviações, fácil para funcionários
+- [x] FoodCalendarCard: remover Q e outros símbolos confusos dos indicadores
+- [x] FoodCalendarCard PDF: mesma simplificação — cores de fundo simples, legendas claras
