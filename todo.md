@@ -233,3 +233,7 @@
 - [x] FoodCalendarCard: remover vegetais com ⚠️ (Alface Romana, Alface Lisa, Espinafre Comum)
 - [x] FoodCalendarCard: criar botão de exportar PDF mensal com marcações preservadas
 - [x] FoodCalendarCard PDF: dias passados mostram marcações feitas, alimentos novos aparecem sem marcações nos dias anteriores
+- [x] FoodCalendarCard: dividir em 3 tabelas separadas (Vegetais, Frutas, Sementes/Proteicos)
+- [x] FoodCalendarCard: cada tabela com seu próprio botão de exportar PDF (1 folha por categoria)
+- [x] FoodCalendarCard: adicionar indicador de qualidade (Excelente/Bom/Pobre) ao lado de cada alimento
+- [x] FoodCalendarCard: indicador baseado na classificação do petbird.ts com cores para fácil identificação
