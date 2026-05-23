@@ -19,6 +19,7 @@ import {
   FileDown, CopyPlus, Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import FoodCalendarCard from "@/components/FoodCalendarCard";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { species, type Species, toxicFoods, groupFoodRecommendations } from "@/data/feeding";
 import {
@@ -971,6 +972,9 @@ export default function FeedingModuleTest() {
           </div>
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
         </div>
+
+        {/* ═══ CALENDÁRIO DE ALIMENTOS (Legumes/Vegetais/Oleaginosas) ═══ */}
+        <FoodCalendarCard />
 
         {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
         {(() => {

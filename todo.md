@@ -222,3 +222,5 @@
 - [x] Ração: manter card expandido ao selecionar 2ª ração (não fechar automaticamente)
 - [x] Criar aba "Alimentação Teste" na sidebar logo abaixo de Alimentação
 - [x] Duplicar componente FeedingModule como FeedingModuleTest
+- [x] Alimentação Teste: criar card de calendário mensal com seletor de alimentos (legumes, vegetais, oleaginosas)
+- [x] Alimentação Teste: checkboxes abaixo de cada dia do mês para ticar quando alimento selecionado
