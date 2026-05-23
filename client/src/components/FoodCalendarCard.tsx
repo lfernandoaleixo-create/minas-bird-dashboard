@@ -7,22 +7,16 @@
  * Persistência em localStorage
  */
 import { useState, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Leaf, Apple, Wheat, Check, Package } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Leaf, Apple, Wheat, Check, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { racoes, vegetais, frutas, proteicos } from "@/data/petbird";
+import { vegetais, frutas, proteicos } from "@/data/petbird";
+import { exportFoodCalendarPdf } from "@/lib/foodCalendarPdf";
 
-// Categorias fiéis à aba Alimentação original
+// Vegetais a excluir (marcados com ⚠️ na aba original)
+const VEGETAIS_EXCLUIDOS = ["Alface Romana, Folha, Crua \u26a0\ufe0f", "Alface Lisa, Folha, Crua \u26a0\ufe0f", "Espinafre Comum, Folha, Crua \u26a0\ufe0f"];
+
+// Categorias fiéis à aba Alimentação original (sem Ração)
 const FOOD_CATEGORIES = {
-  racoes: {
-    label: "Ração / Formulado",
-    icon: Package,
-    color: "bg-blue-600",
-    colorLight: "bg-blue-50",
-    borderColor: "border-blue-200",
-    textColor: "text-blue-700",
-    dotColor: "bg-blue-500",
-    items: racoes.filter(f => f.name !== "Ração Mediana").map(f => f.name),
-  },
   vegetais: {
     label: "Vegetais / Hortaliças",
     icon: Leaf,
@@ -31,7 +25,7 @@ const FOOD_CATEGORIES = {
     borderColor: "border-green-200",
     textColor: "text-green-700",
     dotColor: "bg-green-500",
-    items: vegetais.filter(f => f.name !== "Hortaliça Mediana").map(f => f.name),
+    items: vegetais.filter(f => f.name !== "Hortaliça Mediana" && !VEGETAIS_EXCLUIDOS.includes(f.name)).map(f => f.name),
   },
   frutas: {
     label: "Frutas",
@@ -430,24 +424,35 @@ export default function FoodCalendarCard() {
           </div>
         )}
 
-        {/* Legenda de categorias */}
+        {/* Legenda de categorias + botão PDF */}
         {foods.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-border/30 flex items-center gap-4 flex-wrap">
-            {(Object.keys(FOOD_CATEGORIES) as CategoryKey[]).map(catKey => {
-              const cat = FOOD_CATEGORIES[catKey];
-              const count = foods.filter(f => f.category === catKey).length;
-              if (count === 0) return null;
-              return (
-                <div key={catKey} className="flex items-center gap-1.5">
-                  <div className={cn("w-2.5 h-2.5 rounded-full", cat.dotColor)} />
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    {cat.label} ({count})
-                  </span>
-                </div>
-              );
-            })}
-            <div className="ml-auto text-[10px] text-muted-foreground/60">
-              {foods.length} alimento{foods.length !== 1 ? "s" : ""} na tabela
+          <div className="mt-4 pt-3 border-t border-border/30">
+            <div className="flex items-center gap-4 flex-wrap">
+              {(Object.keys(FOOD_CATEGORIES) as CategoryKey[]).map(catKey => {
+                const cat = FOOD_CATEGORIES[catKey];
+                const count = foods.filter(f => f.category === catKey).length;
+                if (count === 0) return null;
+                return (
+                  <div key={catKey} className="flex items-center gap-1.5">
+                    <div className={cn("w-2.5 h-2.5 rounded-full", cat.dotColor)} />
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                      {cat.label} ({count})
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="ml-auto text-[10px] text-muted-foreground/60">
+                {foods.length} alimento{foods.length !== 1 ? "s" : ""} na tabela
+              </div>
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={() => exportFoodCalendarPdf(foods, checks, currentYear, currentMonth)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all shadow-sm"
+              >
+                <FileDown size={14} />
+                Exportar PDF do Mês
+              </button>
             </div>
           </div>
         )}

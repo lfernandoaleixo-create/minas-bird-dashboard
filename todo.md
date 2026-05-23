@@ -229,3 +229,7 @@
 - [x] FoodCalendarCard: marcar X nos dias em que cada alimento foi usado (combinações livres)
 - [x] FoodCalendarCard: tabela fixa durante o mês todo, preenchida dia a dia
 - [x] FoodCalendarCard: usar listas completas do petbird.ts (cópia fiel da aba Alimentação original — 62 rações, 47 vegetais, 38 frutas, 57 proteicos)
+- [x] FoodCalendarCard: remover categoria "Ração / Formulado" do seletor de alimentos
+- [x] FoodCalendarCard: remover vegetais com ⚠️ (Alface Romana, Alface Lisa, Espinafre Comum)
+- [x] FoodCalendarCard: criar botão de exportar PDF mensal com marcações preservadas
+- [x] FoodCalendarCard PDF: dias passados mostram marcações feitas, alimentos novos aparecem sem marcações nos dias anteriores
