@@ -189,9 +189,9 @@ export default function FoodCalendarCard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedSpecies, setExpandedSpecies] = useState<Record<string, boolean>>({});
-  const [addingSpecies, setAddingSpecies] = useState<string | null>(null);
+  // Per-species: which category panel is open (toggle: click opens, click again closes)
+  const [speciesOpenCat, setSpeciesOpenCat] = useState<Record<string, string | null>>({});
   const [speciesSearchTerm, setSpeciesSearchTerm] = useState("");
-  const [speciesFilterCat, setSpeciesFilterCat] = useState<string>("all");
 
   // Persistir
   const saveFoods = useCallback((newFoods: FoodEntry[]) => {
@@ -316,12 +316,10 @@ export default function FoodCalendarCard() {
     return items;
   };
 
-  const getAvailableSpeciesFoods = (speciesId: string) => {
+  const getAvailableSpeciesFoods = (speciesId: string, catFilter: string) => {
     const addedNames = new Set((speciesFoods[speciesId] || []).map(f => f.name));
     let items = ALL_FOOD_ITEMS_UNIFIED.filter(item => !addedNames.has(item.name));
-    if (speciesFilterCat !== "all") {
-      items = items.filter(item => item.category === speciesFilterCat);
-    }
+    items = items.filter(item => item.category === catFilter);
     if (speciesSearchTerm.trim()) {
       const term = speciesSearchTerm.toLowerCase().trim();
       items = items.filter(item => item.name.toLowerCase().includes(term));
@@ -530,8 +528,24 @@ export default function FoodCalendarCard() {
   const renderSpeciesCard = (sp: typeof ACTIVE_SPECIES[0]) => {
     const isExpanded = !!expandedSpecies[sp.id];
     const spFoods = speciesFoods[sp.id] || [];
-    const isAdding = addingSpecies === sp.id;
-    const available = isAdding ? getAvailableSpeciesFoods(sp.id) : [];
+    const openCat = speciesOpenCat[sp.id] || null;
+
+    const SPECIES_CATEGORIES = [
+      { key: "racao", label: "Ração", icon: Wheat, color: "bg-orange-600", colorLight: "bg-orange-50", borderColor: "border-orange-200", textColor: "text-orange-700" },
+      { key: "vegetais", label: "Vegetais", icon: Leaf, color: "bg-emerald-600", colorLight: "bg-emerald-50", borderColor: "border-emerald-200", textColor: "text-emerald-700" },
+      { key: "frutas", label: "Frutas", icon: Apple, color: "bg-rose-600", colorLight: "bg-rose-50", borderColor: "border-rose-200", textColor: "text-rose-700" },
+      { key: "proteicos", label: "Sementes", icon: Wheat, color: "bg-amber-700", colorLight: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
+    ];
+
+    const toggleSpeciesCat = (catKey: string) => {
+      setSpeciesOpenCat(prev => ({
+        ...prev,
+        [sp.id]: prev[sp.id] === catKey ? null : catKey,
+      }));
+      setSpeciesSearchTerm("");
+    };
+
+    const available = openCat ? getAvailableSpeciesFoods(sp.id, openCat) : [];
 
     return (
       <div key={sp.id} className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
@@ -564,94 +578,74 @@ export default function FoodCalendarCard() {
         {/* Expanded content */}
         {isExpanded && (
           <>
-            {/* Action buttons */}
-            <div className="px-5 py-2 flex items-center justify-end gap-2 border-b border-border/30 bg-teal-50/50">
-              <button
-                onClick={(e) => { e.stopPropagation(); setAddingSpecies(isAdding ? null : sp.id); setSpeciesSearchTerm(""); setSpeciesFilterCat("all"); }}
-                className={cn(
-                  "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border",
-                  isAdding
-                    ? "bg-teal-50 text-teal-700 border-teal-200"
-                    : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
-                )}
-              >
-                <Plus size={11} />
-                Adicionar
-              </button>
-            </div>
-
-            {/* Add Panel — unified selector */}
-            {isAdding && (
-              <div className="border-b border-border/50 bg-muted/10 p-4 space-y-3">
-                {/* Category filter */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Filtrar:</span>
-                  {[
-                    { key: "all", label: "Todos" },
-                    { key: "racao", label: "Ração" },
-                    { key: "vegetais", label: "Vegetais" },
-                    { key: "frutas", label: "Frutas" },
-                    { key: "proteicos", label: "Sementes" },
-                  ].map(opt => (
+            {/* Mini category cards (toggle) */}
+            <div className="px-5 py-3 border-b border-border/30 bg-muted/5">
+              <div className="flex items-center gap-2 flex-wrap">
+                {SPECIES_CATEGORIES.map(cat => {
+                  const CatIcon = cat.icon;
+                  const isOpen = openCat === cat.key;
+                  return (
                     <button
-                      key={opt.key}
-                      onClick={() => setSpeciesFilterCat(opt.key)}
+                      key={cat.key}
+                      onClick={(e) => { e.stopPropagation(); toggleSpeciesCat(cat.key); }}
                       className={cn(
-                        "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
-                        speciesFilterCat === opt.key
-                          ? "bg-teal-100 text-teal-700 border-teal-300"
+                        "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold border transition-all",
+                        isOpen
+                          ? `${cat.colorLight} ${cat.textColor} ${cat.borderColor} shadow-sm`
                           : "bg-background border-border/50 text-muted-foreground hover:bg-muted/30"
                       )}
                     >
-                      {opt.label}
+                      <CatIcon size={12} />
+                      {cat.label}
                     </button>
-                  ))}
-                </div>
-                <input
-                  type="text"
-                  value={speciesSearchTerm}
-                  onChange={(e) => setSpeciesSearchTerm(e.target.value)}
-                  placeholder="Buscar alimento..."
-                  className="w-full px-3 py-2 rounded-lg border border-border/50 bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-teal-300"
-                />
-                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><Star size={10} className="text-emerald-600" /> Excelente</span>
-                  <span className="flex items-center gap-1"><ThumbsUp size={10} className="text-blue-600" /> Bom</span>
-                  <span className="flex items-center gap-1"><AlertTriangle size={10} className="text-amber-600" /> Pobre</span>
-                </div>
-                <div className="max-h-52 overflow-y-auto">
-                  {available.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic py-2">
-                      {speciesSearchTerm ? "Nenhum alimento encontrado." : "Todos já foram adicionados."}
-                    </p>
-                  ) : (
-                    <div className="flex gap-1.5 flex-wrap">
-                      {available.map(food => {
-                        const q = QUALITY_CONFIG[food.quality];
-                        const QIcon = q.icon;
-                        return (
-                          <button
-                            key={food.name}
-                            onClick={() => addSpeciesFood(sp.id, food.name, food.category, food.quality)}
-                            className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", q.bg, q.border, q.color)}
-                          >
-                            <QIcon size={10} />
-                            {food.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            )}
+
+              {/* Food list panel (shown when a category is open) */}
+              {openCat && (
+                <div className="mt-3 space-y-2">
+                  <input
+                    type="text"
+                    value={speciesSearchTerm}
+                    onChange={(e) => setSpeciesSearchTerm(e.target.value)}
+                    placeholder="Buscar alimento..."
+                    className="w-full px-3 py-1.5 rounded-lg border border-border/50 bg-background text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-teal-300"
+                  />
+                  <div className="max-h-48 overflow-y-auto">
+                    {available.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic py-2">
+                        {speciesSearchTerm ? "Nenhum alimento encontrado." : "Todos já foram adicionados."}
+                      </p>
+                    ) : (
+                      <div className="flex gap-1.5 flex-wrap">
+                        {available.map(food => {
+                          const q = QUALITY_CONFIG[food.quality];
+                          const QIcon = q.icon;
+                          return (
+                            <button
+                              key={food.name}
+                              onClick={() => addSpeciesFood(sp.id, food.name, food.category, food.quality)}
+                              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", q.bg, q.border, q.color)}
+                            >
+                              <QIcon size={10} />
+                              {food.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Table */}
             <div className="p-4">
               {spFoods.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <Bird size={24} className="mx-auto mb-2 opacity-20" />
-                  <p className="text-xs">Clique em "Adicionar" para incluir alimentos para {sp.commonName}</p>
+                  <p className="text-xs">Clique em uma categoria acima para adicionar alimentos</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto -mx-4 px-4">

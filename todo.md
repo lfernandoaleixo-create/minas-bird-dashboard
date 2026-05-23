@@ -243,3 +243,7 @@
 - [x] FoodCalendarCard: tornar os 3 cards (Vegetais, Frutas, Sementes/Proteicos) expansíveis (colapsados por padrão)
 - [x] FoodCalendarCard: criar cards por espécie de ave com seletor unificado (incluindo ração) e tabela mensal
 - [x] FoodCalendarCard: cards de espécie com todas as categorias em um único seletor
+- [x] FoodCalendarCard: reverter cards de espécie para formato original (não mexer nos cards de dietas abaixo)
+- [x] FoodCalendarCard espécie: remover filtro "Todos" — só Ração, Vegetais, Frutas, Sementes
+- [x] FoodCalendarCard espécie: alimentos aparecem ao clicar no mini card da categoria (toggle — clicar de novo esconde)
+- [x] FoodCalendarCard espécie: só o que for selecionado fica na tabela mensal (mesma dinâmica de cima)
