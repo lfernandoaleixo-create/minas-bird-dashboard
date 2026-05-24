@@ -283,3 +283,4 @@
 - [x] PDF Anotação: coluna Sobra (S/N) na tabela de 30 dias
 - [x] Remover 8 cards antigos de espécie do FeedingModule e FeedingModuleTest (manter novos)
 - [x] Remover cards Dietas, Calendário de Alimentação e Exportar Calendários do FeedingModule e FeedingModuleTest
+- [x] CORREÇÃO: Restaurar FeedingModule.tsx (aba Alimentação) ao estado original — nunca deveria ter sido alterado

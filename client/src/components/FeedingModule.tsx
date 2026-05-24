@@ -685,6 +685,1101 @@ export default function FeedingModule() {
       {/* ===== MENU INICIAL ===== */}
       {dietMode === "menu" && (
         <>
+        {/* Card único "Dietas" expansível */}
+        <div className="bg-white rounded-xl border border-stone-200 shadow-md overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setDietCardExpanded(!dietCardExpanded)}
+            className="w-full px-6 py-5 text-left hover:bg-stone-50/70 transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Utensils className="w-6 h-6 text-emerald-700" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="font-bold text-stone-800 text-lg">Dietas</span>
+                  <span className="text-xs text-stone-400 font-medium bg-stone-100 px-2 py-0.5 rounded-full">{savedDiets.length} total</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {lifePeriods.map(lp => {
+                    const count = savedDiets.filter(d => d.phaseId === lp.id).length;
+                    const phaseStyles: Record<string, { bg: string; dot: string }> = {
+                      "manutencao": { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+                      "pre-reproducao": { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+                      "alimentacao-filhotes": { bg: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" },
+                      "muda-penas": { bg: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
+                    };
+                    const style = phaseStyles[lp.id] || { bg: "bg-stone-50 text-stone-600 border-stone-200", dot: "bg-stone-400" };
+                    return (
+                      <span key={lp.id} className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border", style.bg)}>
+                        <span className={cn("w-2 h-2 rounded-full", style.dot)} />
+                        {lp.label}: {count}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+              <span className="ml-auto flex-shrink-0">
+                {dietCardExpanded
+                  ? <ChevronDown className="w-5 h-5 text-stone-400" />
+                  : <ChevronRight className="w-5 h-5 text-stone-400" />}
+              </span>
+            </div>
+          </button>
+
+          {dietCardExpanded && (
+            <div className="border-t border-stone-100">
+              {/* Busca e filtro */}
+              <div className="p-4 border-b border-stone-100 bg-stone-50/50">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {savedDiets.length > 3 && (
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                      <input
+                        type="text" placeholder="Buscar dieta..."
+                        value={savedDietsFilter} onChange={e => setSavedDietsFilter(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-stone-400" />
+                    <select
+                      value={phaseFilter}
+                      onChange={e => setPhaseFilter(e.target.value)}
+                      className="text-xs border border-stone-200 rounded-md px-2 py-2 bg-white text-stone-700 focus:outline-none focus:border-emerald-400"
+                    >
+                      <option value="all">Todas as fases</option>
+                      {lifePeriods.map(p => (
+                        <option key={p.id} value={p.id}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleResetAll();
+                      setDietMode("creating");
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors ml-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Nova Dieta
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista por espécie */}
+              {savedDiets.length === 0 ? (
+                <div className="p-8 text-center">
+                  <FolderOpen className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                  <p className="text-stone-500 font-medium">Nenhuma dieta salva ainda</p>
+                  <p className="text-xs text-stone-400 mt-1">Crie uma nova dieta e salve para vê-la aqui</p>
+                  <button
+                    onClick={() => { handleResetAll(); setDietMode("creating"); }}
+                    className="mt-4 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    Criar Nova Dieta
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {/* Column headers */}
+                  <div className="flex items-center px-5 py-2 border-b border-stone-200 bg-stone-50/80">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider flex-1">Espécie</span>
+                    <span className="w-20 text-center text-[10px] font-bold text-stone-400 uppercase tracking-wider flex-shrink-0">Dietas</span>
+                    <span className="w-20 text-center text-[10px] font-bold text-stone-400 uppercase tracking-wider flex-shrink-0">Aves</span>
+                    <span className="w-6 flex-shrink-0" />
+                  </div>
+                  <div className="divide-y divide-stone-100">
+                  {activeFlockSpecies.map(sp => {
+                    const dietsForSp = savedDiets.filter(d => d.speciesId === sp.id);
+                    const phaseFilteredDiets = phaseFilter === "all" ? dietsForSp : dietsForSp.filter(d => d.phaseId === phaseFilter);
+                    const filteredDietsForSp = savedDietsFilter
+                      ? phaseFilteredDiets.filter(d => d.name.toLowerCase().includes(savedDietsFilter.toLowerCase()) || d.speciesName.toLowerCase().includes(savedDietsFilter.toLowerCase()))
+                      : phaseFilteredDiets;
+                    const isExpanded = expandedRegistries.has(sp.id + "-diets");
+                    const toggleExpand = () => {
+                      setExpandedRegistries(prev => {
+                        const next = new Set(prev);
+                        const key = sp.id + "-diets";
+                        if (next.has(key)) next.delete(key);
+                        else next.add(key);
+                        return next;
+                      });
+                    };
+                    return (
+                      <div key={sp.id} className={isExpanded ? "bg-stone-50/60" : ""}>
+                        <button
+                          type="button"
+                          onClick={toggleExpand}
+                          className={cn(
+                            "w-full px-5 py-3 transition-colors text-left border-l-3",
+                            isExpanded
+                              ? "bg-emerald-50/80 border-emerald-500"
+                              : "border-transparent hover:bg-white hover:border-emerald-400"
+                          )}
+                        >
+                          <div className="flex items-center">
+                            <span className={cn(
+                              "text-[15px] font-bold flex-1 min-w-0 truncate",
+                              isExpanded ? "text-emerald-800" : "text-stone-800"
+                            )}>{sp.commonName}</span>
+                            <span className="w-20 text-center text-xs font-semibold text-emerald-700 tabular-nums flex-shrink-0">
+                              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-emerald-100">{dietsForSp.length} {dietsForSp.length === 1 ? "dieta" : "dietas"}</span>
+                            </span>
+                            <span className="w-20 text-center text-xs font-semibold text-stone-600 tabular-nums flex-shrink-0">
+                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full bg-stone-100"><Users className="w-3.5 h-3.5" /> {sp.currentCount || 0}</span>
+                            </span>
+                            <span className="w-6 flex items-center justify-center flex-shrink-0">
+                              {isExpanded
+                                ? <ChevronDown className="w-4 h-4 text-emerald-600" />
+                                : <ChevronRight className="w-4 h-4 text-stone-400" />}
+                            </span>
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="px-4 py-3 space-y-2.5">
+                            {filteredDietsForSp.length === 0 ? (
+                              <div className="px-5 py-4 text-center">
+                                <p className="text-xs text-stone-400">Nenhuma dieta salva para {sp.commonName}</p>
+                                <button
+                                  onClick={() => {
+                                    handleResetAll();
+                                    handleSelectSpecies(sp);
+                                    setDietMode("creating");
+                                  }}
+                                  className="mt-2 text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+                                >
+                                  + Criar dieta
+                                </button>
+                              </div>
+                            ) : (
+                              filteredDietsForSp.map(diet => {
+                                const phaseLabel = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId;
+                                const racaoName = diet.racaoName || "";
+                                const cleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
+                                const ingredientsList = [
+                                  ...(racaoName ? [racaoName] : []),
+                                  ...diet.items.racao.map(i => cleanFoodName(i.foodName)).filter(n => n !== racaoName),
+                                  ...diet.items.vegetais.map(i => cleanFoodName(i.foodName)),
+                                  ...diet.items.frutas.map(i => cleanFoodName(i.foodName)),
+                                  ...diet.items.proteicos.map(i => cleanFoodName(i.foodName)),
+                                ];
+                                return (
+                                <div
+                                  key={diet.id}
+                                  onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
+                                  className="mx-1 px-4 py-3.5 bg-white rounded-xl border border-stone-200/80 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="text-base font-bold text-stone-800 group-hover:text-emerald-700 transition-colors">
+                                        {phaseLabel}{racaoName ? <> <span className="text-stone-300 mx-1">{"\u2014"}</span> <span className="text-amber-700 font-extrabold">{racaoName}</span></> : ""}
+                                      </h4>
+                                      {ingredientsList.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                          {ingredientsList.map((name, idx) => (
+                                            <span
+                                              key={idx}
+                                              className={cn(
+                                                "px-2 py-0.5 text-xs font-medium rounded-full",
+                                                idx === 0 && racaoName
+                                                  ? "bg-amber-100 text-amber-800"
+                                                  : diet.items.vegetais.some(v => name === (() => { let n = v.foodName; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; })())
+                                                    ? "bg-green-100 text-green-800"
+                                                    : diet.items.frutas.some(f => name === (() => { let n = f.foodName; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; })())
+                                                      ? "bg-orange-100 text-orange-800"
+                                                      : "bg-stone-100 text-stone-700"
+                                              )}
+                                            >
+                                              {name}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 ml-3" onClick={e => e.stopPropagation()}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => loadDietForEditing(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                          >
+                                            <Edit3 className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Editar</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleDuplicateDiet(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                                          >
+                                            <CopyPlus className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Duplicar</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleExportDiet(diet)}
+                                            className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                          >
+                                            <FileDown className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Exportar PDF</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleDeleteDiet(diet.id)}
+                                            className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Excluir</TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </div>
+                                </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+
+        {/* ═══ SEPARADOR: Calendário de Alimentação ═══ */}
+        <div className="flex items-center gap-3 py-2">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-200">
+            <CalendarDays className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold text-emerald-700 tracking-wide uppercase">Calendário de Alimentação</span>
+          </div>
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+        </div>
+
+        {/* ===== PAINEL DE REGISTRO DE ALIMENTAÇÃO POR ESPÉCIE ===== */}
+        {(() => {
+          const MONTH_NAMES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+          const FERIADOS_REG: Record<string, string> = {
+            "1-1": "Confraternização Universal",
+            "2-17": "Carnaval", "2-18": "Carnaval",
+            "3-4": "Quarta-feira de Cinzas",
+            "4-18": "Sexta-feira Santa", "4-20": "Páscoa",
+            "4-21": "Tiradentes",
+            "5-1": "Dia do Trabalho",
+            "6-19": "Corpus Christi",
+            "9-7": "Independência do Brasil",
+            "10-12": "N. Sra. Aparecida",
+            "11-2": "Finados", "11-15": "Proclamação da República", "11-20": "Consciência Negra",
+            "12-25": "Natal",
+          };
+          // Fallback palette for diets without a saved color
+          const FALLBACK_COLORS = [
+            "#10b981", "#3b82f6", "#f59e0b", "#a855f7", "#ef4444", "#14b8a6",
+          ];
+
+          /** Convert hex to a color object with Tailwind-like inline styles */
+          function hexToColorObj(hex: string) {
+            // Parse hex to RGB
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return {
+              hex,
+              // Inline styles instead of Tailwind classes (dynamic colors)
+              bgStyle: { backgroundColor: hex },
+              lightStyle: { backgroundColor: `rgba(${r},${g},${b},0.15)` },
+              borderStyle: { borderColor: `rgba(${r},${g},${b},0.4)` },
+              textStyle: { color: hex },
+              darkTextStyle: { color: `rgba(${Math.max(0,r-60)},${Math.max(0,g-60)},${Math.max(0,b-60)},1)` },
+            };
+          }
+
+          return Object.entries(groupedSavedDiets).map(([speciesName, dietsForSpecies]) => {
+            // Build color map from diet.color (user-chosen) or fallback
+            const dietColorMap = new Map<string, ReturnType<typeof hexToColorObj>>();
+            dietsForSpecies.forEach((d, i) => {
+              const hex = d.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+              dietColorMap.set(d.id, hexToColorObj(hex));
+            });
+
+            const speciesId = dietsForSpecies[0]?.speciesId;
+            const allCalendarForSpecies = speciesCalendars[speciesId] || {};
+            // Filtrar entradas do calendário para o ano selecionado
+            const calendarForSpecies: Record<string, string> = {};
+            for (const [key, val] of Object.entries(allCalendarForSpecies)) {
+              const parts = key.split("-").map(Number);
+              if (parts.length === 3 && parts[0] === calendarYear) {
+                calendarForSpecies[key] = val;
+              } else if (parts.length === 2) {
+                // Formato legado m-d: manter se calendarYear for o ano atual
+                calendarForSpecies[key] = val;
+              }
+            }
+            const now = new Date();
+
+            const isExpanded = expandedRegistries.has(speciesName);
+            const toggleExpand = () => {
+              setExpandedRegistries(prev => {
+                const next = new Set(prev);
+                if (next.has(speciesName)) next.delete(speciesName);
+                else next.add(speciesName);
+                return next;
+              });
+            };
+
+
+            return (
+              <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm border-l-4 border-l-emerald-400">
+                {/* Sticky header: nome da espécie + seletor de dieta */}
+                <div className={cn(
+                  "rounded-t-xl",
+                  isExpanded && "sticky top-[57px] z-10 bg-white shadow-sm border-b border-stone-200"
+                )}>
+                <button
+                  type="button"
+                  onClick={toggleExpand}
+                  className={cn(
+                    "w-full px-5 py-3.5 text-left hover:bg-stone-50 transition-colors rounded-t-xl",
+                    isExpanded && "border-b border-stone-100"
+                  )}
+                >
+                  <div className="flex items-center">
+                    <Bird className="w-5 h-5 text-emerald-600 flex-shrink-0 mr-3" />
+                    <h2 className="text-base font-bold text-stone-800 flex-shrink-0" style={{width: '160px'}}>{speciesName}</h2>
+                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600 text-center flex-shrink-0 ml-2" style={{width: '64px'}}>
+                      {dietsForSpecies.length} dieta{dietsForSpecies.length > 1 ? "s" : ""}
+                    </span>
+                    {(() => {
+                      const sp = species.find(s => s.commonName === speciesName);
+                      const plantelCount = sp?.currentCount || 0;
+                      return (
+                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 flex items-center justify-center gap-1 flex-shrink-0 ml-2 whitespace-nowrap" style={{width: '90px'}}>
+                          <Users className="w-3 h-3" />{plantelCount} ave{plantelCount > 1 ? "s" : ""}
+                        </span>
+                      );
+                    })()}
+
+                    <span className="ml-auto flex-shrink-0">
+                      {isExpanded
+                        ? <ChevronDown className="w-5 h-5 text-stone-400" />
+                        : <ChevronRight className="w-5 h-5 text-stone-400" />}
+                    </span>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <>
+                {/* ═══ SEÇÃO 1: Seletor de dieta para pintar no calendário ═══ */}
+                <div className="px-5 py-3 bg-amber-50/40 border-b border-amber-200/40">
+                  <p className="text-[11px] text-amber-700/70 font-medium mb-2 flex items-center gap-1.5">
+                    <Paintbrush className="w-3.5 h-3.5" /> Selecione uma dieta e clique nos dias do calendário:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {dietsForSpecies.map(diet => {
+                      const color = dietColorMap.get(diet.id)!;
+                      const isActive = activePaintDiet === diet.id;
+                      const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;
+                      const selRacaoName = diet.racaoName || "";
+                      const selCleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
+                      const selIngredientsList = [
+                        ...(selRacaoName ? [selRacaoName] : []),
+                        ...diet.items.racao.map(i => selCleanFoodName(i.foodName)).filter(n => n !== selRacaoName),
+                        ...diet.items.vegetais.map(i => selCleanFoodName(i.foodName)),
+                        ...diet.items.frutas.map(i => selCleanFoodName(i.foodName)),
+                        ...diet.items.proteicos.map(i => selCleanFoodName(i.foodName)),
+                      ];
+                      return (
+                        <button
+                          key={diet.id}
+                          type="button"
+                          onClick={() => {
+                            setActivePaintDiet(isActive ? null : diet.id);
+                            setDayDetailDiet(null);
+                          }}
+                          className={cn(
+                            "flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left",
+                            isActive
+                              ? "text-white border-transparent ring-2 ring-offset-1 ring-stone-400 shadow-md"
+                              : "hover:shadow-sm"
+                          )}
+                          style={isActive ? { ...color.bgStyle, borderColor: "transparent" } : { ...color.lightStyle, ...color.borderStyle, ...color.darkTextStyle }}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-sm flex-shrink-0" style={isActive ? { backgroundColor: "rgba(255,255,255,0.4)" } : color.bgStyle} />
+<span className="text-xs font-bold">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
+                             {assignedCount > 0 && (
+                              <span className={cn(
+                                "ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold",
+                                isActive ? "bg-white/30 text-white" : "bg-white text-stone-600"
+                              )}>
+                                {assignedCount}d
+                              </span>
+                            )}
+                          </div>
+                          {selIngredientsList.length > 0 && (
+                            <span className={cn("text-[11px] leading-snug", isActive ? "text-white/80" : "text-stone-500")}>
+                              {selIngredientsList.map((name, idx) => (
+                                <span key={idx}>
+                                  {idx === 0 && selRacaoName ? (
+                                    <span className={cn("font-extrabold", isActive ? "text-white" : "text-amber-700")}>{name}</span>
+                                  ) : (
+                                    <span>{name}</span>
+                                  )}
+                                  {idx < selIngredientsList.length - 1 && <span className={isActive ? "text-white/40" : "text-stone-300"}>{" \u00b7 "}</span>}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+
+                  </div>
+
+                </div>
+                  </>
+                )}
+                </div>
+                {/* End sticky header */}
+
+                {isExpanded && (
+                  <>
+                {/* Resumo da dieta do dia clicado */}
+                {dayDetailDiet && dayDetailKey && (() => {
+                  const keyParts = dayDetailKey.split("-");
+                  const mStr = keyParts.length === 3 ? keyParts[1] : keyParts[0];
+                  const dStr = keyParts.length === 3 ? keyParts[2] : keyParts[1];
+                  const monthName = MONTH_NAMES_FULL[Number(mStr) - 1];
+                  const dayNum = Number(dStr);
+                  const color = dietColorMap.get(dayDetailDiet.id);
+                  return (
+                    <div className="px-5 py-3 border-b border-stone-100 bg-blue-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-bold text-stone-800">{dayNum} de {monthName}</span>
+                          {color && <span className="w-3 h-3 rounded-sm" style={color.bgStyle} />}
+                          <span className="text-sm font-bold text-stone-800">{(() => { const pl = lifePeriods.find(p => p.id === dayDetailDiet.phaseId)?.label || dayDetailDiet.phaseId; const rn = dayDetailDiet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setDayDetailDiet(null); setDayDetailKey(""); }}
+                          className="p-1 text-stone-400 hover:text-stone-600 rounded transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-white rounded-lg p-2 border border-blue-100">
+                          <span className="text-[10px] text-stone-400 uppercase">Total/ave</span>
+                          <p className="text-sm font-bold text-stone-800">{fmtG(dayDetailDiet.totalGrams)}</p>
+                          <p className="text-[10px] text-stone-500">{dayDetailDiet.totalKcal.toFixed(1)} kcal</p>
+                        </div>
+                        {dayDetailDiet.items.racao.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-amber-100">
+                            <span className="text-[10px] text-amber-600 uppercase font-semibold">Ração</span>
+                            {dayDetailDiet.items.racao.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
+                            ))}
+                          </div>
+                        )}
+                        {dayDetailDiet.items.vegetais.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-green-100">
+                            <span className="text-[10px] text-green-600 uppercase font-semibold">Vegetais</span>
+                            {dayDetailDiet.items.vegetais.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
+                            ))}
+                          </div>
+                        )}
+                        {dayDetailDiet.items.frutas.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-red-100">
+                            <span className="text-[10px] text-red-600 uppercase font-semibold">Frutas</span>
+                            {dayDetailDiet.items.frutas.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
+                            ))}
+                          </div>
+                        )}
+                        {dayDetailDiet.items.proteicos.length > 0 && (
+                          <div className="bg-white rounded-lg p-2 border border-yellow-100">
+                            <span className="text-[10px] text-yellow-700 uppercase font-semibold">Proteícos</span>
+                            {dayDetailDiet.items.proteicos.map(item => (
+                              <p key={item.foodId} className="text-[11px] text-stone-700">{item.foodName}: {fmtG(item.grams)}</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-2">
+                        <button
+                          onClick={() => { setViewingDiet(dayDetailDiet); setDietMode("saved-detail"); }}
+                          className="text-[11px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        >
+                          <Eye className="w-3 h-3" /> Ver dieta completa
+                        </button>
+                        <button
+                          onClick={() => loadDietForEditing(dayDetailDiet)}
+                          className="text-[11px] text-amber-600 hover:text-amber-800 font-medium flex items-center gap-1"
+                        >
+                          <Edit3 className="w-3 h-3" /> Editar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ═══ SEÇÃO 2: Calendário Anual ═══ */}
+                <div className="px-5 pt-4 pb-4 bg-white">
+                <div>
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setCalendarYear(y => y - 1)}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-700"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-180" />
+                    </button>
+                    <span className="text-sm font-bold text-stone-700 min-w-[60px] text-center">{calendarYear}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarYear(y => y + 1)}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-700"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 12 }, (_, monthIdx) => {
+                      const month = monthIdx + 1;
+                      const daysInMonth = new Date(calendarYear, month, 0).getDate();
+                      const firstDayOffset = new Date(calendarYear, monthIdx, 1).getDay();
+
+                      return (
+                        <div key={month} className="border border-stone-200 rounded-lg overflow-hidden">
+                          <div className="bg-stone-50 px-3 py-1.5 border-b border-stone-200 flex items-center justify-between">
+                            <span className="text-xs font-bold text-stone-700">{MONTH_NAMES_FULL[monthIdx]}</span>
+                            {activePaintDiet && (() => {
+                              const allDaysInMonth = Array.from({ length: daysInMonth }, (_, i) => `${calendarYear}-${month}-${i + 1}`);
+                              const allAssigned = allDaysInMonth.every(dk => (calendarForSpecies[dk] || calendarForSpecies[`${month}-${dk.split('-')[2]}`]) === activePaintDiet);
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (allAssigned) {
+                                      // Desmarcar mês inteiro - tentar ambos os formatos de key
+                                      allDaysInMonth.forEach(dk => {
+                                        const legKey = `${month}-${dk.split('-')[2]}`;
+                                        const realKey = calendarForSpecies[dk] ? dk : calendarForSpecies[legKey] ? legKey : dk;
+                                        removeDayMut.mutate({ speciesId, dayKey: realKey });
+                                      });
+                                    } else {
+                                      // Marcar mês inteiro
+                                      allDaysInMonth.forEach(dk => {
+                                        const existing = calendarForSpecies[dk] || calendarForSpecies[`${month}-${dk.split('-')[2]}`];
+                                        if (existing !== activePaintDiet) {
+                                          assignDayMut.mutate({ speciesId, dayKey: dk, dietId: activePaintDiet });
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  className={cn(
+                                    "text-[10px] font-semibold px-2 py-0.5 rounded transition-colors",
+                                    allAssigned
+                                      ? "bg-red-100 text-red-700 hover:bg-red-200"
+                                      : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                  )}
+                                >
+                                  {allAssigned ? "Limpar mês" : "Mês inteiro"}
+                                </button>
+                              );
+                            })()}
+                          </div>
+                          <div className="p-2">
+                            {/* Dias da semana header */}
+                            <div className="grid grid-cols-7 gap-px mb-1">
+                              {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
+                                <div key={i} className="text-center text-[9px] font-bold text-stone-500 py-0.5">{d}</div>
+                              ))}
+                            </div>
+                            {/* Grid de dias */}
+                            <div className="grid grid-cols-7 gap-px">
+                              {Array.from({ length: firstDayOffset }, (_, i) => (
+                                <div key={`e-${i}`} className="aspect-square" />
+                              ))}
+                              {Array.from({ length: daysInMonth }, (_, i) => {
+                                const day = i + 1;
+                                const dayKey = `${calendarYear}-${month}-${day}`;
+                                const legacyKey = `${month}-${day}`;
+                                // Determinar qual key está realmente no banco
+                                const actualKey = calendarForSpecies[dayKey] ? dayKey : calendarForSpecies[legacyKey] ? legacyKey : dayKey;
+                                const assignedDietId = calendarForSpecies[dayKey] || calendarForSpecies[legacyKey];
+                                const assignedDiet = assignedDietId ? dietsForSpecies.find(d => d.id === assignedDietId) : null;
+                                const assignedColor = assignedDiet ? dietColorMap.get(assignedDiet.id) : null;
+                                const isToday = day === now.getDate() && monthIdx === now.getMonth() && calendarYear === now.getFullYear();
+                                const feriadoKey = `${month}-${day}`;
+                                const feriado = FERIADOS_REG[feriadoKey];
+                                const isActivePaintTarget = activePaintDiet !== null;
+                                const isViewingThisDay = dayDetailKey === dayKey && dayDetailDiet !== null;
+
+                                return (
+                                  <button
+                                    key={day}
+                                    type="button"
+                                    onClick={() => {
+                                      if (isActivePaintTarget && activePaintDiet) {
+                                        // Modo pintura: atribuir ou remover dieta
+                                        if (assignedDietId === activePaintDiet) {
+                                          removeDayMut.mutate({ speciesId, dayKey: actualKey });
+                                        } else {
+                                          // Remove a key antiga se existir, depois atribui com a nova
+                                          if (assignedDietId && actualKey !== dayKey) {
+                                            removeDayMut.mutate({ speciesId, dayKey: actualKey });
+                                          }
+                                          assignDayMut.mutate({ speciesId, dayKey, dietId: activePaintDiet });
+                                        }
+                                      } else if (assignedDiet) {
+                                        // Dia já atribuído: clique direto remove (desmarcar)
+                                        removeDayMut.mutate({ speciesId, dayKey: actualKey });
+                                        setDayDetailDiet(null);
+                                        setDayDetailKey("");
+                                      }
+                                    }}
+                                    title={(() => {
+                                      const parts: string[] = [];
+                                      if (feriado) parts.push(feriado);
+                                      if (assignedDiet) parts.push(assignedDiet.name);
+                                      return parts.length > 0 ? parts.join(" | ") : undefined;
+                                    })()}
+                                    className={cn(
+                                      "aspect-square rounded-sm flex items-center justify-center text-[10px] font-semibold relative transition-all",
+                                      !assignedColor && "text-stone-600 hover:bg-stone-100",
+                                      assignedColor && "hover:opacity-80",
+                                      isToday && "ring-1 ring-emerald-500 font-bold",
+                                      isActivePaintTarget && !assignedDietId && "hover:bg-emerald-50 cursor-crosshair",
+                                      isActivePaintTarget && assignedDietId && "cursor-crosshair",
+                                      isViewingThisDay && "ring-2 ring-blue-500",
+                                      feriado && !assignedColor && "text-red-500 font-bold"
+                                    )}
+                                    style={assignedColor ? { ...assignedColor.lightStyle, ...assignedColor.darkTextStyle } : undefined}
+                                  >
+                                    {day}
+                                    {feriado && (
+                                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {/* Rodé de feriados do mês */}
+                            {(() => {
+                              const feriadosDoMes: { day: number; name: string }[] = [];
+                              for (let d = 1; d <= daysInMonth; d++) {
+                                const fKey = `${month}-${d}`;
+                                if (FERIADOS_REG[fKey]) feriadosDoMes.push({ day: d, name: FERIADOS_REG[fKey] });
+                              }
+                              return feriadosDoMes.length > 0 ? (
+                                <div className="mt-1 pt-1 border-t border-stone-100">
+                                  {feriadosDoMes.map(f => (
+                                    <p key={f.day} className="text-[10px] text-red-600 leading-snug font-medium">
+                                      <span className="font-bold">{f.day}</span> — {f.name}
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                </div>
+
+                {/* ═══ SEÇÃO 3: Legenda + Exportar PDF ═══ */}
+                <div className="mx-5 mb-4 mt-1 px-4 py-3 bg-stone-50 rounded-xl border border-stone-200 flex flex-wrap items-center gap-3 text-[10px] text-stone-500">
+                  {dietsForSpecies.map(diet => {
+                    const color = dietColorMap.get(diet.id)!;
+                    return (
+                      <span key={diet.id} className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-sm" style={color.bgStyle} />
+                        <span className="text-xs">{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}</span>
+                      </span>
+                    );
+                  })}
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> Feriado</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm ring-1 ring-emerald-500 inline-block" /> Hoje</span>
+                  <button
+                    onClick={() => {
+                      exportCalendarPdf({
+                        year: calendarYear,
+                        speciesName: speciesName,
+                        speciesId: speciesId,
+                        diets: dietsForSpecies,
+                        calendar: calendarForSpecies,
+                        lifePeriods,
+                        enclosureTypes,
+                      });
+                      toast.success("PDF do calendário exportado!");
+                    }}
+                    className="ml-auto flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors"
+                    title="Exportar calendário em PDF"
+                  >
+                    <FileDown className="w-3 h-3" /> Exportar PDF
+                  </button>
+                </div>
+
+                {/* ═══ SEÇÃO 4: Detalhes das Dietas Cadastradas ═══ */}
+                <div className="border-t border-stone-200 bg-stone-50/30">
+                  <div className="px-5 py-2 flex items-center gap-1.5">
+                    <Utensils className="w-3.5 h-3.5 text-stone-400" />
+                    <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Dietas ({dietsForSpecies.length})</span>
+                  </div>
+                  {dietsForSpecies.map(diet => {
+                    const color = dietColorMap.get(diet.id)!;
+                    const assignedCount = Object.values(calendarForSpecies).filter(id => id === diet.id).length;
+                    const calRacaoName = diet.racaoName || "";
+                    const calCleanFoodName = (name: string) => { let n = name; for (let i = 0; i < 3; i++) n = n.replace(/,?\s*(Cru[ao]?|Cozid[ao]|Seco|Inteiro|Descascad[ao]|com [Cc]asca|Inteira?)$/i, "").trim(); return n; };
+                    const calIngredientsList = [
+                      ...(calRacaoName ? [calRacaoName] : []),
+                      ...diet.items.racao.map(i => calCleanFoodName(i.foodName)).filter(n => n !== calRacaoName),
+                      ...diet.items.vegetais.map(i => calCleanFoodName(i.foodName)),
+                      ...diet.items.frutas.map(i => calCleanFoodName(i.foodName)),
+                      ...diet.items.proteicos.map(i => calCleanFoodName(i.foodName)),
+                    ];
+                    return (
+                      <div key={diet.id} className="px-5 py-3.5 hover:bg-stone-50 transition-colors border-b border-stone-100 last:border-b-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-sm flex-shrink-0" style={color.bgStyle} />
+                              <h4 className="text-sm font-bold text-stone-800">
+{(() => { const pl = lifePeriods.find(p => p.id === diet.phaseId)?.label || diet.phaseId; const rn = diet.racaoName || ""; return rn ? `${pl} — ${rn}` : pl; })()}
+                               </h4>
+                            </div>
+                            {calIngredientsList.length > 0 && (
+                              <p className="text-[13px] font-semibold text-stone-600 mt-1.5 ml-5 leading-relaxed">
+                                {calIngredientsList.map((name, idx) => (
+                                  <span key={idx}>
+                                    {idx === 0 && calRacaoName ? (
+                                      <span className="text-amber-700 font-extrabold text-sm">{name}</span>
+                                    ) : (
+                                      <span>{name}</span>
+                                    )}
+                                    {idx < calIngredientsList.length - 1 && <span className="text-stone-300">{" \u00b7 "}</span>}
+                                  </span>
+                                ))}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-1 ml-5">
+                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 flex items-center gap-0.5">
+                                <Users className="w-3 h-3" />{diet.birdCount} ave{diet.birdCount > 1 ? "s" : ""}
+                              </span>
+                              <span className="text-xs text-stone-500 font-medium">{fmtG(diet.totalGrams)}/ave</span>
+                              {assignedCount > 0 && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">
+                                  {assignedCount} dia{assignedCount > 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 ml-3">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
+                                  className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Ver detalhes</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => loadDietForEditing(diet)}
+                                  className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Editar dieta</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleDuplicateDiet(diet)}
+                                  className="p-1.5 text-stone-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                                >
+                                  <CopyPlus className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Duplicar dieta</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleExportDiet(diet)}
+                                  className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Exportar dieta</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => { handleDeleteDiet(diet.id); }}
+                                  className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent sideOffset={4}>Excluir dieta</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                  </>
+                )}
+              </div>
+            );
+          });
+        })()}
+
+        {/* Card de exportar calendários em PDF com filtros */}
+        {(() => {
+          const speciesWithDiets = activeFlockSpecies.filter(sp =>
+            savedDiets.some(d => d.speciesId === sp.id) || Object.keys(speciesCalendars[sp.id] || {}).length > 0
+          );
+          const now = new Date();
+          const currentMonth = now.getMonth() + 1;
+          return (
+            <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setExportCardExpanded(!exportCardExpanded)}
+                className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-stone-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <FileDown className="w-4 h-4 text-indigo-700" />
+                </div>
+                <h3 className="font-bold text-stone-800">Exportar Calendários em PDF</h3>
+                <span className="ml-auto flex-shrink-0">
+                  {exportCardExpanded
+                    ? <ChevronDown className="w-5 h-5 text-stone-400" />
+                    : <ChevronRight className="w-5 h-5 text-stone-400" />}
+                </span>
+              </button>
+
+              {exportCardExpanded && (
+              <div className="px-5 pb-5">
+              {/* Seletor de espécie */}
+              <div className="mb-3">
+                <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Espécies</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => {
+                      // Toggle: se todas selecionadas, desmarcar todas; senão, marcar todas
+                      if (exportSpeciesIds.length === speciesWithDiets.length) {
+                        setExportSpeciesIds([]);
+                      } else {
+                        setExportSpeciesIds(speciesWithDiets.map(s => s.id));
+                      }
+                    }}
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
+                      exportSpeciesIds.length === speciesWithDiets.length
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white text-stone-600 border-stone-200 hover:border-indigo-300"
+                    )}
+                  >
+                    {exportSpeciesIds.length === speciesWithDiets.length ? "✓ Todas" : "Todas"} ({speciesWithDiets.length})
+                  </button>
+                  {speciesWithDiets.map(sp => {
+                    const isSelected = exportSpeciesIds.includes(sp.id);
+                    return (
+                      <button
+                        key={sp.id}
+                        onClick={() => {
+                          setExportSpeciesIds(prev =>
+                            isSelected ? prev.filter(id => id !== sp.id) : [...prev, sp.id]
+                          );
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
+                          isSelected
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-white text-stone-600 border-stone-200 hover:border-emerald-300"
+                        )}
+                      >
+                        {isSelected ? "✓ " : ""}{sp.commonName}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Seletor de período */}
+              <div className="mb-3">
+                <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Período Predefinido</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "Ano Inteiro", value: "full-year" },
+                    { label: "Mês Atual", value: "current-month" },
+                    { label: "Próx. 3 Meses", value: "next-3" },
+                    { label: "Próx. 6 Meses", value: "next-6" },
+                    { label: "1º Semestre", value: "sem-1" },
+                    { label: "2º Semestre", value: "sem-2" },
+                    { label: "Personalizado", value: "custom" },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setExportPeriod(opt.value)}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
+                        exportPeriod === opt.value
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-stone-600 border-stone-200 hover:border-indigo-300"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seletor de meses específicos (quando Personalizado) */}
+              {exportPeriod === "custom" && (
+                <div className="mb-3 p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Selecione os meses</label>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                    {["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"].map((m, i) => {
+                      const monthNum = i + 1;
+                      const isSelected = (exportCustomMonths || []).includes(monthNum);
+                      return (
+                        <button
+                          key={monthNum}
+                          onClick={() => {
+                            setExportCustomMonths(prev => {
+                              const current = prev || [];
+                              return isSelected ? current.filter(n => n !== monthNum) : [...current, monthNum].sort((a,b) => a-b);
+                            });
+                          }}
+                          className={cn(
+                            "px-2 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                            isSelected
+                              ? "bg-indigo-600 text-white border-indigo-600"
+                              : "bg-white text-stone-600 border-stone-200 hover:border-indigo-300"
+                          )}
+                        >
+                          {m}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Seletor de data específica (range) */}
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-stone-600 mb-1.5 block">Ou selecione datas específicas</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={exportDateFrom || ""}
+                    onChange={(e) => {
+                      setExportDateFrom(e.target.value);
+                      if (e.target.value) setExportPeriod("date-range");
+                    }}
+                    className="px-2.5 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                  <span className="text-xs text-stone-400">até</span>
+                  <input
+                    type="date"
+                    value={exportDateTo || ""}
+                    onChange={(e) => {
+                      setExportDateTo(e.target.value);
+                      if (e.target.value) setExportPeriod("date-range");
+                    }}
+                    className="px-2.5 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                  {exportPeriod === "date-range" && (
+                    <button
+                      onClick={() => { setExportDateFrom(""); setExportDateTo(""); setExportPeriod("full-year"); }}
+                      className="text-[10px] text-red-500 hover:text-red-700 font-medium"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Botão de exportar */}
+              <button
+                disabled={exportSpeciesIds.length === 0}
+                onClick={() => {
+                  let months: number[];
+                  switch (exportPeriod) {
+                    case "current-month": months = [currentMonth]; break;
+                    case "next-3": months = Array.from({ length: 3 }, (_, i) => ((currentMonth - 1 + i) % 12) + 1); break;
+                    case "next-6": months = Array.from({ length: 6 }, (_, i) => ((currentMonth - 1 + i) % 12) + 1); break;
+                    case "sem-1": months = [1, 2, 3, 4, 5, 6]; break;
+                    case "sem-2": months = [7, 8, 9, 10, 11, 12]; break;
+                    case "custom": months = exportCustomMonths.length > 0 ? exportCustomMonths : Array.from({ length: 12 }, (_, i) => i + 1); break;
+                    case "date-range": {
+                      // Extrair meses do range de datas
+                      if (exportDateFrom && exportDateTo) {
+                        const fromMonth = parseInt(exportDateFrom.split("-")[1]);
+                        const toMonth = parseInt(exportDateTo.split("-")[1]);
+                        months = [];
+                        for (let m = fromMonth; m <= toMonth; m++) months.push(m);
+                      } else {
+                        months = Array.from({ length: 12 }, (_, i) => i + 1);
+                      }
+                      break;
+                    }
+                    default: months = Array.from({ length: 12 }, (_, i) => i + 1);
+                  }
+                  const filteredSpecies = speciesWithDiets.filter(sp => exportSpeciesIds.includes(sp.id));
+                  exportAllCalendarsPdf(
+                    calendarYear,
+                    filteredSpecies.map(sp => ({ id: sp.id, commonName: sp.commonName })),
+                    savedDiets,
+                    speciesCalendars,
+                    months,
+                    lifePeriods,
+                    enclosureTypes,
+                  );
+                  toast.success(`PDF exportado com ${filteredSpecies.length} espécie${filteredSpecies.length > 1 ? "s" : ""}!`);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                <FileDown className="w-4 h-4" />
+                Exportar PDF {exportSpeciesIds.length > 0 ? `(${exportSpeciesIds.length} espécie${exportSpeciesIds.length > 1 ? "s" : ""})` : ""}
+              </button>
+              </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ===== FERRAMENTAS OPERACIONAIS ===== */}
         <OperationalTools
