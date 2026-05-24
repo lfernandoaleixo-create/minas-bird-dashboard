@@ -1,12 +1,13 @@
 /**
- * DietCalculator — Calculadora de Dieta por Espécie
- * Seleciona ração, % de ração na dieta, e calcula automaticamente
- * a quantidade de "salada" (vegetais + frutas + sementes/proteicos).
- * Ajustável na prática com sliders de proporção.
+ * DietCalculator — Calculadora de Dieta Simplificada por Espécie
+ * - Fases com fator de multiplicação visível
+ * - Recinto com fator editável manualmente + tooltip de referência
+ * - Seletor de ração (mantido)
+ * - Métrica simples: % ração → quantidade de salada (sem sliders)
  * Persistência em localStorage por espécie.
  */
-import { useState, useMemo, useCallback } from "react";
-import { Calculator, ChevronDown, Wheat, Leaf, Apple, Egg, Info } from "lucide-react";
+import { useState, useMemo, useCallback, useRef } from "react";
+import { Calculator, ChevronDown, HelpCircle, Wheat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   racoes,
@@ -16,7 +17,6 @@ import {
   lifePeriods,
   enclosureTypes,
 } from "@/data/petbird";
-import type { FoodItem } from "@/data/petbird";
 import { species } from "@/data/feeding";
 
 interface DietCalculatorProps {
@@ -26,16 +26,12 @@ interface DietCalculatorProps {
 
 const RACAO_PCT_OPTIONS = [50, 60, 70, 80, 90, 100];
 
-const STORAGE_KEY_DIET_CALC = "dietCalc_v1";
+const STORAGE_KEY_DIET_CALC = "dietCalc_v2";
 
 interface CalcState {
   racaoId: string | null;
   racaoPct: number;
-  // Proporções da salada (somam 100%)
-  vegPct: number;
-  frtPct: number;
-  proPct: number;
-  enclosureId: string;
+  enclosureMultiplier: number; // fator manual editável
 }
 
 function loadCalcState(speciesId: string): CalcState {
@@ -49,10 +45,7 @@ function loadCalcState(speciesId: string): CalcState {
   return {
     racaoId: null,
     racaoPct: 70,
-    vegPct: 50,
-    frtPct: 30,
-    proPct: 20,
-    enclosureId: "viveiro-voo-interno",
+    enclosureMultiplier: 1.0,
   };
 }
 
@@ -70,6 +63,8 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
   const [state, setState] = useState<CalcState>(() => loadCalcState(speciesId));
   const [racaoSearch, setRacaoSearch] = useState("");
   const [showRacaoList, setShowRacaoList] = useState(false);
+  const [showEnclosureHelp, setShowEnclosureHelp] = useState(false);
+  const helpRef = useRef<HTMLDivElement>(null);
 
   const persist = useCallback((newState: CalcState) => {
     setState(newState);
@@ -80,17 +75,18 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
   const sp = useMemo(() => species.find(s => s.id === speciesId), [speciesId]);
   const birdData = useMemo(() => getPetBirdData(speciesId), [speciesId]);
   const phase = useMemo(() => lifePeriods.find(p => p.id === selectedPhase) || lifePeriods[0], [selectedPhase]);
-  const enclosure = useMemo(() => enclosureTypes.find(e => e.id === state.enclosureId) || enclosureTypes[3], [state.enclosureId]);
   const selectedRacao = useMemo(() => racoes.find(r => r.id === state.racaoId) || null, [state.racaoId]);
 
-  // MER calculation
+  // MER calculation using manual enclosure multiplier
   const weight = birdData?.weight || (sp ? (sp.weightRange.min + sp.weightRange.max) / 2 : 100);
   const mer = useMemo(() => {
     if (!birdData || weight <= 0) return 0;
-    return calculateMER(weight, birdData.metabolism, phase.multiplier, enclosure.id);
-  }, [birdData, weight, phase, enclosure]);
+    // Use viveiro-voo-interno as base, then apply manual multiplier
+    const baseMer = calculateMER(weight, birdData.metabolism, phase.multiplier, "viveiro-voo-interno");
+    return baseMer * state.enclosureMultiplier;
+  }, [birdData, weight, phase, state.enclosureMultiplier]);
 
-  // Diet calculation
+  // Diet calculation — simple metric
   const dietResult = useMemo(() => {
     if (!selectedRacao || mer <= 0) return null;
 
@@ -100,31 +96,19 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
 
     const racaoGrams = kcalToGrams(racaoKcal, selectedRacao.energyKcal);
 
-    // Average kcal/kg for each group (based on petbird data medians)
-    const AVG_KCAL = { vegetais: 280, frutas: 554, proteicos: 3596 };
-
-    const vegKcal = saladaKcal * (state.vegPct / 100);
-    const frtKcal = saladaKcal * (state.frtPct / 100);
-    const proKcal = saladaKcal * (state.proPct / 100);
-
-    const vegGrams = kcalToGrams(vegKcal, AVG_KCAL.vegetais);
-    const frtGrams = kcalToGrams(frtKcal, AVG_KCAL.frutas);
-    const proGrams = kcalToGrams(proKcal, AVG_KCAL.proteicos);
-
-    const totalSaladaGrams = vegGrams + frtGrams + proGrams;
+    // Average kcal/kg for mixed salad (vegetais + frutas + sementes ponderado)
+    const AVG_SALADA_KCAL = 450; // média ponderada típica de salada mista para psitacídeos
+    const saladaGrams = kcalToGrams(saladaKcal, AVG_SALADA_KCAL);
 
     return {
       racaoKcal,
       racaoGrams,
       saladaKcal,
-      totalSaladaGrams,
-      vegGrams,
-      frtGrams,
-      proGrams,
+      saladaGrams,
       totalKcal: mer,
-      totalGrams: racaoGrams + totalSaladaGrams,
+      totalGrams: racaoGrams + saladaGrams,
     };
-  }, [selectedRacao, mer, state.racaoPct, state.vegPct, state.frtPct, state.proPct]);
+  }, [selectedRacao, mer, state.racaoPct]);
 
   // Filtered rations for search
   const filteredRacoes = useMemo(() => {
@@ -132,23 +116,6 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
     const q = racaoSearch.toLowerCase();
     return racoes.filter(r => r.name !== "Ração Mediana" && r.name.toLowerCase().includes(q));
   }, [racaoSearch]);
-
-  const handleSaladPctChange = (key: "vegPct" | "frtPct" | "proPct", value: number) => {
-    // Adjust other two proportionally to keep total = 100
-    const others = (["vegPct", "frtPct", "proPct"] as const).filter(k => k !== key);
-    const remaining = 100 - value;
-    const otherTotal = state[others[0]] + state[others[1]];
-    let newState: CalcState;
-    if (otherTotal === 0) {
-      newState = { ...state, [key]: value, [others[0]]: Math.round(remaining / 2), [others[1]]: remaining - Math.round(remaining / 2) };
-    } else {
-      const ratio0 = state[others[0]] / otherTotal;
-      const v0 = Math.round(remaining * ratio0);
-      const v1 = remaining - v0;
-      newState = { ...state, [key]: value, [others[0]]: v0, [others[1]]: v1 };
-    }
-    persist(newState);
-  };
 
   if (!sp || !birdData) return null;
 
@@ -166,7 +133,7 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
           <span className="text-[11px] font-bold text-foreground/80">Calculadora de Dieta</span>
           {selectedRacao && dietResult && (
             <span className="text-[10px] text-muted-foreground ml-2">
-              {selectedRacao.name.substring(0, 20)}{selectedRacao.name.length > 20 ? "..." : ""} · {state.racaoPct}% ração · {dietResult.totalGrams.toFixed(1)}g total
+              {selectedRacao.name.substring(0, 20)}{selectedRacao.name.length > 20 ? "..." : ""} · {state.racaoPct}% ração → {dietResult.saladaGrams.toFixed(0)}g salada
             </span>
           )}
         </div>
@@ -176,26 +143,91 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
       {/* Calculator content */}
       {isOpen && (
         <div className="px-5 pb-4 space-y-4">
-          {/* Info banner */}
-          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-indigo-50 border border-indigo-100">
-            <Info size={12} className="text-indigo-500 mt-0.5 flex-shrink-0" />
-            <p className="text-[10px] text-indigo-700 leading-relaxed">
-              MER calculado: <span className="font-bold">{mer.toFixed(1)} kcal/dia</span> · Peso: {weight}g · Fase: {phase.label} · Recinto: {enclosure.label}
+          {/* Phase display with multipliers */}
+          <div>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+              Fase da Vida
+            </label>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {lifePeriods.map(p => (
+                <div
+                  key={p.id}
+                  className={cn(
+                    "px-2.5 py-1.5 rounded-lg text-[10px] border transition-all",
+                    selectedPhase === p.id
+                      ? "bg-teal-600 text-white border-teal-600 shadow-sm font-bold"
+                      : "bg-muted/20 border-border/30 text-muted-foreground/60"
+                  )}
+                >
+                  {p.label} <span className={cn("font-mono", selectedPhase === p.id ? "text-teal-100" : "text-muted-foreground/40")}>×{p.multiplier}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] text-muted-foreground/50 mt-1 italic">
+              A fase é selecionada no seletor acima do card
             </p>
           </div>
 
-          {/* Enclosure selector */}
+          {/* Enclosure factor — manual input with help tooltip */}
           <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Recinto</label>
-            <select
-              value={state.enclosureId}
-              onChange={(e) => persist({ ...state, enclosureId: e.target.value })}
-              className="w-full px-3 py-1.5 rounded-lg border border-border/50 bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-300"
-            >
-              {enclosureTypes.map(enc => (
-                <option key={enc.id} value={enc.id}>{enc.label}</option>
-              ))}
-            </select>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+              Fator do Recinto
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="0.05"
+                min="0.5"
+                max="2.0"
+                value={state.enclosureMultiplier}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val) && val >= 0.5 && val <= 2.0) {
+                    persist({ ...state, enclosureMultiplier: val });
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-20 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background text-xs text-foreground text-center font-mono font-bold focus:outline-none focus:ring-1 focus:ring-indigo-300"
+              />
+              {/* Help icon with tooltip */}
+              <div className="relative" ref={helpRef}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowEnclosureHelp(!showEnclosureHelp); }}
+                  onMouseEnter={() => setShowEnclosureHelp(true)}
+                  onMouseLeave={() => setShowEnclosureHelp(false)}
+                  className="w-5 h-5 rounded-full flex items-center justify-center bg-muted/30 hover:bg-indigo-100 transition-colors"
+                >
+                  <HelpCircle size={12} className="text-muted-foreground" />
+                </button>
+                {showEnclosureHelp && (
+                  <div className="absolute z-50 left-7 top-0 bg-card border border-border rounded-lg shadow-xl p-3 min-w-[260px]">
+                    <p className="text-[10px] font-bold text-foreground mb-2">Referência de Fatores por Recinto:</p>
+                    <table className="w-full text-[9px]">
+                      <thead>
+                        <tr className="border-b border-border/30">
+                          <th className="text-left py-1 text-muted-foreground font-semibold">Recinto</th>
+                          <th className="text-right py-1 text-muted-foreground font-semibold">Fator</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {enclosureTypes.map(enc => (
+                          <tr key={enc.id} className="border-b border-border/10">
+                            <td className="py-1 text-foreground">{enc.label}</td>
+                            <td className="py-1 text-right font-mono font-bold text-indigo-700">×{enc.multiplier.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p className="text-[8px] text-muted-foreground/60 mt-2 italic">
+                      Ajuste manualmente conforme sua realidade
+                    </p>
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                (base: Viveiro Voo Interno = ×1.00)
+              </span>
+            </div>
           </div>
 
           {/* Ração selector */}
@@ -207,6 +239,7 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
                 value={showRacaoList ? racaoSearch : (selectedRacao?.name || "")}
                 onChange={(e) => { setRacaoSearch(e.target.value); setShowRacaoList(true); }}
                 onFocus={() => setShowRacaoList(true)}
+                onClick={(e) => e.stopPropagation()}
                 placeholder="Buscar ração..."
                 className="w-full px-3 py-2 rounded-lg border border-border/50 bg-background text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-indigo-300"
               />
@@ -230,7 +263,7 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
                         )}
                       >
                         <span className="font-medium">{r.name}</span>
-                        <span className="text-muted-foreground ml-2">({r.classification}) · {r.energyKcal} kcal/kg · {r.proteinG}% prot</span>
+                        <span className="text-muted-foreground ml-2">({r.classification}) · {r.energyKcal} kcal/kg</span>
                       </button>
                     ))
                   )}
@@ -242,7 +275,6 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
                 <span>Energia: <span className="font-semibold text-foreground">{selectedRacao.energyKcal} kcal/kg</span></span>
                 <span>Proteína: <span className="font-semibold text-foreground">{selectedRacao.proteinG}%</span></span>
                 <span>Gordura: <span className="font-semibold text-foreground">{selectedRacao.fatG}%</span></span>
-                <span>Fibra: <span className="font-semibold text-foreground">{selectedRacao.fiberG}%</span></span>
               </div>
             )}
           </div>
@@ -252,7 +284,7 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
               % de Ração na Dieta
             </label>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {RACAO_PCT_OPTIONS.map(pct => (
                 <button
                   key={pct}
@@ -270,129 +302,54 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
             </div>
           </div>
 
-          {/* Salad proportion sliders */}
-          {state.racaoPct < 100 && (
-            <div>
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
-                Proporção da Salada ({100 - state.racaoPct}% restante)
-              </label>
-              <div className="space-y-2.5">
-                {/* Vegetais */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 min-w-[90px]">
-                    <Leaf size={12} className="text-emerald-600" />
-                    <span className="text-[11px] font-semibold text-emerald-700">Vegetais</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={state.vegPct}
-                    onChange={(e) => handleSaladPctChange("vegPct", Number(e.target.value))}
-                    className="flex-1 h-1.5 rounded-full appearance-none bg-emerald-100 accent-emerald-600"
-                  />
-                  <span className="text-[11px] font-bold text-emerald-700 min-w-[35px] text-right">{state.vegPct}%</span>
-                </div>
-                {/* Frutas */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 min-w-[90px]">
-                    <Apple size={12} className="text-orange-600" />
-                    <span className="text-[11px] font-semibold text-orange-700">Frutas</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={state.frtPct}
-                    onChange={(e) => handleSaladPctChange("frtPct", Number(e.target.value))}
-                    className="flex-1 h-1.5 rounded-full appearance-none bg-orange-100 accent-orange-600"
-                  />
-                  <span className="text-[11px] font-bold text-orange-700 min-w-[35px] text-right">{state.frtPct}%</span>
-                </div>
-                {/* Proteicos/Sementes */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 min-w-[90px]">
-                    <Wheat size={12} className="text-purple-600" />
-                    <span className="text-[11px] font-semibold text-purple-700">Sementes</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={state.proPct}
-                    onChange={(e) => handleSaladPctChange("proPct", Number(e.target.value))}
-                    className="flex-1 h-1.5 rounded-full appearance-none bg-purple-100 accent-purple-600"
-                  />
-                  <span className="text-[11px] font-bold text-purple-700 min-w-[35px] text-right">{state.proPct}%</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Results */}
+          {/* Results — simple metric */}
           {dietResult && selectedRacao && (
             <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/50 to-white p-4 space-y-3">
-              <h5 className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Resultado — Por Ave / Dia</h5>
-              
-              {/* Main metrics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-center">
-                  <Wheat size={14} className="mx-auto text-amber-600 mb-1" />
-                  <p className="text-[10px] text-amber-600 font-medium">Ração</p>
-                  <p className="text-base font-black text-amber-800">{dietResult.racaoGrams.toFixed(1)}g</p>
-                  <p className="text-[9px] text-amber-500">{state.racaoPct}% · {dietResult.racaoKcal.toFixed(0)} kcal</p>
+              <div className="flex items-center justify-between">
+                <h5 className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Métrica — Por Ave / Dia</h5>
+                <span className="text-[9px] text-muted-foreground font-mono">MER: {mer.toFixed(1)} kcal</span>
+              </div>
+
+              {/* Main metric cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-center">
+                  <Wheat size={16} className="mx-auto text-amber-600 mb-1" />
+                  <p className="text-[10px] text-amber-600 font-medium mb-0.5">Ração ({state.racaoPct}%)</p>
+                  <p className="text-xl font-black text-amber-800">{dietResult.racaoGrams.toFixed(1)}g</p>
+                  <p className="text-[9px] text-amber-500 mt-0.5">{dietResult.racaoKcal.toFixed(0)} kcal</p>
                 </div>
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-center">
-                  <Leaf size={14} className="mx-auto text-emerald-600 mb-1" />
-                  <p className="text-[10px] text-emerald-600 font-medium">Vegetais</p>
-                  <p className="text-base font-black text-emerald-800">{dietResult.vegGrams.toFixed(1)}g</p>
-                  <p className="text-[9px] text-emerald-500">{state.vegPct}% da salada</p>
-                </div>
-                <div className="rounded-lg bg-orange-50 border border-orange-200 p-2.5 text-center">
-                  <Apple size={14} className="mx-auto text-orange-600 mb-1" />
-                  <p className="text-[10px] text-orange-600 font-medium">Frutas</p>
-                  <p className="text-base font-black text-orange-800">{dietResult.frtGrams.toFixed(1)}g</p>
-                  <p className="text-[9px] text-orange-500">{state.frtPct}% da salada</p>
-                </div>
-                <div className="rounded-lg bg-purple-50 border border-purple-200 p-2.5 text-center">
-                  <Wheat size={14} className="mx-auto text-purple-600 mb-1" />
-                  <p className="text-[10px] text-purple-600 font-medium">Sementes</p>
-                  <p className="text-base font-black text-purple-800">{dietResult.proGrams.toFixed(1)}g</p>
-                  <p className="text-[9px] text-purple-500">{state.proPct}% da salada</p>
+                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-center">
+                  <svg className="mx-auto text-emerald-600 mb-1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 21h10"/><path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M12 3v4"/><path d="M8 5l1 2"/><path d="M16 5l-1 2"/></svg>
+                  <p className="text-[10px] text-emerald-600 font-medium mb-0.5">Salada ({100 - state.racaoPct}%)</p>
+                  <p className="text-xl font-black text-emerald-800">{dietResult.saladaGrams.toFixed(1)}g</p>
+                  <p className="text-[9px] text-emerald-500 mt-0.5">{dietResult.saladaKcal.toFixed(0)} kcal</p>
                 </div>
               </div>
 
-              {/* Summary row */}
-              <div className="flex items-center justify-between pt-2 border-t border-indigo-100">
-                <div className="text-[10px] text-muted-foreground">
-                  <span className="font-semibold text-foreground">Total Salada:</span> {dietResult.totalSaladaGrams.toFixed(1)}g ({(100 - state.racaoPct)}% da dieta)
-                </div>
-                <div className="text-[10px] text-muted-foreground">
-                  <span className="font-semibold text-foreground">Total Geral:</span> {dietResult.totalGrams.toFixed(1)}g/dia · {dietResult.totalKcal.toFixed(0)} kcal
-                </div>
+              {/* Total */}
+              <div className="flex items-center justify-between pt-2 border-t border-indigo-100 text-[10px]">
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">Total:</span> {dietResult.totalGrams.toFixed(1)}g/dia · {dietResult.totalKcal.toFixed(0)} kcal
+                </span>
+                {sp.dailyRation > 0 && (
+                  <span className="text-muted-foreground italic">
+                    Prática atual: {sp.dailyRation}g ração + {sp.dailySalad}g salada
+                  </span>
+                )}
               </div>
 
-              {/* Per-flock calculation */}
-              {sp && sp.currentCount > 1 && (
+              {/* Per-flock */}
+              {sp.currentCount > 1 && (
                 <div className="pt-2 border-t border-indigo-100">
-                  <p className="text-[10px] font-semibold text-indigo-700 mb-1">
-                    Para o plantel ({sp.currentCount} aves):
+                  <p className="text-[10px] font-semibold text-indigo-700 mb-1.5">
+                    Plantel ({sp.currentCount} aves):
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
-                    <span className="px-2 py-1 rounded bg-amber-50 text-amber-800 font-medium text-center">
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <span className="px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-800 font-bold text-center">
                       Ração: {(dietResult.racaoGrams * sp.currentCount).toFixed(0)}g
                     </span>
-                    <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-800 font-medium text-center">
-                      Vegetais: {(dietResult.vegGrams * sp.currentCount).toFixed(0)}g
-                    </span>
-                    <span className="px-2 py-1 rounded bg-orange-50 text-orange-800 font-medium text-center">
-                      Frutas: {(dietResult.frtGrams * sp.currentCount).toFixed(0)}g
-                    </span>
-                    <span className="px-2 py-1 rounded bg-purple-50 text-purple-800 font-medium text-center">
-                      Sementes: {(dietResult.proGrams * sp.currentCount).toFixed(0)}g
+                    <span className="px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-800 font-bold text-center">
+                      Salada: {(dietResult.saladaGrams * sp.currentCount).toFixed(0)}g
                     </span>
                   </div>
                 </div>
@@ -403,7 +360,7 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
           {!selectedRacao && (
             <div className="text-center py-4 text-muted-foreground">
               <Calculator size={20} className="mx-auto mb-2 opacity-20" />
-              <p className="text-[11px]">Selecione uma ração acima para calcular a dieta</p>
+              <p className="text-[11px]">Selecione uma ração acima para ver a métrica</p>
             </div>
           )}
         </div>
