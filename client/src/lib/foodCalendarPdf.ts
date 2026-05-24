@@ -30,10 +30,17 @@ const CATEGORY_COLORS: Record<string, [number, number, number]> = {
   proteicos: [124, 58, 237], // purple-600
 };
 
-const QUALITY_COLORS: Record<string, { color: [number, number, number]; label: string }> = {
-  excelente: { color: [16, 185, 129], label: "Excelente" },
-  bom: { color: [37, 99, 235], label: "Bom" },
-  pobre: { color: [217, 119, 6], label: "Pobre" },
+const QUALITY_COLORS: Record<string, { color: [number, number, number]; label: string; symbol: string }> = {
+  excelente: { color: [16, 185, 129], label: "Excelente", symbol: "+" },
+  bom: { color: [37, 99, 235], label: "Bom", symbol: "+/\u2212" },
+  pobre: { color: [217, 119, 6], label: "Pobre", symbol: "\u2212" },
+};
+
+const CATEGORY_ROW_BG: Record<string, [number, number, number]> = {
+  racoes: [255, 251, 235],    // amber-50
+  vegetais: [240, 253, 244],  // green-50
+  frutas: [254, 242, 242],    // red-50
+  proteicos: [250, 245, 255], // purple-50
 };
 
 const MONTHS = [
@@ -341,26 +348,34 @@ export async function exportFoodCalendarSpeciesPdf(
   doc.line(tableX, y, tableX + availableW, y);
 
   // Food rows
-  allFoods.forEach((food, idx) => {
-    if (idx % 2 === 0) {
-      doc.setFillColor(250, 250, 250);
-      doc.rect(tableX, y, availableW, rowH, "F");
-    }
+  allFoods.forEach((food) => {
+    // Category row background color
+    const rowBg = CATEGORY_ROW_BG[food.category] || [250, 250, 250];
+    doc.setFillColor(...rowBg);
+    doc.rect(tableX, y, availableW, rowH, "F");
 
-    // Quality dot
-    drawQualityDot(doc, tableX + 2.5, y + rowH / 2, 1.2, food.quality);
+    // Quality symbol (skip for ração)
+    let nameOffset = 3;
+    if (food.category !== "racoes") {
+      const q = QUALITY_COLORS[food.quality] || QUALITY_COLORS.bom;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...q.color);
+      doc.text(q.symbol, tableX + 2, y + rowH * 0.65);
+      nameOffset = 3 + doc.getTextWidth(q.symbol) + 1;
+    }
 
     // Food name — exclusive foods get * prefix
     const displayName = food.inherited ? food.name : `* ${food.name}`;
     doc.setFontSize(6);
     doc.setFont("helvetica", food.inherited ? "normal" : "bold");
     doc.setTextColor(...BRAND.text);
-    const maxNameW = nameColW - 7;
+    const maxNameW = nameColW - nameOffset - 3;
     let fontSize = 6;
     let textW = doc.getTextWidth(displayName);
     if (textW > maxNameW) { fontSize = 5.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(displayName); }
     if (textW > maxNameW) { fontSize = 5; doc.setFontSize(fontSize); }
-    doc.text(displayName, tableX + 5, y + rowH * 0.65, { maxWidth: maxNameW });
+    doc.text(displayName, tableX + nameOffset, y + rowH * 0.65, { maxWidth: maxNameW });
 
     // Check marks
     let totalChecked = 0;
@@ -411,20 +426,29 @@ export async function exportFoodCalendarSpeciesPdf(
   doc.setFont("helvetica", "normal");
   let lx = tableX;
 
-  // Quality dots
-  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "excelente");
+  // Quality symbols
+  doc.setFont("helvetica", "bold");
   doc.setTextColor(...QUALITY_COLORS.excelente.color);
-  doc.text("Excelente", lx + 4.5, legendY);
+  doc.text("+", lx, legendY);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.text);
+  doc.text("Excelente", lx + 4, legendY);
   lx += 24;
 
-  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "bom");
+  doc.setFont("helvetica", "bold");
   doc.setTextColor(...QUALITY_COLORS.bom.color);
-  doc.text("Bom", lx + 4.5, legendY);
-  lx += 16;
+  doc.text("+/\u2212", lx, legendY);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.text);
+  doc.text("Bom", lx + 6, legendY);
+  lx += 18;
 
-  drawQualityDot(doc, lx + 1.5, legendY - 0.5, 1.5, "pobre");
+  doc.setFont("helvetica", "bold");
   doc.setTextColor(...QUALITY_COLORS.pobre.color);
-  doc.text("Pobre", lx + 4.5, legendY);
+  doc.text("\u2212", lx, legendY);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.text);
+  doc.text("Pobre", lx + 4, legendY);
   lx += 18;
 
   // Exclusive indicator

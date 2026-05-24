@@ -797,7 +797,9 @@ export default function FoodCalendarCard() {
                           <tr key={food.name} className={cn("group hover:opacity-80 transition-colors", rowBg)}>
                             <td className={cn("sticky left-0 z-10 px-2 py-1.5 border-b border-border/30", rowBg)}>
                               <div className="flex items-center gap-1.5">
-                                <span className={cn("text-xs font-bold flex-shrink-0 min-w-[20px]", q.color)} title={q.label}>{q.symbol}</span>
+                                {food.category !== "racoes" && (
+                                  <span className={cn("text-xs font-bold flex-shrink-0 min-w-[20px]", q.color)} title={q.label}>{q.symbol}</span>
+                                )}
                                 {!food.inherited && (
                                   <span className="text-base font-black text-violet-600 flex-shrink-0 leading-none">*</span>
                                 )}

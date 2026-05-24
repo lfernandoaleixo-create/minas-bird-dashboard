@@ -264,3 +264,5 @@
 - [x] FoodCalendarCard espécie: ordem fixa dos alimentos na tabela sempre Ração → Vegetais → Frutas → Sementes
 - [x] FoodCalendarCard espécie: cor de fundo na linha do alimento = cor da categoria do mini card (âmbar/verde/vermelho/roxo)
 - [x] FoodCalendarCard espécie: trocar indicador de qualidade para símbolos textuais (+ Excelente, +/− Bom, − Pobre)
+- [x] FoodCalendarCard espécie: remover indicador de qualidade (+, +/−, −) dos itens de ração (somente nome)
+- [x] FoodCalendarCard PDF espécie: aplicar cor de fundo por categoria + símbolos textuais + sem qualidade na ração
