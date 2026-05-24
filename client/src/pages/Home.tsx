@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 const MB_SYMBOL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663487476806/GbyPqTQ4WPAeZLRC6VPuta/mb-symbol_eba1d647.png";
 const AVIARY_BG = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663487476806/hxUogTsXUMSRebXV.png";
 
-type TabId = "alimentacao" | "alimentacao_teste" | "clientes" | "mapa";
+type TabId = "alimentacao" | "clientes" | "mapa";
+type SubTab = "original" | "teste";
 
 interface Tab {
   id: TabId;
@@ -25,13 +26,13 @@ interface Tab {
 
 const tabs: Tab[] = [
   { id: "alimentacao", label: "Alimentação", shortLabel: "Aliment.", icon: Utensils },
-  { id: "alimentacao_teste", label: "Alimentação Teste", shortLabel: "Teste", icon: FlaskConical },
   { id: "clientes", label: "Clientes", shortLabel: "Clientes", icon: Users },
   { id: "mapa", label: "Mapa de Progresso", shortLabel: "Progresso", icon: LayoutGrid },
 ];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("alimentacao");
+  const [feedingSubTab, setFeedingSubTab] = useState<SubTab>("original");
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,8 +111,39 @@ export default function Home() {
       {/* Content area */}
       <main ref={contentRef} className="flex-1 overflow-y-auto">
         <div className="px-4 lg:px-8 py-6 pb-16">
-          {activeTab === "alimentacao" && <FeedingModule />}
-          {activeTab === "alimentacao_teste" && <FeedingModuleTest />}
+          {activeTab === "alimentacao" && (
+            <div>
+              {/* Sub-tab selector */}
+              <div className="flex items-center gap-1 mb-5 bg-white rounded-lg border border-stone-200 shadow-sm p-1 w-fit">
+                <button
+                  onClick={() => setFeedingSubTab("original")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                    feedingSubTab === "original"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
+                  )}
+                >
+                  <Utensils size={14} />
+                  Alimentação
+                </button>
+                <button
+                  onClick={() => setFeedingSubTab("teste")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                    feedingSubTab === "teste"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
+                  )}
+                >
+                  <FlaskConical size={14} />
+                  Alimentação Teste
+                </button>
+              </div>
+              {/* Content */}
+              {feedingSubTab === "original" ? <FeedingModule /> : <FeedingModuleTest />}
+            </div>
+          )}
           {activeTab === "clientes" && (
             <div className="max-w-4xl mx-auto mt-8">
               <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-10 text-center">
