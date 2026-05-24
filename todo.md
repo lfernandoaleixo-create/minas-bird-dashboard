@@ -262,3 +262,5 @@
 - [x] FoodCalendarCard PDF: mesma simplificação — cores de fundo simples, legendas claras
 - [x] FoodCalendarCard espécie: aumentar símbolo de exclusivo (*) para ficar bem visível
 - [x] FoodCalendarCard espécie: ordem fixa dos alimentos na tabela sempre Ração → Vegetais → Frutas → Sementes
+- [x] FoodCalendarCard espécie: cor de fundo na linha do alimento = cor da categoria do mini card (âmbar/verde/vermelho/roxo)
+- [x] FoodCalendarCard espécie: trocar indicador de qualidade para símbolos textuais (+ Excelente, +/− Bom, − Pobre)

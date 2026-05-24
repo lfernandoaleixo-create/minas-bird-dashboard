@@ -32,6 +32,7 @@ function getQuality(classification: string): "excelente" | "bom" | "pobre" {
 const QUALITY_CONFIG = {
   excelente: {
     label: "Excelente",
+    symbol: "+",
     color: "text-emerald-700",
     bg: "bg-emerald-100",
     border: "border-emerald-300",
@@ -39,6 +40,7 @@ const QUALITY_CONFIG = {
   },
   bom: {
     label: "Bom",
+    symbol: "+/\u2212",
     color: "text-blue-700",
     bg: "bg-blue-100",
     border: "border-blue-300",
@@ -46,11 +48,20 @@ const QUALITY_CONFIG = {
   },
   pobre: {
     label: "Pobre",
+    symbol: "\u2212",
     color: "text-amber-700",
     bg: "bg-amber-100",
     border: "border-amber-300",
     dotColor: "bg-amber-500",
   },
+};
+
+// Cores de fundo da linha por categoria (para cards de espécie)
+const CATEGORY_ROW_BG: Record<string, string> = {
+  racao: "bg-amber-50/70",
+  vegetais: "bg-emerald-50/70",
+  frutas: "bg-red-50/70",
+  proteicos: "bg-purple-50/70",
 };
 
 // Categorias com seus itens e classificações
@@ -737,9 +748,13 @@ export default function FoodCalendarCard() {
             {/* PDF button + Table */}
             <div className="p-4">
               {allFoods.length > 0 && (
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1.5"><span className="text-sm font-black text-violet-600">*</span> = exclusivo desta ave</span>
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1"><span className="text-sm font-black text-violet-600">*</span> = exclusivo</span>
+                    <span className="text-muted-foreground/30">|</span>
+                    <span className="flex items-center gap-1"><span className="font-bold text-emerald-700">+</span> Excelente</span>
+                    <span className="flex items-center gap-1"><span className="font-bold text-blue-700">+/\u2212</span> Bom</span>
+                    <span className="flex items-center gap-1"><span className="font-bold text-amber-700">\u2212</span> Pobre</span>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); exportFoodCalendarSpeciesPdf(allFoods, checks, speciesChecks[sp.id] || {}, currentYear, currentMonth, sp.commonName, sp.id); }}
@@ -774,14 +789,15 @@ export default function FoodCalendarCard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {allFoods.map((food, foodIdx) => {
+                      {allFoods.map((food) => {
                         const count = getSpeciesFoodCheckedCount(sp.id, food.name, food.inherited);
                         const q = QUALITY_CONFIG[food.quality];
+                        const rowBg = CATEGORY_ROW_BG[food.category] || "bg-background";
                         return (
-                          <tr key={food.name} className={cn("group hover:bg-muted/20 transition-colors", foodIdx % 2 === 0 ? "bg-background" : "bg-muted/5")}>
-                            <td className="sticky left-0 z-10 bg-inherit px-2 py-1.5 border-b border-border/30">
+                          <tr key={food.name} className={cn("group hover:opacity-80 transition-colors", rowBg)}>
+                            <td className={cn("sticky left-0 z-10 px-2 py-1.5 border-b border-border/30", rowBg)}>
                               <div className="flex items-center gap-1.5">
-                                <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", q.dotColor)} title={q.label} />
+                                <span className={cn("text-xs font-bold flex-shrink-0 min-w-[20px]", q.color)} title={q.label}>{q.symbol}</span>
                                 {!food.inherited && (
                                   <span className="text-base font-black text-violet-600 flex-shrink-0 leading-none">*</span>
                                 )}
