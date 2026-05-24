@@ -1,11 +1,11 @@
 /**
- * annotationPdf.ts — Gera PDF "Anotação" por espécie (1 PÁGINA APENAS)
+ * annotationPdf.ts — Gera PDF "Anotação" por espécie
  * 
- * Conteúdo:
- * - Cabeçalho: nome da espécie BEM GRANDE, fase, fator do recinto, ração
- * - Campo "Dia 1 = ___/___/___" para o funcionário preencher
- * - Tabela compacta com as 6 situações de % (50-100%)
- * - Área de anotação: 30 linhas compactas para tratadores
+ * Layout ORIGINAL que o usuário aprovou:
+ * - Header: barra verde com logo MB + "Anotação" + nome espécie
+ * - Info: Fase, Ração, Peso, Fator Recinto, MER, Plantel
+ * - Tabela de Proporções (vertical): % Ração | Ração (g) | Salada (g) | Total (g) | Plantel Ração | Plantel Salada
+ * - Anotações: Dia | Data | % Usada | Ração (g) | Salada (g) | Sobra | Observações
  *
  * TUDO EM 1 PÁGINA A4 PORTRAIT.
  */
@@ -13,8 +13,10 @@ import { jsPDF } from "jspdf";
 import {
   BRAND,
   loadLogo,
+  drawBrandHeader,
   drawBrandFooter,
   PDF_FONT,
+  PDF_MARGIN,
 } from "./pdfBrand";
 import {
   racoes,
@@ -51,196 +53,169 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
 
   const logo = await loadLogo();
 
-  // Create PDF — portrait A4
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const margin = 8; // margens reduzidas para caber tudo
+  const margin = 8;
 
-  let y = 4;
+  // ===== HEADER (barra verde) =====
+  const now = new Date();
+  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const monthYear = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
-  // ===== HEADER: Logo + Species name GRANDE =====
-  // MB logo small
-  if (logo) {
-    try { doc.addImage(logo, "PNG", margin, y, 10, 10); } catch { /* skip */ }
-  }
+  let y = drawBrandHeader(doc, pageW, logo, "Anotação", `${sp.commonName} (${sp.scientificName})`);
 
-  // Species name — BEM GRANDE
-  doc.setFontSize(18);
+  // ===== INFO SECTION =====
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.dark);
-  doc.text(sp.commonName.toUpperCase(), margin + 13, y + 5);
-
-  // Scientific name below
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "italic");
-  doc.setTextColor(...BRAND.muted);
-  doc.text(sp.scientificName, margin + 13, y + 10);
-
-  // Right side: "ANOTAÇÃO"
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.medium);
-  doc.text("ANOTAÇÃO", pageW - margin, y + 5, { align: "right" });
-
-  y += 14;
-
-  // Accent line
-  doc.setFillColor(...BRAND.headerAccent);
-  doc.rect(margin, y, pageW - margin * 2, 0.8, "F");
-  y += 3;
-
-  // ===== INFO ROW: Fase | Recinto | Ração | Peso | MER | Plantel =====
-  doc.setFontSize(7.5);
-  const infoItems = [
-    `Fase: ${phase.label} (×${phase.multiplier})`,
-    `Recinto: ×${enclosureMultiplier.toFixed(2)}`,
-    `Peso: ${weight}g`,
-    `MER: ${mer.toFixed(1)} kcal`,
-    `Plantel: ${sp.currentCount} aves`,
-  ];
-  doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.text);
-  doc.text(infoItems.join("   |   "), margin, y);
+
+  // Row 1: Fase + Fator Recinto
+  doc.text(`Fase:`, margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${phase.label} (×${phase.multiplier})`, margin + doc.getTextWidth("Fase:") + 2, y);
+
+  doc.setFont("helvetica", "bold");
+  const recintoX = pageW / 2;
+  doc.text(`Fator Recinto:`, recintoX, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(`×${enclosureMultiplier.toFixed(2)}`, recintoX + doc.getTextWidth("Fator Recinto:") + 2, y);
   y += 4;
 
-  // Ração name (full, on its own line)
+  // Row 2: Ração
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text(`Ração: ${racao.name}`, margin, y);
+  doc.text(`Ração:`, margin, y);
   doc.setFont("helvetica", "normal");
-  doc.text(`(${racao.energyKcal} kcal/kg · Prot ${racao.proteinG}% · Gord ${racao.fatG}%)`, margin + doc.getTextWidth(`Ração: ${racao.name}`) + 2, y);
+  doc.text(`${racao.name} (${racao.energyKcal} kcal/kg)`, margin + doc.getTextWidth("Ração:") + 2, y);
+  y += 4;
+
+  // Row 3: Peso + MER + Plantel
+  doc.setFont("helvetica", "bold");
+  doc.text(`Peso:`, margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${weight}g`, margin + doc.getTextWidth("Peso:") + 2, y);
+
+  doc.setFont("helvetica", "bold");
+  const merX = margin + 40;
+  doc.text(`MER:`, merX, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${mer.toFixed(1)} kcal/dia`, merX + doc.getTextWidth("MER:") + 2, y);
+
+  doc.setFont("helvetica", "bold");
+  const plantelX = margin + 90;
+  doc.text(`Plantel:`, plantelX, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${sp.currentCount} aves`, plantelX + doc.getTextWidth("Plantel:") + 2, y);
   y += 5;
 
-  // ===== CAMPO: Dia 1 = ___/___/___ =====
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.dark);
-  doc.text("Dia 1 corresponde a:", margin, y);
-  doc.setFont("helvetica", "normal");
-  doc.setDrawColor(...BRAND.gridLine);
-  doc.setLineWidth(0.4);
-  const fieldX = margin + doc.getTextWidth("Dia 1 corresponde a:") + 3;
-  doc.line(fieldX, y, fieldX + 25, y); // underline for date
-  doc.text("/", fieldX + 8, y);
-  doc.text("/", fieldX + 16, y);
-  y += 5;
-
-  // ===== TABELA DE PROPORÇÕES (compacta, horizontal) =====
+  // ===== TABELA DE PROPORÇÕES — Ração vs Salada =====
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
-  doc.text("PROPORÇÕES — RAÇÃO vs SALADA (por ave/dia)", margin, y);
-  y += 3.5;
+  doc.text("Tabela de Proporções — Ração vs Salada", margin, y);
+  y += 3;
 
   const tableW = pageW - margin * 2;
-  const numCols = 7; // header + 6 values
-  const colW = tableW / numCols;
-  const rowH = 5;
+  const propCols = sp.currentCount > 1
+    ? [18, 22, 22, 22, 30, 30] // % | Ração | Salada | Total | Plantel Ração | Plantel Salada
+    : [22, 30, 30, 30, 0, 0];  // % | Ração | Salada | Total
+  const propHeaders = sp.currentCount > 1
+    ? ["% Ração", "Ração (g)", "Salada (g)", "Total (g)", "Plantel\nRação (g)", "Plantel\nSalada (g)"]
+    : ["% Ração", "Ração (g)", "Salada (g)", "Total (g)"];
+  const numPropCols = sp.currentCount > 1 ? 6 : 4;
+
+  // Adjust column widths to fill tableW
+  const totalColW = propCols.slice(0, numPropCols).reduce((a, b) => a + b, 0);
+  const scale = tableW / totalColW;
+  for (let i = 0; i < numPropCols; i++) propCols[i] *= scale;
+
+  const propRowH = 4.5;
 
   // Header row
   doc.setFillColor(...BRAND.headerBg);
-  doc.rect(margin, y, tableW, rowH, "F");
+  doc.rect(margin, y, tableW, propRowH + 1, "F");
   doc.setFontSize(6.5);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
 
-  const colHeaders = ["", "50%", "60%", "70%", "80%", "90%", "100%"];
-  colHeaders.forEach((h, i) => {
-    doc.text(h, margin + colW * i + colW / 2, y + rowH / 2 + 1, { align: "center" });
-  });
-  y += rowH;
+  let cx = margin;
+  for (let i = 0; i < numPropCols; i++) {
+    doc.text(propHeaders[i], cx + propCols[i] / 2, y + (propRowH + 1) / 2 + 0.8, { align: "center" });
+    cx += propCols[i];
+  }
+  y += propRowH + 1;
 
-  // Calculate values for each %
-  const calcRow = (label: string, fn: (pct: number) => string) => {
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...BRAND.text);
-    doc.text(label, margin + colW / 2, y + rowH / 2 + 1, { align: "center" });
+  // Data rows (6 percentages)
+  doc.setFontSize(7);
+  for (let ri = 0; ri < RACAO_PCT_OPTIONS.length; ri++) {
+    const pct = RACAO_PCT_OPTIONS[ri];
+    const racaoG = kcalToGrams(mer * pct / 100, racao.energyKcal);
+    const saladaG = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL);
+    const totalG = racaoG + saladaG;
+
+    if (ri % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(margin, y, tableW, propRowH, "F");
+    }
+
+    const vals = sp.currentCount > 1
+      ? [`${pct}%`, racaoG.toFixed(1), saladaG.toFixed(1), totalG.toFixed(1), (racaoG * sp.currentCount).toFixed(0), (saladaG * sp.currentCount).toFixed(0)]
+      : [`${pct}%`, racaoG.toFixed(1), saladaG.toFixed(1), totalG.toFixed(1)];
+
     doc.setFont("helvetica", "normal");
-    RACAO_PCT_OPTIONS.forEach((pct, i) => {
-      doc.text(fn(pct), margin + colW * (i + 1) + colW / 2, y + rowH / 2 + 1, { align: "center" });
-    });
-    y += rowH;
-  };
-
-  // Ração (g)
-  calcRow("Ração (g)", (pct) => {
-    const g = kcalToGrams(mer * pct / 100, racao.energyKcal);
-    return g.toFixed(1);
-  });
-
-  // Salada (g)
-  doc.setFillColor(248, 250, 252);
-  doc.rect(margin, y, tableW, rowH, "F");
-  calcRow("Salada (g)", (pct) => {
-    const g = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL);
-    return g.toFixed(1);
-  });
-
-  // Total (g)
-  calcRow("Total (g)", (pct) => {
-    const rG = kcalToGrams(mer * pct / 100, racao.energyKcal);
-    const sG = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL);
-    return (rG + sG).toFixed(1);
-  });
-
-  // Plantel Ração
-  if (sp.currentCount > 1) {
-    doc.setFillColor(248, 250, 252);
-    doc.rect(margin, y, tableW, rowH, "F");
-    calcRow(`Plantel R (${sp.currentCount})`, (pct) => {
-      const g = kcalToGrams(mer * pct / 100, racao.energyKcal) * sp.currentCount;
-      return `${g.toFixed(0)}`;
-    });
-
-    // Plantel Salada
-    calcRow(`Plantel S (${sp.currentCount})`, (pct) => {
-      const g = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL) * sp.currentCount;
-      return `${g.toFixed(0)}`;
-    });
+    doc.setTextColor(...BRAND.text);
+    cx = margin;
+    for (let i = 0; i < numPropCols; i++) {
+      if (i === 0) doc.setFont("helvetica", "bold");
+      else doc.setFont("helvetica", "normal");
+      doc.text(vals[i], cx + propCols[i] / 2, y + propRowH / 2 + 1, { align: "center" });
+      cx += propCols[i];
+    }
+    y += propRowH;
   }
 
-  // Table border
-  const tableRows = sp.currentCount > 1 ? 5 : 3;
-  const tableStartY = y - (tableRows * rowH + rowH); // rows + header
+  // Table border + lines
+  const propTableStart = y - (6 * propRowH + propRowH + 1);
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.25);
-  doc.rect(margin, tableStartY, tableW, (tableRows + 1) * rowH);
-
+  doc.rect(margin, propTableStart, tableW, 6 * propRowH + propRowH + 1);
   // Vertical lines
-  for (let i = 1; i < numCols; i++) {
-    doc.line(margin + colW * i, tableStartY, margin + colW * i, y);
+  cx = margin;
+  for (let i = 0; i < numPropCols - 1; i++) {
+    cx += propCols[i];
+    doc.line(cx, propTableStart, cx, y);
   }
   // Horizontal lines
-  for (let r = 1; r <= tableRows; r++) {
-    doc.line(margin, tableStartY + rowH * r, margin + tableW, tableStartY + rowH * r);
+  const propHeaderEnd = propTableStart + propRowH + 1;
+  doc.line(margin, propHeaderEnd, margin + tableW, propHeaderEnd);
+  for (let r = 1; r < 6; r++) {
+    doc.line(margin, propHeaderEnd + propRowH * r, margin + tableW, propHeaderEnd + propRowH * r);
   }
 
   y += 4;
 
-  // ===== ANOTAÇÃO: 30 DIAS (compacta) =====
+  // ===== ANOTAÇÕES — Mês Ano =====
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
-  doc.text("ANOTAÇÕES DIÁRIAS", margin, y);
+  doc.text(`Anotações — ${monthYear}`, margin, y);
   y += 3;
 
   // Calculate available space for 30 rows
   const footerReserve = 9;
   const availableH = pageH - y - footerReserve;
   const annHeaderH = 4.5;
-  const annRowH = Math.min((availableH - annHeaderH) / 30, 5); // max 5mm per row
+  const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
 
-  // Columns: Dia(8) | % Usada(14) | Ração g(16) | Salada g(16) | Sobra(12) | Observações(rest)
-  const annCols = [8, 14, 16, 16, 12, 0];
-  annCols[5] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4];
-  const annHeaders = ["Dia", "%", "Ração", "Salada", "Sobra", "Observações"];
+  // Columns: Dia(7) | Data(14) | % Usada(12) | Ração(14) | Salada(14) | Sobra(10) | Observações(rest)
+  const annCols = [7, 14, 12, 14, 14, 10, 0];
+  annCols[6] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4] - annCols[5];
+  const annHeaders = ["Dia", "Data", "% Usada", "Ração (g)", "Salada (g)", "Sobra", "Observações"];
 
   // Header
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(margin, y, tableW, annHeaderH, "F");
-  doc.setFontSize(6);
+  doc.setFontSize(5.5);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
 
@@ -252,7 +227,7 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   y += annHeaderH;
 
   // 30 rows
-  doc.setFontSize(6);
+  doc.setFontSize(5.5);
   for (let d = 1; d <= 30; d++) {
     if (d % 2 === 0) {
       doc.setFillColor(250, 251, 252);
@@ -262,7 +237,7 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
     // Day number
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.text);
-    doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.7, { align: "center" });
+    doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.6, { align: "center" });
 
     y += annRowH;
   }
@@ -283,19 +258,17 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   });
 
   // Footer
-  drawBrandFooter(doc, pageW, pageH);
+  drawBrandFooter(doc, pageW, pageH, 1, 1);
 
   // Save
-  const now = new Date();
-  const monthNames = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-  const filename = `anotacao-${sp.commonName.toLowerCase().replace(/\s+/g, "-")}-${monthNames[now.getMonth()]}-${now.getFullYear()}.pdf`;
+  const monthNamesLower = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  const filename = `anotacao-${sp.commonName.toLowerCase().replace(/\s+/g, "-")}-${monthNamesLower[now.getMonth()]}-${now.getFullYear()}.pdf`;
   doc.save(filename);
 }
 
 /**
  * Generate annotation PDF for ALL active species in one file (one page per species).
  * Uses the same phaseId, enclosureMultiplier, and racaoId for all.
- * Species that don't have petbird data are skipped.
  */
 export async function generateAllAnnotationPdfs(params: {
   phaseId: string;
@@ -313,7 +286,12 @@ export async function generateAllAnnotationPdfs(params: {
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 8;
 
+  const now = new Date();
+  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const monthYear = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
   let firstPage = true;
+  let pageCount = 0;
 
   for (const sp of activeSpecies) {
     const birdData = getPetBirdData(sp.id);
@@ -327,153 +305,153 @@ export async function generateAllAnnotationPdfs(params: {
       doc.addPage();
     }
     firstPage = false;
+    pageCount++;
 
     const weight = birdData.weight || (sp.weightRange.min + sp.weightRange.max) / 2;
     const baseMer = calculateMER(weight, birdData.metabolism, phase.multiplier, "viveiro-voo-interno");
     const mer = baseMer * enclosureMultiplier;
 
-    let y = 4;
+    // Header
+    let y = drawBrandHeader(doc, pageW, logo, "Anotação", `${sp.commonName} (${sp.scientificName})`);
 
-    // ===== HEADER =====
-    if (logo) {
-      try { doc.addImage(logo, "PNG", margin, y, 10, 10); } catch { /* skip */ }
-    }
-
-    doc.setFontSize(18);
+    // Info
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...BRAND.dark);
-    doc.text(sp.commonName.toUpperCase(), margin + 13, y + 5);
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "italic");
-    doc.setTextColor(...BRAND.muted);
-    doc.text(sp.scientificName, margin + 13, y + 10);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...BRAND.medium);
-    doc.text("ANOTA\u00C7\u00C3O", pageW - margin, y + 5, { align: "right" });
-
-    y += 14;
-    doc.setFillColor(...BRAND.headerAccent);
-    doc.rect(margin, y, pageW - margin * 2, 0.8, "F");
-    y += 3;
-
-    // Info row
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND.text);
-    doc.text([
-      `Fase: ${phase.label} (\u00d7${phase.multiplier})`,
-      `Recinto: \u00d7${enclosureMultiplier.toFixed(2)}`,
-      `Peso: ${weight}g`,
-      `MER: ${mer.toFixed(1)} kcal`,
-      `Plantel: ${sp.currentCount} aves`,
-    ].join("   |   "), margin, y);
+    doc.text(`Fase:`, margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${phase.label} (×${phase.multiplier})`, margin + doc.getTextWidth("Fase:") + 2, y);
+    doc.setFont("helvetica", "bold");
+    const recintoX = pageW / 2;
+    doc.text(`Fator Recinto:`, recintoX, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(`×${enclosureMultiplier.toFixed(2)}`, recintoX + doc.getTextWidth("Fator Recinto:") + 2, y);
     y += 4;
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.text(`Ra\u00e7\u00e3o: ${racao.name}`, margin, y);
+    doc.text(`Ração:`, margin, y);
     doc.setFont("helvetica", "normal");
-    doc.text(`(${racao.energyKcal} kcal/kg)`, margin + doc.getTextWidth(`Ra\u00e7\u00e3o: ${racao.name}`) + 2, y);
-    y += 5;
+    doc.text(`${racao.name} (${racao.energyKcal} kcal/kg)`, margin + doc.getTextWidth("Ração:") + 2, y);
+    y += 4;
 
-    // Day 1 field
-    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...BRAND.dark);
-    doc.text("Dia 1 corresponde a:", margin, y);
-    doc.setDrawColor(...BRAND.gridLine);
-    doc.setLineWidth(0.4);
-    const fieldX = margin + doc.getTextWidth("Dia 1 corresponde a:") + 3;
-    doc.line(fieldX, y, fieldX + 25, y);
-    doc.text("/", fieldX + 8, y);
-    doc.text("/", fieldX + 16, y);
+    doc.text(`Peso:`, margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${weight}g`, margin + doc.getTextWidth("Peso:") + 2, y);
+    doc.setFont("helvetica", "bold");
+    const merX = margin + 40;
+    doc.text(`MER:`, merX, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${mer.toFixed(1)} kcal/dia`, merX + doc.getTextWidth("MER:") + 2, y);
+    doc.setFont("helvetica", "bold");
+    const plantelX = margin + 90;
+    doc.text(`Plantel:`, plantelX, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${sp.currentCount} aves`, plantelX + doc.getTextWidth("Plantel:") + 2, y);
     y += 5;
 
     // Proportions table
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.dark);
-    doc.text("PROPOR\u00C7\u00D5ES \u2014 RA\u00C7\u00C3O vs SALADA (por ave/dia)", margin, y);
-    y += 3.5;
+    doc.text("Tabela de Proporções — Ração vs Salada", margin, y);
+    y += 3;
 
     const tableW = pageW - margin * 2;
-    const numCols = 7;
-    const colW = tableW / numCols;
-    const rowH = 5;
+    const propCols = sp.currentCount > 1
+      ? [18, 22, 22, 22, 30, 30]
+      : [22, 30, 30, 30, 0, 0];
+    const propHeaders = sp.currentCount > 1
+      ? ["% Ração", "Ração (g)", "Salada (g)", "Total (g)", "Plantel\nRação (g)", "Plantel\nSalada (g)"]
+      : ["% Ração", "Ração (g)", "Salada (g)", "Total (g)"];
+    const numPropCols = sp.currentCount > 1 ? 6 : 4;
+
+    const totalColW = propCols.slice(0, numPropCols).reduce((a, b) => a + b, 0);
+    const scale = tableW / totalColW;
+    for (let i = 0; i < numPropCols; i++) propCols[i] *= scale;
+
+    const propRowH = 4.5;
 
     doc.setFillColor(...BRAND.headerBg);
-    doc.rect(margin, y, tableW, rowH, "F");
+    doc.rect(margin, y, tableW, propRowH + 1, "F");
     doc.setFontSize(6.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.headerText);
-    ["", "50%", "60%", "70%", "80%", "90%", "100%"].forEach((h, i) => {
-      doc.text(h, margin + colW * i + colW / 2, y + rowH / 2 + 1, { align: "center" });
-    });
-    y += rowH;
 
-    const calcRowAll = (label: string, fn: (pct: number) => string, altBg?: boolean) => {
-      if (altBg) {
+    let cx = margin;
+    for (let i = 0; i < numPropCols; i++) {
+      doc.text(propHeaders[i], cx + propCols[i] / 2, y + (propRowH + 1) / 2 + 0.8, { align: "center" });
+      cx += propCols[i];
+    }
+    y += propRowH + 1;
+
+    doc.setFontSize(7);
+    for (let ri = 0; ri < RACAO_PCT_OPTIONS.length; ri++) {
+      const pct = RACAO_PCT_OPTIONS[ri];
+      const racaoG = kcalToGrams(mer * pct / 100, racao.energyKcal);
+      const saladaG = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL);
+      const totalG = racaoG + saladaG;
+
+      if (ri % 2 === 1) {
         doc.setFillColor(248, 250, 252);
-        doc.rect(margin, y, tableW, rowH, "F");
+        doc.rect(margin, y, tableW, propRowH, "F");
       }
-      doc.setFontSize(6.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...BRAND.text);
-      doc.text(label, margin + colW / 2, y + rowH / 2 + 1, { align: "center" });
+
+      const vals = sp.currentCount > 1
+        ? [`${pct}%`, racaoG.toFixed(1), saladaG.toFixed(1), totalG.toFixed(1), (racaoG * sp.currentCount).toFixed(0), (saladaG * sp.currentCount).toFixed(0)]
+        : [`${pct}%`, racaoG.toFixed(1), saladaG.toFixed(1), totalG.toFixed(1)];
+
       doc.setFont("helvetica", "normal");
-      RACAO_PCT_OPTIONS.forEach((pct, i) => {
-        doc.text(fn(pct), margin + colW * (i + 1) + colW / 2, y + rowH / 2 + 1, { align: "center" });
-      });
-      y += rowH;
-    };
-
-    calcRowAll("Ra\u00e7\u00e3o (g)", (pct) => kcalToGrams(mer * pct / 100, racao.energyKcal).toFixed(1));
-    calcRowAll("Salada (g)", (pct) => kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL).toFixed(1), true);
-    calcRowAll("Total (g)", (pct) => (kcalToGrams(mer * pct / 100, racao.energyKcal) + kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL)).toFixed(1));
-
-    if (sp.currentCount > 1) {
-      calcRowAll(`Plantel R (${sp.currentCount})`, (pct) => (kcalToGrams(mer * pct / 100, racao.energyKcal) * sp.currentCount).toFixed(0), true);
-      calcRowAll(`Plantel S (${sp.currentCount})`, (pct) => (kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL) * sp.currentCount).toFixed(0));
+      doc.setTextColor(...BRAND.text);
+      cx = margin;
+      for (let i = 0; i < numPropCols; i++) {
+        if (i === 0) doc.setFont("helvetica", "bold");
+        else doc.setFont("helvetica", "normal");
+        doc.text(vals[i], cx + propCols[i] / 2, y + propRowH / 2 + 1, { align: "center" });
+        cx += propCols[i];
+      }
+      y += propRowH;
     }
 
-    const tableRows = sp.currentCount > 1 ? 5 : 3;
-    const tableStartY = y - (tableRows * rowH + rowH);
+    const propTableStart = y - (6 * propRowH + propRowH + 1);
     doc.setDrawColor(...BRAND.gridLine);
     doc.setLineWidth(0.25);
-    doc.rect(margin, tableStartY, tableW, (tableRows + 1) * rowH);
-    for (let i = 1; i < numCols; i++) {
-      doc.line(margin + colW * i, tableStartY, margin + colW * i, y);
+    doc.rect(margin, propTableStart, tableW, 6 * propRowH + propRowH + 1);
+    cx = margin;
+    for (let i = 0; i < numPropCols - 1; i++) {
+      cx += propCols[i];
+      doc.line(cx, propTableStart, cx, y);
     }
-    for (let r = 1; r <= tableRows; r++) {
-      doc.line(margin, tableStartY + rowH * r, margin + tableW, tableStartY + rowH * r);
+    const propHeaderEnd = propTableStart + propRowH + 1;
+    doc.line(margin, propHeaderEnd, margin + tableW, propHeaderEnd);
+    for (let r = 1; r < 6; r++) {
+      doc.line(margin, propHeaderEnd + propRowH * r, margin + tableW, propHeaderEnd + propRowH * r);
     }
 
     y += 4;
 
-    // Annotation table (30 days with Sobra column)
+    // Annotation table
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.dark);
-    doc.text("ANOTA\u00C7\u00D5ES DI\u00C1RIAS", margin, y);
+    doc.text(`Anotações — ${monthYear}`, margin, y);
     y += 3;
 
     const footerReserve = 9;
     const availableH = pageH - y - footerReserve;
     const annHeaderH = 4.5;
-    const annRowH = Math.min((availableH - annHeaderH) / 30, 5);
+    const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
 
-    const annCols = [8, 14, 16, 16, 12, 0];
-    annCols[5] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4];
-    const annHeaders = ["Dia", "%", "Ra\u00e7\u00e3o", "Salada", "Sobra", "Observa\u00e7\u00f5es"];
+    const annCols = [7, 14, 12, 14, 14, 10, 0];
+    annCols[6] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4] - annCols[5];
+    const annHeaders = ["Dia", "Data", "% Usada", "Ração (g)", "Salada (g)", "Sobra", "Observações"];
 
     doc.setFillColor(...BRAND.headerBg);
     doc.rect(margin, y, tableW, annHeaderH, "F");
-    doc.setFontSize(6);
+    doc.setFontSize(5.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.headerText);
+
     let hx = margin;
     annHeaders.forEach((h, i) => {
       doc.text(h, hx + annCols[i] / 2, y + annHeaderH / 2 + 0.8, { align: "center" });
@@ -481,7 +459,7 @@ export async function generateAllAnnotationPdfs(params: {
     });
     y += annHeaderH;
 
-    doc.setFontSize(6);
+    doc.setFontSize(5.5);
     for (let d = 1; d <= 30; d++) {
       if (d % 2 === 0) {
         doc.setFillColor(250, 251, 252);
@@ -489,7 +467,7 @@ export async function generateAllAnnotationPdfs(params: {
       }
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.text);
-      doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.7, { align: "center" });
+      doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.6, { align: "center" });
       y += annRowH;
     }
 
@@ -508,8 +486,7 @@ export async function generateAllAnnotationPdfs(params: {
     drawBrandFooter(doc, pageW, pageH);
   }
 
-  const now = new Date();
-  const monthNames = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-  const filename = `anotacao-todas-especies-${monthNames[now.getMonth()]}-${now.getFullYear()}.pdf`;
+  const monthNamesLower = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  const filename = `anotacao-todas-especies-${monthNamesLower[now.getMonth()]}-${now.getFullYear()}.pdf`;
   doc.save(filename);
 }
