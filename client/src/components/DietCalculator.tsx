@@ -54,6 +54,7 @@ export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange
 
   // tRPC: load from DB
   const { data: allConfigs } = trpc.dietCalc.getAll.useQuery();
+  const { data: allSpeciesPhases } = trpc.foodCalendar.getSpeciesPhases.useQuery();
   const saveMut = trpc.dietCalc.save.useMutation();
   const utils = trpc.useUtils();
 
@@ -397,9 +398,9 @@ export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange
                 onClick={(e) => {
                   e.stopPropagation();
                   generateAllAnnotationPdfs({
-                    phaseId: selectedPhase,
-                    enclosureMultiplier: state.enclosureMultiplier,
-                    racaoId: state.racaoId!,
+                    speciesConfigs: allConfigs || {},
+                    speciesPhases: allSpeciesPhases || {},
+                    fallbackPhaseId: selectedPhase,
                   });
                 }}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-medium transition-all"

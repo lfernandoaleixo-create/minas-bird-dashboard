@@ -279,14 +279,18 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
 
 /**
  * Generate annotation PDF for ALL active species in one file (one page per species).
- * Uses the same phaseId, enclosureMultiplier, and racaoId for all.
+ * Uses per-species configuration (ração, fase, recinto) from the database.
+ * Species without a configured ração are skipped.
  */
 export async function generateAllAnnotationPdfs(params: {
-  phaseId: string;
-  enclosureMultiplier: number;
-  racaoId: string;
+  /** Per-species configs from DB: { speciesId: { racaoId, racaoPct, enclosureMultiplierX100 } } */
+  speciesConfigs: Record<string, { racaoId: string | null; racaoPct: number; enclosureMultiplierX100: number }>;
+  /** Per-species phase from DB: { speciesId: phaseId } */
+  speciesPhases: Record<string, string>;
+  /** Fallback phase if species has no saved phase */
+  fallbackPhaseId: string;
 }): Promise<void> {
-  const { phaseId, enclosureMultiplier, racaoId } = params;
+  const { speciesConfigs, speciesPhases, fallbackPhaseId } = params;
 
   const activeSpecies = species.filter(s => s.inCurrentFlock);
   if (activeSpecies.length === 0) return;
@@ -308,9 +312,15 @@ export async function generateAllAnnotationPdfs(params: {
     const birdData = getPetBirdData(sp.id);
     if (!birdData) continue;
 
-    const phase = lifePeriods.find(p => p.id === phaseId) || lifePeriods[0];
+    // Get per-species config from DB
+    const spConfig = speciesConfigs[sp.id];
+    const spPhaseId = speciesPhases[sp.id] || fallbackPhaseId;
+    const phase = lifePeriods.find(p => p.id === spPhaseId) || lifePeriods[0];
+    const racaoId = spConfig?.racaoId;
+    if (!racaoId) continue; // Skip species without configured ração
     const racao = racoes.find(r => r.id === racaoId);
     if (!racao) continue;
+    const enclosureMultiplier = spConfig ? spConfig.enclosureMultiplierX100 / 100 : 1.0;
 
     if (!firstPage) {
       doc.addPage();
