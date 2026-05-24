@@ -24,6 +24,11 @@ import {
   Clock,
   Save,
   AlertTriangle,
+  CreditCard,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 
 // Species list for interest selection
@@ -85,23 +90,84 @@ const emptyForm: ClientFormData = {
   status: "ativo",
 };
 
+type PaymentMethod = "pix" | "dinheiro" | "cartao_debito" | "cartao_credito" | "boleto" | "transferencia";
+
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "pix", label: "PIX" },
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "cartao_debito", label: "Cartão Débito" },
+  { value: "cartao_credito", label: "Cartão Crédito" },
+  { value: "boleto", label: "Boleto" },
+  { value: "transferencia", label: "Transferência" },
+];
+
+interface InstallmentInput {
+  valueCents: number;
+  dueDate: string;
+}
+
 interface PurchaseFormData {
   species: string;
   quantity: number;
   valueCents: number | null;
+  paymentMethod: PaymentMethod | "";
+  installmentsCount: number;
   invoiceNumber: string;
   saleDate: string;
   notes: string;
+  installments: InstallmentInput[];
 }
 
 const emptyPurchaseForm: PurchaseFormData = {
   species: "",
   quantity: 1,
   valueCents: null,
+  paymentMethod: "",
+  installmentsCount: 1,
   invoiceNumber: "",
   saleDate: new Date().toISOString().split("T")[0],
   notes: "",
+  installments: [],
 };
+
+// Generate installment dates (30 days apart from sale date)
+function generateInstallments(totalCents: number, count: number, startDate: string): InstallmentInput[] {
+  const parcels: InstallmentInput[] = [];
+  const baseValue = Math.floor(totalCents / count);
+  const remainder = totalCents - baseValue * count;
+  const start = new Date(startDate);
+  for (let i = 0; i < count; i++) {
+    const dueDate = new Date(start);
+    dueDate.setDate(dueDate.getDate() + 30 * (i + 1));
+    parcels.push({
+      valueCents: baseValue + (i === 0 ? remainder : 0),
+      dueDate: dueDate.toISOString().split("T")[0],
+    });
+  }
+  return parcels;
+}
+
+// Payment method label
+function getPaymentLabel(method: string | null): string {
+  const found = PAYMENT_METHODS.find((m) => m.value === method);
+  return found ? found.label : "Não informado";
+}
+
+// Installment status badge
+function InstallmentStatusBadge({ status }: { status: string }) {
+  const config: Record<string, { label: string; color: string; icon: any }> = {
+    pendente: { label: "Pendente", color: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock },
+    pago: { label: "Pago", color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+    atrasado: { label: "Atrasado", color: "bg-red-50 text-red-700 border-red-200", icon: AlertCircle },
+  };
+  const { label, color, icon: Icon } = config[status] || config.pendente;
+  return (
+    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", color)}>
+      <Icon size={10} />
+      {label}
+    </span>
+  );
+}
 
 // Format phone for display
 function formatPhone(phone: string): string {
@@ -269,17 +335,38 @@ export default function ClientsModule() {
     setView("form");
   };
 
+  const updateInstallmentMutation = trpc.purchase.updateInstallment.useMutation({
+    onSuccess: () => {
+      utils.cliente.getById.invalidate();
+    },
+  });
+
   const handlePurchaseSubmit = () => {
     if (!purchaseForm.species.trim() || !selectedClientId) return;
+    const hasInstallments = (purchaseForm.paymentMethod === "cartao_credito" || purchaseForm.paymentMethod === "boleto") && purchaseForm.installmentsCount > 1;
     createPurchaseMutation.mutate({
       clientId: selectedClientId,
       species: purchaseForm.species,
       quantity: purchaseForm.quantity,
       valueCents: purchaseForm.valueCents,
+      paymentMethod: purchaseForm.paymentMethod || null,
+      installmentsCount: purchaseForm.installmentsCount,
       invoiceNumber: purchaseForm.invoiceNumber.trim() || null,
       saleDate: purchaseForm.saleDate,
       notes: purchaseForm.notes.trim() || null,
+      installments: hasInstallments ? purchaseForm.installments : undefined,
     });
+  };
+
+  // Auto-generate installments when count or value changes
+  const handleInstallmentsChange = (count: number) => {
+    const newForm = { ...purchaseForm, installmentsCount: count };
+    if (count > 1 && purchaseForm.valueCents && purchaseForm.valueCents > 0) {
+      newForm.installments = generateInstallments(purchaseForm.valueCents, count, purchaseForm.saleDate);
+    } else {
+      newForm.installments = [];
+    }
+    setPurchaseForm(newForm);
   };
 
   const toggleSpeciesInterest = (species: string) => {
@@ -460,6 +547,10 @@ export default function ClientsModule() {
           {/* Purchase form */}
           {showPurchaseForm && (
             <div className="mb-4 p-4 bg-stone-50 rounded-lg border border-stone-200">
+              <h4 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
+                <CreditCard size={14} className="text-emerald-600" />
+                Nova Venda
+              </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-stone-600 mb-1 block">Espécie *</label>
@@ -485,7 +576,7 @@ export default function ClientsModule() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Valor (R$)</label>
+                  <label className="text-xs font-medium text-stone-600 mb-1 block">Valor Total (R$)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -494,7 +585,12 @@ export default function ClientsModule() {
                     value={purchaseForm.valueCents !== null ? (purchaseForm.valueCents / 100).toFixed(2) : ""}
                     onChange={(e) => {
                       const val = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null;
-                      setPurchaseForm((p) => ({ ...p, valueCents: val }));
+                      const newForm = { ...purchaseForm, valueCents: val };
+                      // Regenerate installments if needed
+                      if (val && newForm.installmentsCount > 1) {
+                        newForm.installments = generateInstallments(val, newForm.installmentsCount, newForm.saleDate);
+                      }
+                      setPurchaseForm(newForm);
                     }}
                     className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
                   />
@@ -504,10 +600,53 @@ export default function ClientsModule() {
                   <input
                     type="date"
                     value={purchaseForm.saleDate}
-                    onChange={(e) => setPurchaseForm((p) => ({ ...p, saleDate: e.target.value }))}
+                    onChange={(e) => {
+                      const newForm = { ...purchaseForm, saleDate: e.target.value };
+                      if (newForm.valueCents && newForm.installmentsCount > 1) {
+                        newForm.installments = generateInstallments(newForm.valueCents, newForm.installmentsCount, e.target.value);
+                      }
+                      setPurchaseForm(newForm);
+                    }}
                     className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
                   />
                 </div>
+                <div>
+                  <label className="text-xs font-medium text-stone-600 mb-1 block">Forma de Pagamento</label>
+                  <select
+                    value={purchaseForm.paymentMethod}
+                    onChange={(e) => {
+                      const method = e.target.value as PaymentMethod | "";
+                      const newForm = { ...purchaseForm, paymentMethod: method };
+                      // Reset installments if not credit/boleto
+                      if (method !== "cartao_credito" && method !== "boleto") {
+                        newForm.installmentsCount = 1;
+                        newForm.installments = [];
+                      }
+                      setPurchaseForm(newForm);
+                    }}
+                    className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
+                  >
+                    <option value="">Selecione...</option>
+                    {PAYMENT_METHODS.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Installments count - only for credit card or boleto */}
+                {(purchaseForm.paymentMethod === "cartao_credito" || purchaseForm.paymentMethod === "boleto") && (
+                  <div>
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Parcelas</label>
+                    <select
+                      value={purchaseForm.installmentsCount}
+                      onChange={(e) => handleInstallmentsChange(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>{n}x{purchaseForm.valueCents ? ` de ${formatCurrency(Math.floor(purchaseForm.valueCents / n))}` : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs font-medium text-stone-600 mb-1 block">Nota Fiscal</label>
                   <input
@@ -529,6 +668,41 @@ export default function ClientsModule() {
                   />
                 </div>
               </div>
+
+              {/* Installments preview */}
+              {purchaseForm.installments.length > 1 && (
+                <div className="mt-4 p-3 bg-white rounded-lg border border-stone-200">
+                  <h5 className="text-xs font-semibold text-stone-600 mb-2 flex items-center gap-1.5">
+                    <Calendar size={12} />
+                    Parcelas ({purchaseForm.installments.length}x)
+                  </h5>
+                  <div className="space-y-1.5">
+                    {purchaseForm.installments.map((inst, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <span className="text-stone-600">
+                          {idx + 1}ª parcela
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="date"
+                            value={inst.dueDate}
+                            onChange={(e) => {
+                              const newInstallments = [...purchaseForm.installments];
+                              newInstallments[idx] = { ...newInstallments[idx], dueDate: e.target.value };
+                              setPurchaseForm((p) => ({ ...p, installments: newInstallments }));
+                            }}
+                            className="px-2 py-1 border border-stone-200 rounded text-xs"
+                          />
+                          <span className="font-semibold text-stone-700 min-w-[80px] text-right">
+                            {formatCurrency(inst.valueCents)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 mt-3">
                 <button
                   onClick={handlePurchaseSubmit}
@@ -536,7 +710,7 @@ export default function ClientsModule() {
                   className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                 >
                   <Save size={14} />
-                  Salvar
+                  Registrar Venda
                 </button>
                 <button
                   onClick={() => { setShowPurchaseForm(false); setPurchaseForm(emptyPurchaseForm); }}
@@ -550,37 +724,111 @@ export default function ClientsModule() {
 
           {/* Purchase list */}
           {client.purchases && client.purchases.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {client.purchases.map((p: any) => (
-                <div key={p.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
-                      <Bird size={14} className="text-emerald-600" />
+                <div key={p.id} className="p-4 bg-stone-50 rounded-lg border border-stone-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                        <Bird size={14} className="text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-stone-700">
+                          {p.quantity}x {p.species}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-stone-400">
+                            {new Date(p.saleDate).toLocaleDateString("pt-BR")}
+                          </span>
+                          {p.paymentMethod && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 font-medium">
+                              {getPaymentLabel(p.paymentMethod)}
+                            </span>
+                          )}
+                          {p.installments && p.installments > 1 && (
+                            <span className="text-xs text-stone-500">
+                              {p.installments}x
+                            </span>
+                          )}
+                          {p.invoiceNumber && (
+                            <span className="text-xs text-stone-400">
+                              NF {p.invoiceNumber}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-stone-700">
-                        {p.quantity}x {p.species}
-                      </p>
-                      <p className="text-xs text-stone-400">
-                        {new Date(p.saleDate).toLocaleDateString("pt-BR")}
-                        {p.invoiceNumber && ` · NF ${p.invoiceNumber}`}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      {p.valueCents && (
+                        <span className="text-sm font-semibold text-emerald-700">
+                          {formatCurrency(p.valueCents)}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => deletePurchaseMutation.mutate({ id: p.id })}
+                        className="p-1.5 text-stone-400 hover:text-red-500 transition-colors"
+                        title="Excluir venda"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {p.valueCents && (
-                      <span className="text-sm font-semibold text-emerald-700">
-                        {formatCurrency(p.valueCents)}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => deletePurchaseMutation.mutate({ id: p.id })}
-                      className="p-1.5 text-stone-400 hover:text-red-500 transition-colors"
-                      title="Excluir venda"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+
+                  {/* Installments table */}
+                  {p.parcelas && p.parcelas.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-stone-200">
+                      <h5 className="text-xs font-semibold text-stone-600 mb-2 flex items-center gap-1.5">
+                        <Calendar size={11} />
+                        Parcelas
+                      </h5>
+                      <div className="space-y-1.5">
+                        {(p.parcelas as any[]).map((inst: any) => (
+                          <div key={inst.id} className="flex items-center justify-between text-xs bg-white p-2 rounded border border-stone-100">
+                            <div className="flex items-center gap-2">
+                              <span className="text-stone-500 font-medium w-16">
+                                {inst.installmentNumber}ª parcela
+                              </span>
+                              <span className="text-stone-400">
+                                Venc: {new Date(inst.dueDate).toLocaleDateString("pt-BR")}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-stone-700">
+                                {formatCurrency(inst.valueCents)}
+                              </span>
+                              <InstallmentStatusBadge status={inst.status} />
+                              {inst.status !== "pago" && (
+                                <button
+                                  onClick={() => updateInstallmentMutation.mutate({
+                                    id: inst.id,
+                                    status: "pago",
+                                    paidAt: new Date().toISOString(),
+                                  })}
+                                  className="px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                  title="Marcar como pago"
+                                >
+                                  Pagar
+                                </button>
+                              )}
+                              {inst.status === "pago" && (
+                                <button
+                                  onClick={() => updateInstallmentMutation.mutate({
+                                    id: inst.id,
+                                    status: "pendente",
+                                    paidAt: null,
+                                  })}
+                                  className="px-2 py-0.5 text-[10px] font-medium bg-stone-50 text-stone-500 rounded border border-stone-200 hover:bg-stone-100 transition-colors"
+                                  title="Desfazer pagamento"
+                                >
+                                  Desfazer
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

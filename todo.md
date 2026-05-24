@@ -293,3 +293,9 @@
 - [x] Módulo Clientes: listagem de clientes com busca e filtros
 - [x] Módulo Clientes: edição e exclusão de clientes
 - [x] Módulo Clientes: testes automatizados
+- [x] Vendas: adicionar forma de pagamento (PIX, Dinheiro, Cartão Débito, Cartão Crédito, Boleto, Transferência)
+- [x] Vendas: campo de parcelas (1x a 12x) quando forma de pagamento for Cartão Crédito ou Boleto
+- [x] Vendas: tabela de parcelas com valor e data de vencimento de cada parcela
+- [x] Vendas: status de cada parcela (Pendente, Pago, Atrasado)
+- [x] Vendas: visualização do histórico de pagamentos no detalhe do cliente
+- [x] Vendas: testes automatizados para parcelas

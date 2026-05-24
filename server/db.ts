@@ -287,7 +287,7 @@ export async function saveFullCalendarForSpeciesPublic(speciesId: string, calend
 
 // ===== MODULE ORDER =====
 
-import { moduleOrder, topicComments, clients, clientPurchases } from "../drizzle/schema";
+import { moduleOrder, topicComments, clients, clientPurchases, saleInstallments } from "../drizzle/schema";
 import { asc, desc } from "drizzle-orm";
 
 export async function getModuleOrder() {
@@ -330,7 +330,7 @@ export async function upsertTopicComment(topicKey: string, comment: string) {
 
 // ===== CLIENTS CRUD =====
 
-import type { InsertClient, InsertClientPurchase } from "../drizzle/schema";
+import type { InsertClient, InsertClientPurchase, InsertSaleInstallment } from "../drizzle/schema";
 
 export async function getAllClients() {
   const db = await getDb();
@@ -362,7 +362,11 @@ export async function updateClient(id: number, data: Partial<InsertClient>) {
 export async function deleteClient(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // Delete purchases first
+  // Delete installments of all purchases, then purchases, then client
+  const purchases = await db.select().from(clientPurchases).where(eq(clientPurchases.clientId, id));
+  for (const p of purchases) {
+    await db.delete(saleInstallments).where(eq(saleInstallments.purchaseId, p.id));
+  }
   await db.delete(clientPurchases).where(eq(clientPurchases.clientId, id));
   await db.delete(clients).where(eq(clients.id, id));
   return true;
@@ -389,6 +393,41 @@ export async function createPurchase(purchase: InsertClientPurchase) {
 export async function deletePurchase(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // Delete installments first
+  await db.delete(saleInstallments).where(eq(saleInstallments.purchaseId, id));
   await db.delete(clientPurchases).where(eq(clientPurchases.id, id));
   return true;
+}
+
+// ===== SALE INSTALLMENTS CRUD =====
+
+export async function getInstallmentsByPurchase(purchaseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(saleInstallments)
+    .where(eq(saleInstallments.purchaseId, purchaseId))
+    .orderBy(asc(saleInstallments.installmentNumber));
+}
+
+export async function createInstallments(installments: InsertSaleInstallment[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (installments.length === 0) return [];
+  await db.insert(saleInstallments).values(installments);
+  // Return all installments for the purchase
+  return getInstallmentsByPurchase(installments[0].purchaseId);
+}
+
+export async function updateInstallmentStatus(id: number, status: "pendente" | "pago" | "atrasado", paidAt?: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const updateData: any = { status };
+  if (status === "pago" && paidAt) {
+    updateData.paidAt = paidAt;
+  } else if (status !== "pago") {
+    updateData.paidAt = null;
+  }
+  await db.update(saleInstallments).set(updateData).where(eq(saleInstallments.id, id));
+  const rows = await db.select().from(saleInstallments).where(eq(saleInstallments.id, id)).limit(1);
+  return rows[0];
 }

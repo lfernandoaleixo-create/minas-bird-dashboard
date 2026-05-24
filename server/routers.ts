@@ -26,6 +26,9 @@ import {
   getPurchasesByClient,
   createPurchase,
   deletePurchase,
+  getInstallmentsByPurchase,
+  createInstallments,
+  updateInstallmentStatus,
 } from "./db";
 
 // Schema para itens de dieta
@@ -284,7 +287,14 @@ export const appRouter = router({
         const client = await getClientById(input.id);
         if (!client) return null;
         const purchases = await getPurchasesByClient(input.id);
-        return { ...client, purchases };
+        // Attach installments to each purchase
+        const purchasesWithInstallments = await Promise.all(
+          purchases.map(async (p) => {
+            const parcelas = await getInstallmentsByPurchase(p.id);
+            return { ...p, parcelas };
+          })
+        );
+        return { ...client, purchases: purchasesWithInstallments };
       }),
 
     /** Criar novo cliente */
@@ -358,23 +368,38 @@ export const appRouter = router({
 
   // ===== COMPRAS DE CLIENTES =====
   purchase: router({
-    /** Listar compras de um cliente */
+    /** Listar compras de um cliente (com parcelas) */
     listByClient: publicProcedure
       .input(z.object({ clientId: z.number() }))
       .query(async ({ input }) => {
-        return getPurchasesByClient(input.clientId);
+        const purchases = await getPurchasesByClient(input.clientId);
+        // Attach installments to each purchase
+        const result = await Promise.all(
+          purchases.map(async (p) => {
+            const installments = await getInstallmentsByPurchase(p.id);
+            return { ...p, installments };
+          })
+        );
+        return result;
       }),
 
-    /** Registrar nova compra */
+    /** Registrar nova venda com forma de pagamento e parcelas */
     create: publicProcedure
       .input(z.object({
         clientId: z.number(),
         species: z.string().min(1),
         quantity: z.number().int().min(1),
         valueCents: z.number().int().nullable().optional(),
+        paymentMethod: z.enum(["pix", "dinheiro", "cartao_debito", "cartao_credito", "boleto", "transferencia"]).nullable().optional(),
+        installmentsCount: z.number().int().min(1).max(12).optional().default(1),
         invoiceNumber: z.string().nullable().optional(),
         saleDate: z.string(), // ISO date string
         notes: z.string().nullable().optional(),
+        /** Array de parcelas com valor e vencimento */
+        installments: z.array(z.object({
+          valueCents: z.number().int(),
+          dueDate: z.string(), // ISO date string
+        })).optional(),
       }))
       .mutation(async ({ input }) => {
         const purchase = await createPurchase({
@@ -382,19 +407,53 @@ export const appRouter = router({
           species: input.species,
           quantity: input.quantity,
           valueCents: input.valueCents ?? null,
+          paymentMethod: input.paymentMethod ?? null,
+          installments: input.installmentsCount,
           invoiceNumber: input.invoiceNumber ?? null,
           saleDate: new Date(input.saleDate),
           notes: input.notes ?? null,
         });
-        return { success: true, purchase };
+        // Create installments if provided
+        let createdInstallments: any[] = [];
+        if (input.installments && input.installments.length > 0 && purchase) {
+          const installmentData = input.installments.map((inst, idx) => ({
+            purchaseId: purchase.id,
+            installmentNumber: idx + 1,
+            valueCents: inst.valueCents,
+            dueDate: new Date(inst.dueDate),
+            status: "pendente" as const,
+          }));
+          createdInstallments = await createInstallments(installmentData);
+        }
+        return { success: true, purchase: purchase ? { ...purchase, installments: createdInstallments } : null };
       }),
 
-    /** Deletar compra */
+    /** Deletar compra (e suas parcelas) */
     delete: publicProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await deletePurchase(input.id);
         return { success: true };
+      }),
+
+    /** Atualizar status de uma parcela */
+    updateInstallment: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["pendente", "pago", "atrasado"]),
+        paidAt: z.string().nullable().optional(), // ISO date string
+      }))
+      .mutation(async ({ input }) => {
+        const paidAt = input.paidAt ? new Date(input.paidAt) : undefined;
+        const installment = await updateInstallmentStatus(input.id, input.status, paidAt);
+        return { success: true, installment };
+      }),
+
+    /** Listar parcelas de uma compra */
+    getInstallments: publicProcedure
+      .input(z.object({ purchaseId: z.number() }))
+      .query(async ({ input }) => {
+        return getInstallmentsByPurchase(input.purchaseId);
       }),
   }),
 

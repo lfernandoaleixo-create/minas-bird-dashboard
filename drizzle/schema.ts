@@ -186,8 +186,12 @@ export const clientPurchases = mysqlTable("client_purchases", {
   species: varchar("species", { length: 255 }).notNull(),
   /** Quantidade de aves */
   quantity: int("quantity").notNull().default(1),
-  /** Valor da venda em centavos (R$) */
+  /** Valor total da venda em centavos (R$) */
   valueCents: int("valueCents"),
+  /** Forma de pagamento */
+  paymentMethod: mysqlEnum("paymentMethod", ["pix", "dinheiro", "cartao_debito", "cartao_credito", "boleto", "transferencia"]),
+  /** Número de parcelas (1 = à vista) */
+  installments: int("installments").default(1),
   /** Número da nota fiscal / recibo */
   invoiceNumber: varchar("invoiceNumber", { length: 64 }),
   /** Data da venda */
@@ -199,3 +203,27 @@ export const clientPurchases = mysqlTable("client_purchases", {
 
 export type ClientPurchase = typeof clientPurchases.$inferSelect;
 export type InsertClientPurchase = typeof clientPurchases.$inferInsert;
+
+/**
+ * Parcelas de uma venda
+ * Cada registro é uma parcela com valor, vencimento e status de pagamento
+ */
+export const saleInstallments = mysqlTable("sale_installments", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da venda (client_purchases) */
+  purchaseId: int("purchaseId").notNull(),
+  /** Número da parcela (1, 2, 3...) */
+  installmentNumber: int("installmentNumber").notNull(),
+  /** Valor da parcela em centavos */
+  valueCents: int("valueCents").notNull(),
+  /** Data de vencimento */
+  dueDate: timestamp("dueDate").notNull(),
+  /** Data em que foi pago (null = não pago) */
+  paidAt: timestamp("paidAt"),
+  /** Status da parcela */
+  status: mysqlEnum("installmentStatus", ["pendente", "pago", "atrasado"]).default("pendente").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SaleInstallment = typeof saleInstallments.$inferSelect;
+export type InsertSaleInstallment = typeof saleInstallments.$inferInsert;
