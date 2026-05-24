@@ -278,3 +278,4 @@
 - [x] FoodCalendarCard: clicar no cadeado abre dialog de senha (MinasBird) para permitir exclusão de item protegido
 - [x] Calculadora de dieta no card de espécie (selecionar ração, % ração, proporção salada, resultado em gramas)
 - [x] Simplificar calculadora: fases com fator visível, recinto com input manual + tooltip, métrica simples ração→salada
+- [x] PDF Anotação por espécie: fase, recinto, ração, 6 situações de %, área de anotação 30 dias
