@@ -273,3 +273,5 @@
 - [x] FoodCalendarCard PDF espécie: aumentar significativamente o tamanho das letras dos nomes dos alimentos (8.5pt base)
 - [x] FoodCalendarCard PDF espécie: incluir a fase selecionada no cabeçalho do PDF
 - [x] FoodCalendarCard: regras de exclusão — alimentos com ≥1 check no mês não podem ser removidos; sem checks podem; virada de mês libera tudo; espécies: herdados protegidos, exclusivos com checks protegidos
+- [x] FoodCalendarCard: ícone de cadeado sutil nos alimentos protegidos (≥1 check no mês)
+- [x] FoodCalendarCard: histórico mensal — meses anteriores com checks preservados visíveis ao navegar

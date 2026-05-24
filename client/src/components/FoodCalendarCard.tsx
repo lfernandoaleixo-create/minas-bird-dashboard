@@ -10,7 +10,7 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, X, Leaf, Apple, Wheat,
-  Check, FileDown, Bird
+  Check, FileDown, Bird, Lock, History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { vegetais, frutas, proteicos, racoes, lifePeriods } from "@/data/petbird";
@@ -417,6 +417,9 @@ export default function FoodCalendarCard() {
     return day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
   };
 
+  const isCurrentMonth = currentMonth === today.getMonth() && currentYear === today.getFullYear();
+  const isPastMonth = currentYear < today.getFullYear() || (currentYear === today.getFullYear() && currentMonth < today.getMonth());
+
   const getFoodsByCategory = (catKey: CategoryKey) => foods.filter(f => f.category === catKey);
 
   const toggleCategoryExpand = (catKey: string) => {
@@ -566,7 +569,11 @@ export default function FoodCalendarCard() {
                               <div className="flex items-center gap-1.5">
                                 <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", q.dotColor)} title={q.label} />
                                 <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[140px]" title={food.name}>{food.name}</span>
-                                {count === 0 && (
+                                {count > 0 ? (
+                                  <span className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 flex-shrink-0 transition-all" title="Protegido — usado neste mês">
+                                    <Lock size={10} className="text-muted-foreground/50" />
+                                  </span>
+                                ) : (
                                   <button onClick={() => removeFood(food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
                                 )}
                               </div>
@@ -807,9 +814,13 @@ export default function FoodCalendarCard() {
                                   <span className="text-base font-black text-violet-600 flex-shrink-0 leading-none">*</span>
                                 )}
                                 <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
-                                {!food.inherited && count === 0 && (
+                                {!food.inherited && (count > 0 ? (
+                                  <span className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 flex-shrink-0 transition-all" title="Protegido — usado neste mês">
+                                    <Lock size={10} className="text-muted-foreground/50" />
+                                  </span>
+                                ) : (
                                   <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
-                                )}
+                                ))}
                               </div>
                             </td>
                             {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
@@ -865,10 +876,26 @@ export default function FoodCalendarCard() {
             <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-muted/50 transition-all">
               <ChevronRight size={16} className="text-muted-foreground" />
             </button>
+            {!isCurrentMonth && (
+              <button
+                onClick={() => { setCurrentMonth(today.getMonth()); setCurrentYear(today.getFullYear()); }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                title="Voltar ao mês atual"
+              >
+                Hoje
+              </button>
+            )}
           </div>
         </div>
+        {/* Past month indicator */}
+        {isPastMonth && (
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30 pb-2">
+            <History size={12} className="text-blue-500" />
+            <span className="text-[11px] font-medium text-blue-600">Histórico — visualizando mês anterior</span>
+          </div>
+        )}
         {/* Legenda de qualidade */}
-        <div className="flex items-center gap-5 mt-2 pt-2 border-t border-border/30">
+        <div className={cn("flex items-center gap-5 mt-2 pt-2 border-t border-border/30", isPastMonth && "mt-0 pt-2")}>
           <span className="text-[10px] text-muted-foreground font-medium">Qualidade:</span>
           <span className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-medium"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Excelente</span>
           <span className="flex items-center gap-1.5 text-[11px] text-blue-700 font-medium"><span className="w-3 h-3 rounded-full bg-blue-500" /> Bom</span>
