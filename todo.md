@@ -270,3 +270,5 @@
 - [x] FoodCalendarCard espécie: corrigir símbolos estranhos na legenda (usar texto puro +, +/-, -)
 - [x] FoodCalendarCard espécie: aumentar bastante o tamanho da legenda para fácil leitura
 - [x] FoodCalendarCard PDF espécie: mesmas correções (key, símbolos, legenda maior)
+- [x] FoodCalendarCard PDF espécie: aumentar significativamente o tamanho das letras dos nomes dos alimentos (8.5pt base)
+- [x] FoodCalendarCard PDF espécie: incluir a fase selecionada no cabeçalho do PDF

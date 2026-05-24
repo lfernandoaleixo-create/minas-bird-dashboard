@@ -758,7 +758,7 @@ export default function FoodCalendarCard() {
                     <span className="flex items-center gap-1.5"><span className="text-base font-extrabold text-amber-700">-</span> <span className="font-medium">Pobre</span></span>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); exportFoodCalendarSpeciesPdf(allFoods, checks, speciesChecks[sp.id] || {}, currentYear, currentMonth, sp.commonName, sp.id); }}
+                    onClick={(e) => { e.stopPropagation(); const phaseLabel = LIFE_PHASES.find(p => p.id === selectedPhase)?.label || ''; exportFoodCalendarSpeciesPdf(allFoods, checks, speciesChecks[sp.id] || {}, currentYear, currentMonth, sp.commonName, sp.id, phaseLabel); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-teal-600 text-white hover:opacity-90 shadow-sm transition-all"
                   >
                     <FileDown size={12} />

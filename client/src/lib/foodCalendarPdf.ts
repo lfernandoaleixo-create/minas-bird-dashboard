@@ -292,6 +292,7 @@ export async function exportFoodCalendarSpeciesPdf(
   month: number, // 0-indexed
   speciesName: string,
   speciesId: string,
+  phaseName?: string,
 ) {
   if (allFoods.length === 0) return;
 
@@ -307,7 +308,7 @@ export async function exportFoodCalendarSpeciesPdf(
   const startY = drawCustomHeader(
     doc, pageW, logoBase64,
     `Controle Diario — ${speciesName}`,
-    "Criatorio Minas Bird · Calendario por Especie",
+    phaseName ? `Fase: ${phaseName}` : "Criatorio Minas Bird · Calendario por Especie",
     MONTHS[month], year
   );
 
@@ -330,12 +331,12 @@ export async function exportFoodCalendarSpeciesPdf(
   // Header row
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(tableX, y, availableW, rowH, "F");
-  doc.setFontSize(7);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
   doc.text("ALIMENTO", tableX + 5, y + rowH * 0.65);
 
-  doc.setFontSize(6.5);
+  doc.setFontSize(7);
   doc.setTextColor(...BRAND.muted);
   for (let d = 1; d <= totalDays; d++) {
     const dx = tableX + nameColW + (d - 1) * dayColW;
@@ -359,7 +360,7 @@ export async function exportFoodCalendarSpeciesPdf(
     let nameOffset = 3;
     if (food.category !== "racao" && food.category !== "racoes") {
       const q = QUALITY_COLORS[food.quality] || QUALITY_COLORS.bom;
-      doc.setFontSize(7);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...q.color);
       doc.text(q.symbol, tableX + 2, y + rowH * 0.65);
@@ -368,14 +369,15 @@ export async function exportFoodCalendarSpeciesPdf(
 
     // Food name — exclusive foods get * prefix
     const displayName = food.inherited ? food.name : `* ${food.name}`;
-    doc.setFontSize(6);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", food.inherited ? "normal" : "bold");
     doc.setTextColor(...BRAND.text);
     const maxNameW = nameColW - nameOffset - 3;
-    let fontSize = 6;
+    let fontSize = 8.5;
     let textW = doc.getTextWidth(displayName);
-    if (textW > maxNameW) { fontSize = 5.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(displayName); }
-    if (textW > maxNameW) { fontSize = 5; doc.setFontSize(fontSize); }
+    if (textW > maxNameW) { fontSize = 7.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(displayName); }
+    if (textW > maxNameW) { fontSize = 6.5; doc.setFontSize(fontSize); textW = doc.getTextWidth(displayName); }
+    if (textW > maxNameW) { fontSize = 6; doc.setFontSize(fontSize); }
     doc.text(displayName, tableX + nameOffset, y + rowH * 0.65, { maxWidth: maxNameW });
 
     // Check marks
