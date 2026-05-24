@@ -30,6 +30,24 @@ import {
   createInstallments,
   updateInstallmentStatus,
 } from "./db";
+import {
+  getFoodCalendarFoods,
+  addFoodCalendarFood,
+  removeFoodCalendarFood,
+  getFoodCalendarChecks,
+  setFoodCalendarCheck,
+  getFoodCalendarSpeciesFoods,
+  addFoodCalendarSpeciesFood,
+  removeFoodCalendarSpeciesFood,
+  getFoodCalendarSpeciesChecks,
+  setFoodCalendarSpeciesCheck,
+  getFoodCalendarSpeciesPhases,
+  setFoodCalendarSpeciesPhase,
+  getDietCalcConfigs,
+  setDietCalcConfig,
+  getTopicOrders,
+  setTopicOrder,
+} from "./dbShared";
 
 // Schema para itens de dieta
 const dietItemSchema = z.object({
@@ -477,6 +495,172 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await upsertTopicComment(input.topicKey, input.comment);
+        return { success: true };
+      }),
+  }),
+
+  // ═══════════════════════════════════════════════════════════
+  // FOOD CALENDAR — Shared data (Alimentação Teste)
+  // ═══════════════════════════════════════════════════════════
+  foodCalendar: router({
+    /** Get all foods in the general calendar tables */
+    getFoods: publicProcedure.query(async () => {
+      return getFoodCalendarFoods();
+    }),
+
+    /** Add a food to the general calendar */
+    addFood: publicProcedure
+      .input(z.object({ name: z.string(), category: z.string(), quality: z.string() }))
+      .mutation(async ({ input }) => {
+        await addFoodCalendarFood(input.name, input.category, input.quality);
+        return { success: true };
+      }),
+
+    /** Remove a food from the general calendar */
+    removeFood: publicProcedure
+      .input(z.object({ name: z.string() }))
+      .mutation(async ({ input }) => {
+        await removeFoodCalendarFood(input.name);
+        return { success: true };
+      }),
+
+    /** Get all checks (general) */
+    getChecks: publicProcedure.query(async () => {
+      const rows = await getFoodCalendarChecks();
+      const result: Record<string, boolean> = {};
+      for (const row of rows) {
+        result[row.checkKey] = true;
+      }
+      return result;
+    }),
+
+    /** Set/unset a check */
+    setCheck: publicProcedure
+      .input(z.object({ checkKey: z.string(), checked: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await setFoodCalendarCheck(input.checkKey, input.checked);
+        return { success: true };
+      }),
+
+    /** Get all species foods */
+    getSpeciesFoods: publicProcedure.query(async () => {
+      const rows = await getFoodCalendarSpeciesFoods();
+      const result: Record<string, Array<{ name: string; category: string; quality: string }>> = {};
+      for (const row of rows) {
+        if (!result[row.speciesId]) result[row.speciesId] = [];
+        result[row.speciesId].push({ name: row.name, category: row.category, quality: row.quality });
+      }
+      return result;
+    }),
+
+    /** Add a species food */
+    addSpeciesFood: publicProcedure
+      .input(z.object({ speciesId: z.string(), name: z.string(), category: z.string(), quality: z.string() }))
+      .mutation(async ({ input }) => {
+        await addFoodCalendarSpeciesFood(input.speciesId, input.name, input.category, input.quality);
+        return { success: true };
+      }),
+
+    /** Remove a species food */
+    removeSpeciesFood: publicProcedure
+      .input(z.object({ speciesId: z.string(), name: z.string() }))
+      .mutation(async ({ input }) => {
+        await removeFoodCalendarSpeciesFood(input.speciesId, input.name);
+        return { success: true };
+      }),
+
+    /** Get all species checks */
+    getSpeciesChecks: publicProcedure.query(async () => {
+      const rows = await getFoodCalendarSpeciesChecks();
+      const result: Record<string, Record<string, boolean>> = {};
+      for (const row of rows) {
+        if (!result[row.speciesId]) result[row.speciesId] = {};
+        result[row.speciesId][row.checkKey] = true;
+      }
+      return result;
+    }),
+
+    /** Set/unset a species check */
+    setSpeciesCheck: publicProcedure
+      .input(z.object({ speciesId: z.string(), checkKey: z.string(), checked: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await setFoodCalendarSpeciesCheck(input.speciesId, input.checkKey, input.checked);
+        return { success: true };
+      }),
+
+    /** Get all species phases */
+    getSpeciesPhases: publicProcedure.query(async () => {
+      const rows = await getFoodCalendarSpeciesPhases();
+      const result: Record<string, string> = {};
+      for (const row of rows) {
+        result[row.speciesId] = row.phaseId;
+      }
+      return result;
+    }),
+
+    /** Set species phase */
+    setSpeciesPhase: publicProcedure
+      .input(z.object({ speciesId: z.string(), phaseId: z.string() }))
+      .mutation(async ({ input }) => {
+        await setFoodCalendarSpeciesPhase(input.speciesId, input.phaseId);
+        return { success: true };
+      }),
+  }),
+
+  // ═══════════════════════════════════════════════════════════
+  // DIET CALCULATOR CONFIG — Shared
+  // ═══════════════════════════════════════════════════════════
+  dietCalc: router({
+    /** Get all diet calc configs */
+    getAll: publicProcedure.query(async () => {
+      const rows = await getDietCalcConfigs();
+      const result: Record<string, { racaoId: string | null; racaoPct: number; enclosureMultiplierX100: number }> = {};
+      for (const row of rows) {
+        result[row.speciesId] = {
+          racaoId: row.racaoId,
+          racaoPct: row.racaoPct,
+          enclosureMultiplierX100: row.enclosureMultiplierX100,
+        };
+      }
+      return result;
+    }),
+
+    /** Save diet calc config for a species */
+    save: publicProcedure
+      .input(z.object({
+        speciesId: z.string(),
+        racaoId: z.string().nullable(),
+        racaoPct: z.number().min(50).max(100),
+        enclosureMultiplierX100: z.number().min(50).max(300),
+      }))
+      .mutation(async ({ input }) => {
+        await setDietCalcConfig(input.speciesId, input.racaoId, input.racaoPct, input.enclosureMultiplierX100);
+        return { success: true };
+      }),
+  }),
+
+  // ═══════════════════════════════════════════════════════════
+  // TOPIC ORDER — Shared (Progress Map)
+  // ═══════════════════════════════════════════════════════════
+  topicOrderRouter: router({
+    /** Get all topic orders */
+    getAll: publicProcedure.query(async () => {
+      const rows = await getTopicOrders();
+      const result: Record<string, number[]> = {};
+      for (const row of rows) {
+        result[row.moduleId] = row.orderJson;
+      }
+      return result;
+    }),
+
+    /** Save topic order for a module */
+    save: publicProcedure
+      .input(z.object({
+        moduleId: z.string(),
+        orderJson: z.array(z.number()),
+      }))
+      .mutation(async ({ input }) => {
+        await setTopicOrder(input.moduleId, input.orderJson);
         return { success: true };
       }),
   }),

@@ -6,7 +6,7 @@
  * - Métrica simples: % ração → quantidade de salada (sem sliders)
  * Persistência em localStorage por espécie.
  */
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Calculator, ChevronDown, FileDown, Files, HelpCircle, Wheat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -19,6 +19,7 @@ import {
 } from "@/data/petbird";
 import { species } from "@/data/feeding";
 import { generateAnnotationPdf, generateAllAnnotationPdfs } from "@/lib/annotationPdf";
+import { trpc } from "@/lib/trpc";
 
 interface DietCalculatorProps {
   speciesId: string;
@@ -29,50 +30,56 @@ interface DietCalculatorProps {
 
 const RACAO_PCT_OPTIONS = [50, 60, 70, 80, 90, 100];
 
-const STORAGE_KEY_DIET_CALC = "dietCalc_v2";
-
 interface CalcState {
   racaoId: string | null;
   racaoPct: number;
   enclosureMultiplier: number; // fator manual editável
 }
 
-function loadCalcState(speciesId: string): CalcState {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_DIET_CALC);
-    if (saved) {
-      const all = JSON.parse(saved);
-      if (all[speciesId]) return all[speciesId];
-    }
-  } catch {}
-  return {
-    racaoId: null,
-    racaoPct: 70,
-    enclosureMultiplier: 1.0,
-  };
-}
-
-function saveCalcState(speciesId: string, state: CalcState) {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_DIET_CALC);
-    const all = saved ? JSON.parse(saved) : {};
-    all[speciesId] = state;
-    localStorage.setItem(STORAGE_KEY_DIET_CALC, JSON.stringify(all));
-  } catch {}
-}
+const DEFAULT_STATE: CalcState = {
+  racaoId: null,
+  racaoPct: 70,
+  enclosureMultiplier: 1.0,
+};
 
 export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange, phases }: DietCalculatorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [state, setState] = useState<CalcState>(() => loadCalcState(speciesId));
+  const [state, setState] = useState<CalcState>(DEFAULT_STATE);
   const [racaoSearch, setRacaoSearch] = useState("");
   const [showRacaoList, setShowRacaoList] = useState(false);
   const [showEnclosureHelp, setShowEnclosureHelp] = useState(false);
   const helpRef = useRef<HTMLDivElement>(null);
 
+  // tRPC: load from DB
+  const { data: allConfigs } = trpc.dietCalc.getAll.useQuery();
+  const saveMut = trpc.dietCalc.save.useMutation();
+  const utils = trpc.useUtils();
+
+  // Sync from DB
+  useEffect(() => {
+    if (allConfigs && allConfigs[speciesId]) {
+      const cfg = allConfigs[speciesId];
+      setState({
+        racaoId: cfg.racaoId,
+        racaoPct: cfg.racaoPct,
+        enclosureMultiplier: cfg.enclosureMultiplierX100 / 100,
+      });
+    } else if (allConfigs && !allConfigs[speciesId]) {
+      setState(DEFAULT_STATE);
+    }
+  }, [allConfigs, speciesId]);
+
   const persist = useCallback((newState: CalcState) => {
     setState(newState);
-    saveCalcState(speciesId, newState);
-  }, [speciesId]);
+    saveMut.mutate({
+      speciesId,
+      racaoId: newState.racaoId,
+      racaoPct: newState.racaoPct,
+      enclosureMultiplierX100: Math.round(newState.enclosureMultiplier * 100),
+    }, {
+      onSuccess: () => utils.dietCalc.getAll.invalidate(),
+    });
+  }, [speciesId, saveMut, utils]);
 
   // Species data
   const sp = useMemo(() => species.find(s => s.id === speciesId), [speciesId]);

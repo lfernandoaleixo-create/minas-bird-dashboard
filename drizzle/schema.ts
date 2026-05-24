@@ -227,3 +227,127 @@ export const saleInstallments = mysqlTable("sale_installments", {
 
 export type SaleInstallment = typeof saleInstallments.$inferSelect;
 export type InsertSaleInstallment = typeof saleInstallments.$inferInsert;
+
+/**
+ * Alimentos adicionados ao calendário geral (Alimentação Teste)
+ * Cada registro é um alimento que foi adicionado a uma das 3 tabelas (vegetais, frutas, sementes)
+ */
+export const foodCalendarFoods = mysqlTable("food_calendar_foods", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Nome do alimento */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Categoria: vegetais, frutas, sementes */
+  category: varchar("category", { length: 64 }).notNull(),
+  /** Qualidade: excelente, bom, pobre */
+  quality: varchar("quality", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FoodCalendarFood = typeof foodCalendarFoods.$inferSelect;
+export type InsertFoodCalendarFood = typeof foodCalendarFoods.$inferInsert;
+
+/**
+ * Marcações (checks) do calendário geral
+ * Cada registro indica que um alimento foi servido em um dia específico de um mês
+ * checkKey no formato "YYYY-MM|foodName|day"
+ */
+export const foodCalendarChecks = mysqlTable("food_calendar_checks", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Chave única: YYYY-MM|foodName|day */
+  checkKey: varchar("checkKey", { length: 255 }).notNull().unique(),
+  /** Marcado = true */
+  checked: int("checked").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FoodCalendarCheck = typeof foodCalendarChecks.$inferSelect;
+export type InsertFoodCalendarCheck = typeof foodCalendarChecks.$inferInsert;
+
+/**
+ * Alimentos exclusivos por espécie no calendário
+ * Cada registro é um alimento adicionado diretamente no card de uma espécie
+ */
+export const foodCalendarSpeciesFoods = mysqlTable("food_calendar_species_foods", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da espécie */
+  speciesId: varchar("speciesId", { length: 128 }).notNull(),
+  /** Nome do alimento */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Categoria: racoes, vegetais, frutas, sementes */
+  category: varchar("category", { length: 64 }).notNull(),
+  /** Qualidade: excelente, bom, pobre */
+  quality: varchar("quality", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FoodCalendarSpeciesFood = typeof foodCalendarSpeciesFoods.$inferSelect;
+export type InsertFoodCalendarSpeciesFood = typeof foodCalendarSpeciesFoods.$inferInsert;
+
+/**
+ * Marcações por espécie no calendário
+ * checkKey no formato "YYYY-MM|foodName|day"
+ */
+export const foodCalendarSpeciesChecks = mysqlTable("food_calendar_species_checks", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da espécie */
+  speciesId: varchar("speciesId", { length: 128 }).notNull(),
+  /** Chave: YYYY-MM|foodName|day */
+  checkKey: varchar("checkKey", { length: 255 }).notNull(),
+  /** Marcado = true */
+  checked: int("checked").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FoodCalendarSpeciesCheck = typeof foodCalendarSpeciesChecks.$inferSelect;
+export type InsertFoodCalendarSpeciesCheck = typeof foodCalendarSpeciesChecks.$inferInsert;
+
+/**
+ * Fase selecionada por espécie no calendário
+ */
+export const foodCalendarSpeciesPhase = mysqlTable("food_calendar_species_phase", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da espécie */
+  speciesId: varchar("speciesId", { length: 128 }).notNull().unique(),
+  /** ID da fase selecionada */
+  phaseId: varchar("phaseId", { length: 64 }).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FoodCalendarSpeciesPhase = typeof foodCalendarSpeciesPhase.$inferSelect;
+export type InsertFoodCalendarSpeciesPhase = typeof foodCalendarSpeciesPhase.$inferInsert;
+
+/**
+ * Configurações da calculadora de dieta por espécie
+ * Armazena ração selecionada, % ração e multiplicador de recinto
+ */
+export const dietCalcConfig = mysqlTable("diet_calc_config", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da espécie */
+  speciesId: varchar("speciesId", { length: 128 }).notNull().unique(),
+  /** ID da ração selecionada (null = nenhuma) */
+  racaoId: varchar("racaoId", { length: 128 }),
+  /** Porcentagem de ração (50-100) */
+  racaoPct: int("racaoPct").notNull().default(70),
+  /** Multiplicador do recinto (float * 100 para armazenar como int) */
+  enclosureMultiplierX100: int("enclosureMultiplierX100").notNull().default(100),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DietCalcConfig = typeof dietCalcConfig.$inferSelect;
+export type InsertDietCalcConfig = typeof dietCalcConfig.$inferInsert;
+
+/**
+ * Ordem dos tópicos dentro de cada módulo no mapa de progresso
+ * Substitui o localStorage "minas-bird-topic-order"
+ */
+export const topicOrder = mysqlTable("topic_order", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID do módulo */
+  moduleId: varchar("moduleId", { length: 128 }).notNull().unique(),
+  /** Array JSON com a ordem dos índices originais dos tópicos */
+  orderJson: json("orderJson").$type<number[]>().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TopicOrder = typeof topicOrder.$inferSelect;
+export type InsertTopicOrder = typeof topicOrder.$inferInsert;

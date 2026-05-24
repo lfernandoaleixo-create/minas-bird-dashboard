@@ -64,6 +64,13 @@
       "when": 1779659422085,
       "tag": "0008_jittery_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1779661422961,
+      "tag": "0009_cool_manta",
+      "breakpoints": true
     }
   ]
 }

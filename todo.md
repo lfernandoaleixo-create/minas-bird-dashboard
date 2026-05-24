@@ -300,3 +300,12 @@
 - [x] Vendas: visualização do histórico de pagamentos no detalhe do cliente
 - [x] Vendas: testes automatizados para parcelas
 - [x] Alimentação Teste: botão de reset para limpar todas as marcações (localStorage)
+- [x] MIGRAÇÃO COMPLETA: mover toda persistência de localStorage para banco de dados compartilhado
+- [x] Schema: FoodCalendarCard (foods, checks, speciesFoods, speciesChecks, speciesPhase)
+- [x] Schema: DietCalculator (configurações de cálculo por espécie)
+- [x] Schema: ProgressMap (ordem dos tópicos)
+- [x] Rotas tRPC públicas para todos os módulos migrados
+- [x] Refatorar FoodCalendarCard para tRPC
+- [x] Refatorar DietCalculator para tRPC
+- [x] Refatorar ProgressMap topic order para tRPC
+- [x] Todos os dados visíveis em tempo real para qualquer usuário

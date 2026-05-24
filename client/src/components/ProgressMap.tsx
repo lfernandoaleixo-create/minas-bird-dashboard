@@ -54,21 +54,7 @@ const VIBRANT_COLORS = [
   { header: "#be185d", headerText: "#fff", dot: "#f472b6", border: "#f9a8d4", expandBg: "#fdf2f8", topicBg: "#fef1f7", numBg: "#fce7f3", numText: "#9d174d" },
 ];
 
-const STORAGE_KEY = "minas-bird-topic-order";
-
-function loadTopicOrder(): Record<string, number[]> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return {};
-}
-
-function saveTopicOrder(order: Record<string, number[]>) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
-  } catch {}
-}
+// Topic order now stored in database via tRPC
 
 function buildModulesMap(): Map<string, ModuleCardData> {
   const map = new Map<string, ModuleCardData>();
@@ -419,19 +405,34 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
-  // Topic order state
+  // Topic order state — loaded from DB
+  const { data: serverTopicOrders } = trpc.topicOrderRouter.getAll.useQuery();
+  const saveTopicOrderMut = trpc.topicOrderRouter.save.useMutation();
+  const topicOrderUtils = trpc.useUtils();
+
   const [topicOrders, setTopicOrders] = useState<Record<string, number[]>>(() => {
-    const saved = loadTopicOrder();
     const result: Record<string, number[]> = {};
     Array.from(modulesMap.entries()).forEach(([id, mod]) => {
-      if (saved[id] && saved[id].length === mod.topics.length) {
-        result[id] = saved[id];
-      } else {
-        result[id] = mod.topics.map((t: TopicItem) => t.originalIndex);
-      }
+      result[id] = mod.topics.map((t: TopicItem) => t.originalIndex);
     });
     return result;
   });
+
+  // Sync topic orders from DB
+  useEffect(() => {
+    if (serverTopicOrders) {
+      setTopicOrders(prev => {
+        const updated = { ...prev };
+        for (const [modId, order] of Object.entries(serverTopicOrders)) {
+          const mod = modulesMap.get(modId);
+          if (mod && order.length === mod.topics.length) {
+            updated[modId] = order;
+          }
+        }
+        return updated;
+      });
+    }
+  }, [serverTopicOrders]);
 
   // Comments state — loaded from DB
   const { data: serverComments } = trpc.topicComment.getAll.useQuery();
@@ -468,10 +469,12 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
   const handleTopicReorder = useCallback((moduleId: string, newOrder: number[]) => {
     setTopicOrders(prev => {
       const updated = { ...prev, [moduleId]: newOrder };
-      saveTopicOrder(updated);
       return updated;
     });
-  }, []);
+    saveTopicOrderMut.mutate({ moduleId, orderJson: newOrder }, {
+      onSuccess: () => topicOrderUtils.topicOrderRouter.getAll.invalidate(),
+    });
+  }, [saveTopicOrderMut, topicOrderUtils]);
 
   const toggleCard = useCallback((modId: string) => {
     setExpandedCard(prev => {

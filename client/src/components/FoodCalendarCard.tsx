@@ -7,7 +7,7 @@
  * Indicador de qualidade (Excelente/Bom/Pobre) ao lado de cada alimento
  * Persistência em localStorage
  */
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, X, Leaf, Apple, Wheat,
   Check, FileDown, Bird, Lock, History
@@ -17,6 +17,7 @@ import { vegetais, frutas, proteicos, racoes, lifePeriods } from "@/data/petbird
 import { species } from "@/data/feeding";
 import { exportFoodCalendarCategoryPdf, exportFoodCalendarSpeciesPdf } from "@/lib/foodCalendarPdf";
 import DietCalculator from "@/components/DietCalculator";
+import { trpc } from "@/lib/trpc";
 
 // Vegetais a excluir (marcados com ⚠️ na aba original)
 const VEGETAIS_EXCLUIDOS = ["Alface Romana, Folha, Crua \u26a0\ufe0f", "Alface Lisa, Folha, Crua \u26a0\ufe0f", "Espinafre Comum, Folha, Crua \u26a0\ufe0f"];
@@ -149,11 +150,7 @@ const MONTHS = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
-const STORAGE_KEY_FOODS = "foodCalendarFoods_v3";
-const STORAGE_KEY_CHECKS = "foodCalendarChecks_v2";
-const STORAGE_KEY_SPECIES_FOODS = "foodCalendarSpeciesFoods_v1";
-const STORAGE_KEY_SPECIES_CHECKS = "foodCalendarSpeciesChecks_v1";
-const STORAGE_KEY_SPECIES_PHASE = "foodCalendarSpeciesPhase_v1";
+// localStorage keys removed — data now comes from the database via tRPC
 
 function getMonthKey(year: number, month: number) {
   return `${year}-${String(month + 1).padStart(2, "0")}`;
@@ -164,47 +161,58 @@ export default function FoodCalendarCard() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
 
-  // === CATEGORY TABLES STATE ===
-  const [foods, setFoods] = useState<FoodEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_FOODS);
-      if (!saved) return [];
-      const parsed = JSON.parse(saved) as FoodEntry[];
-      return parsed.filter(f => f.category in FOOD_CATEGORIES);
-    } catch { return []; }
-  });
+  // === tRPC QUERIES (shared database) ===
+  const { data: dbFoods } = trpc.foodCalendar.getFoods.useQuery();
+  const { data: dbChecks } = trpc.foodCalendar.getChecks.useQuery();
+  const { data: dbSpeciesFoods } = trpc.foodCalendar.getSpeciesFoods.useQuery();
+  const { data: dbSpeciesChecks } = trpc.foodCalendar.getSpeciesChecks.useQuery();
+  const { data: dbSpeciesPhases } = trpc.foodCalendar.getSpeciesPhases.useQuery();
 
-  const [checks, setChecks] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_CHECKS);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+  // === tRPC MUTATIONS ===
+  const addFoodMut = trpc.foodCalendar.addFood.useMutation();
+  const removeFoodMut = trpc.foodCalendar.removeFood.useMutation();
+  const setCheckMut = trpc.foodCalendar.setCheck.useMutation();
+  const addSpeciesFoodMut = trpc.foodCalendar.addSpeciesFood.useMutation();
+  const removeSpeciesFoodMut = trpc.foodCalendar.removeSpeciesFood.useMutation();
+  const setSpeciesCheckMut = trpc.foodCalendar.setSpeciesCheck.useMutation();
+  const setSpeciesPhaseMut = trpc.foodCalendar.setSpeciesPhase.useMutation();
+  const utils = trpc.useUtils();
 
-  // === SPECIES TABLES STATE ===
-  // speciesFoods: { [speciesId]: FoodEntry[] } — EXCLUSIVE to that species
-  const [speciesFoods, setSpeciesFoods] = useState<Record<string, FoodEntry[]>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SPECIES_FOODS);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+  // === LOCAL STATE (derived from DB, with optimistic updates) ===
+  const [foods, setFoods] = useState<FoodEntry[]>([]);
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
+  const [speciesFoods, setSpeciesFoods] = useState<Record<string, FoodEntry[]>>({});
+  const [speciesChecks, setSpeciesChecks] = useState<Record<string, Record<string, boolean>>>({});
+  const [speciesPhase, setSpeciesPhase] = useState<Record<string, string>>({});
 
-  // speciesChecks: { [speciesId]: { "YYYY-MM|foodName|day": true } }
-  const [speciesChecks, setSpeciesChecks] = useState<Record<string, Record<string, boolean>>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SPECIES_CHECKS);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+  // Sync from DB to local state
+  useEffect(() => {
+    if (dbFoods) {
+      setFoods(dbFoods.map(f => ({ name: f.name, category: f.category, quality: f.quality as "excelente" | "bom" | "pobre" })).filter(f => f.category in FOOD_CATEGORIES));
+    }
+  }, [dbFoods]);
 
-  // Per-species selected phase
-  const [speciesPhase, setSpeciesPhase] = useState<Record<string, string>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SPECIES_PHASE);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+  useEffect(() => {
+    if (dbChecks) setChecks(dbChecks);
+  }, [dbChecks]);
+
+  useEffect(() => {
+    if (dbSpeciesFoods) {
+      const mapped: Record<string, FoodEntry[]> = {};
+      for (const [speciesId, items] of Object.entries(dbSpeciesFoods)) {
+        mapped[speciesId] = items.map(f => ({ name: f.name, category: f.category, quality: f.quality as "excelente" | "bom" | "pobre" }));
+      }
+      setSpeciesFoods(mapped);
+    }
+  }, [dbSpeciesFoods]);
+
+  useEffect(() => {
+    if (dbSpeciesChecks) setSpeciesChecks(dbSpeciesChecks);
+  }, [dbSpeciesChecks]);
+
+  useEffect(() => {
+    if (dbSpeciesPhases) setSpeciesPhase(dbSpeciesPhases);
+  }, [dbSpeciesPhases]);
 
   // UI state
   const [addingCategory, setAddingCategory] = useState<CategoryKey | null>(null);
@@ -232,30 +240,25 @@ export default function FoodCalendarCard() {
     }
   };
 
-  // Persistir
+  // Persist helpers — optimistic update + DB mutation
   const saveFoods = useCallback((newFoods: FoodEntry[]) => {
     setFoods(newFoods);
-    localStorage.setItem(STORAGE_KEY_FOODS, JSON.stringify(newFoods));
   }, []);
 
   const saveChecks = useCallback((newChecks: Record<string, boolean>) => {
     setChecks(newChecks);
-    localStorage.setItem(STORAGE_KEY_CHECKS, JSON.stringify(newChecks));
   }, []);
 
   const saveSpeciesFoods = useCallback((newData: Record<string, FoodEntry[]>) => {
     setSpeciesFoods(newData);
-    localStorage.setItem(STORAGE_KEY_SPECIES_FOODS, JSON.stringify(newData));
   }, []);
 
   const saveSpeciesChecks = useCallback((newData: Record<string, Record<string, boolean>>) => {
     setSpeciesChecks(newData);
-    localStorage.setItem(STORAGE_KEY_SPECIES_CHECKS, JSON.stringify(newData));
   }, []);
 
   const saveSpeciesPhase = useCallback((newData: Record<string, string>) => {
     setSpeciesPhase(newData);
-    localStorage.setItem(STORAGE_KEY_SPECIES_PHASE, JSON.stringify(newData));
   }, []);
 
   // Dias do mês
@@ -272,14 +275,21 @@ export default function FoodCalendarCard() {
   const toggleCheck = (foodName: string, day: number) => {
     const key = getCheckKey(foodName, day);
     const newChecks = { ...checks };
+    const newChecked = !newChecks[key];
     if (newChecks[key]) delete newChecks[key];
     else newChecks[key] = true;
     saveChecks(newChecks);
+    setCheckMut.mutate({ checkKey: key, checked: newChecked }, {
+      onSuccess: () => utils.foodCalendar.getChecks.invalidate(),
+    });
   };
 
   const addFood = (name: string, category: CategoryKey, quality: "excelente" | "bom" | "pobre") => {
     if (foods.some(f => f.name === name)) return;
     saveFoods([...foods, { name, category, quality }]);
+    addFoodMut.mutate({ name, category, quality }, {
+      onSuccess: () => utils.foodCalendar.getFoods.invalidate(),
+    });
   };
 
   const removeFood = (name: string) => {
@@ -287,6 +297,12 @@ export default function FoodCalendarCard() {
     const newChecks = { ...checks };
     Object.keys(newChecks).forEach(key => { if (key.includes(`|${name}|`)) delete newChecks[key]; });
     saveChecks(newChecks);
+    removeFoodMut.mutate({ name }, {
+      onSuccess: () => {
+        utils.foodCalendar.getFoods.invalidate();
+        utils.foodCalendar.getChecks.invalidate();
+      },
+    });
   };
 
   // === SPECIES TABLE HELPERS ===
@@ -301,10 +317,14 @@ export default function FoodCalendarCard() {
     const current = { ...speciesChecks };
     if (!current[speciesId]) current[speciesId] = {};
     const specChecks = { ...current[speciesId] };
+    const newChecked = !specChecks[key];
     if (specChecks[key]) delete specChecks[key];
     else specChecks[key] = true;
     current[speciesId] = specChecks;
     saveSpeciesChecks(current);
+    setSpeciesCheckMut.mutate({ speciesId, checkKey: key, checked: newChecked }, {
+      onSuccess: () => utils.foodCalendar.getSpeciesChecks.invalidate(),
+    });
   };
 
   const addSpeciesFood = (speciesId: string, name: string, category: string, quality: "excelente" | "bom" | "pobre") => {
@@ -315,6 +335,9 @@ export default function FoodCalendarCard() {
     if (foods.some(f => f.name === name)) return;
     current[speciesId] = [...current[speciesId], { name, category, quality }];
     saveSpeciesFoods(current);
+    addSpeciesFoodMut.mutate({ speciesId, name, category, quality }, {
+      onSuccess: () => utils.foodCalendar.getSpeciesFoods.invalidate(),
+    });
   };
 
   const removeSpeciesFood = (speciesId: string, name: string) => {
@@ -330,6 +353,12 @@ export default function FoodCalendarCard() {
       currentChecks[speciesId] = specChecks;
       saveSpeciesChecks(currentChecks);
     }
+    removeSpeciesFoodMut.mutate({ speciesId, name }, {
+      onSuccess: () => {
+        utils.foodCalendar.getSpeciesFoods.invalidate();
+        utils.foodCalendar.getSpeciesChecks.invalidate();
+      },
+    });
   };
 
   // Get all foods for a species: inherited (from general, only if checked at least once) + exclusive (species-only)
@@ -657,6 +686,9 @@ export default function FoodCalendarCard() {
 
     const handlePhaseChange = (phaseId: string) => {
       saveSpeciesPhase({ ...speciesPhase, [sp.id]: phaseId });
+      setSpeciesPhaseMut.mutate({ speciesId: sp.id, phaseId }, {
+        onSuccess: () => utils.foodCalendar.getSpeciesPhases.invalidate(),
+      });
     };
 
     return (
