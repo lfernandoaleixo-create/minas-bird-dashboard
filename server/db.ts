@@ -287,8 +287,8 @@ export async function saveFullCalendarForSpeciesPublic(speciesId: string, calend
 
 // ===== MODULE ORDER =====
 
-import { moduleOrder, topicComments } from "../drizzle/schema";
-import { asc } from "drizzle-orm";
+import { moduleOrder, topicComments, clients, clientPurchases } from "../drizzle/schema";
+import { asc, desc } from "drizzle-orm";
 
 export async function getModuleOrder() {
   const db = await getDb();
@@ -326,4 +326,69 @@ export async function upsertTopicComment(topicKey: string, comment: string) {
   if (comment.trim()) {
     await db.insert(topicComments).values({ topicKey, comment: comment.trim() });
   }
+}
+
+// ===== CLIENTS CRUD =====
+
+import type { InsertClient, InsertClientPurchase } from "../drizzle/schema";
+
+export async function getAllClients() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(clients).orderBy(asc(clients.name));
+}
+
+export async function getClientById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createClient(client: InsertClient) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(clients).values(client);
+  return getClientById(result[0].insertId);
+}
+
+export async function updateClient(id: number, data: Partial<InsertClient>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(clients).set(data).where(eq(clients.id, id));
+  return getClientById(id);
+}
+
+export async function deleteClient(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Delete purchases first
+  await db.delete(clientPurchases).where(eq(clientPurchases.clientId, id));
+  await db.delete(clients).where(eq(clients.id, id));
+  return true;
+}
+
+// ===== CLIENT PURCHASES CRUD =====
+
+export async function getPurchasesByClient(clientId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(clientPurchases)
+    .where(eq(clientPurchases.clientId, clientId))
+    .orderBy(desc(clientPurchases.saleDate));
+}
+
+export async function createPurchase(purchase: InsertClientPurchase) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(clientPurchases).values(purchase);
+  const rows = await db.select().from(clientPurchases).where(eq(clientPurchases.id, result[0].insertId)).limit(1);
+  return rows[0];
+}
+
+export async function deletePurchase(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(clientPurchases).where(eq(clientPurchases.id, id));
+  return true;
 }

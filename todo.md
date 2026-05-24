@@ -287,3 +287,9 @@
 - [x] Tela inicial com 3 cards: Alimentação, Alimentação Teste, Cadastro de Clientes
 - [x] Redesign radical: remover sidebar, navegação no topo, 4 módulos (Alimentação, Alimentação Teste, Clientes, Mapa de Progresso)
 - [x] Unificar Alimentação e Alimentação Teste em uma única aba com sub-seletor interno (verde/âmbar)
+- [x] Módulo Clientes: schema de banco de dados (nome, telefone, email, endereço, espécies de interesse, observações, data de cadastro)
+- [x] Módulo Clientes: rotas tRPC para CRUD (criar, listar, editar, excluir)
+- [x] Módulo Clientes: componente de formulário de cadastro completo
+- [x] Módulo Clientes: listagem de clientes com busca e filtros
+- [x] Módulo Clientes: edição e exclusão de clientes
+- [x] Módulo Clientes: testes automatizados

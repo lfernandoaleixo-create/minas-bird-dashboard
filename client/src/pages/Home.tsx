@@ -6,6 +6,7 @@
 import FeedingModule from "@/components/FeedingModule";
 import FeedingModuleTest from "@/components/FeedingModuleTest";
 import ProgressMap from "@/components/ProgressMap";
+import ClientsModule from "@/components/ClientsModule";
 import { useState, useRef, useEffect } from "react";
 import { Utensils, FlaskConical, Users, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -144,21 +145,7 @@ export default function Home() {
               {feedingSubTab === "original" ? <FeedingModule /> : <FeedingModuleTest />}
             </div>
           )}
-          {activeTab === "clientes" && (
-            <div className="max-w-4xl mx-auto mt-8">
-              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-10 text-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200/50 flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-6 h-6 text-emerald-700" />
-                </div>
-                <h2 className="text-lg font-bold text-stone-800 mb-2">
-                  Clientes
-                </h2>
-                <p className="text-stone-500 text-sm max-w-md mx-auto">
-                  Módulo em desenvolvimento. Em breve você poderá gerenciar seus clientes aqui.
-                </p>
-              </div>
-            </div>
-          )}
+          {activeTab === "clientes" && <ClientsModule />}
           {activeTab === "mapa" && <ProgressMap onNavigate={() => {}} />}
         </div>
       </main>

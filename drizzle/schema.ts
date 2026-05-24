@@ -134,3 +134,68 @@ export const topicComments = mysqlTable("topic_comments", {
 
 export type TopicComment = typeof topicComments.$inferSelect;
 export type InsertTopicComment = typeof topicComments.$inferInsert;
+
+/**
+ * Cadastro de clientes do criatório
+ * Armazena informações completas dos clientes (compradores de aves)
+ */
+export const clients = mysqlTable("clients", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Nome completo do cliente */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Telefone principal (WhatsApp) */
+  phone: varchar("phone", { length: 32 }).notNull(),
+  /** Telefone secundário (opcional) */
+  phone2: varchar("phone2", { length: 32 }),
+  /** Email do cliente */
+  email: varchar("email", { length: 320 }),
+  /** CPF do cliente */
+  cpf: varchar("cpf", { length: 14 }),
+  /** Endereço completo */
+  address: text("address"),
+  /** Cidade */
+  city: varchar("city", { length: 128 }),
+  /** Estado (UF) */
+  state: varchar("state", { length: 2 }),
+  /** CEP */
+  cep: varchar("cep", { length: 10 }),
+  /** Espécies de interesse (JSON array de nomes) */
+  speciesInterest: json("speciesInterest").$type<string[]>(),
+  /** Como conheceu o criatório */
+  referralSource: varchar("referralSource", { length: 128 }),
+  /** Observações gerais */
+  notes: text("notes"),
+  /** Status do cliente: ativo, inativo, lista de espera */
+  status: mysqlEnum("status", ["ativo", "inativo", "lista_espera"]).default("ativo").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = typeof clients.$inferInsert;
+
+/**
+ * Histórico de compras/vendas do cliente
+ * Cada registro é uma transação (venda de ave)
+ */
+export const clientPurchases = mysqlTable("client_purchases", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID do cliente */
+  clientId: int("clientId").notNull(),
+  /** Espécie vendida */
+  species: varchar("species", { length: 255 }).notNull(),
+  /** Quantidade de aves */
+  quantity: int("quantity").notNull().default(1),
+  /** Valor da venda em centavos (R$) */
+  valueCents: int("valueCents"),
+  /** Número da nota fiscal / recibo */
+  invoiceNumber: varchar("invoiceNumber", { length: 64 }),
+  /** Data da venda */
+  saleDate: timestamp("saleDate").notNull(),
+  /** Observações da venda */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ClientPurchase = typeof clientPurchases.$inferSelect;
+export type InsertClientPurchase = typeof clientPurchases.$inferInsert;

@@ -18,6 +18,14 @@ import {
   saveModuleOrder,
   getAllTopicComments,
   upsertTopicComment,
+  getAllClients,
+  getClientById,
+  createClient,
+  updateClient,
+  deleteClient,
+  getPurchasesByClient,
+  createPurchase,
+  deletePurchase,
 } from "./db";
 
 // Schema para itens de dieta
@@ -258,6 +266,134 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await saveModuleOrder(input.moduleIds);
+        return { success: true };
+      }),
+  }),
+
+  // ===== CLIENTES =====
+  cliente: router({
+    /** Listar todos os clientes */
+    list: publicProcedure.query(async () => {
+      return getAllClients();
+    }),
+
+    /** Obter cliente por ID com histórico de compras */
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const client = await getClientById(input.id);
+        if (!client) return null;
+        const purchases = await getPurchasesByClient(input.id);
+        return { ...client, purchases };
+      }),
+
+    /** Criar novo cliente */
+    create: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        phone: z.string().min(1),
+        phone2: z.string().nullable().optional(),
+        email: z.string().nullable().optional(),
+        cpf: z.string().nullable().optional(),
+        address: z.string().nullable().optional(),
+        city: z.string().nullable().optional(),
+        state: z.string().nullable().optional(),
+        cep: z.string().nullable().optional(),
+        speciesInterest: z.array(z.string()).nullable().optional(),
+        referralSource: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+        status: z.enum(["ativo", "inativo", "lista_espera"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const client = await createClient({
+          name: input.name,
+          phone: input.phone,
+          phone2: input.phone2 ?? null,
+          email: input.email ?? null,
+          cpf: input.cpf ?? null,
+          address: input.address ?? null,
+          city: input.city ?? null,
+          state: input.state ?? null,
+          cep: input.cep ?? null,
+          speciesInterest: input.speciesInterest ?? null,
+          referralSource: input.referralSource ?? null,
+          notes: input.notes ?? null,
+          status: input.status ?? "ativo",
+        });
+        return { success: true, client };
+      }),
+
+    /** Atualizar cliente */
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        phone: z.string().min(1).optional(),
+        phone2: z.string().nullable().optional(),
+        email: z.string().nullable().optional(),
+        cpf: z.string().nullable().optional(),
+        address: z.string().nullable().optional(),
+        city: z.string().nullable().optional(),
+        state: z.string().nullable().optional(),
+        cep: z.string().nullable().optional(),
+        speciesInterest: z.array(z.string()).nullable().optional(),
+        referralSource: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+        status: z.enum(["ativo", "inativo", "lista_espera"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        const client = await updateClient(id, data as any);
+        return { success: true, client };
+      }),
+
+    /** Deletar cliente */
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteClient(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // ===== COMPRAS DE CLIENTES =====
+  purchase: router({
+    /** Listar compras de um cliente */
+    listByClient: publicProcedure
+      .input(z.object({ clientId: z.number() }))
+      .query(async ({ input }) => {
+        return getPurchasesByClient(input.clientId);
+      }),
+
+    /** Registrar nova compra */
+    create: publicProcedure
+      .input(z.object({
+        clientId: z.number(),
+        species: z.string().min(1),
+        quantity: z.number().int().min(1),
+        valueCents: z.number().int().nullable().optional(),
+        invoiceNumber: z.string().nullable().optional(),
+        saleDate: z.string(), // ISO date string
+        notes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const purchase = await createPurchase({
+          clientId: input.clientId,
+          species: input.species,
+          quantity: input.quantity,
+          valueCents: input.valueCents ?? null,
+          invoiceNumber: input.invoiceNumber ?? null,
+          saleDate: new Date(input.saleDate),
+          notes: input.notes ?? null,
+        });
+        return { success: true, purchase };
+      }),
+
+    /** Deletar compra */
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deletePurchase(input.id);
         return { success: true };
       }),
   }),
