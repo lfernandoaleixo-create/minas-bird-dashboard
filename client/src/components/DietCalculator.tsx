@@ -7,7 +7,7 @@
  * Persistência em localStorage por espécie.
  */
 import { useState, useMemo, useCallback, useRef } from "react";
-import { Calculator, ChevronDown, FileDown, HelpCircle, Wheat } from "lucide-react";
+import { Calculator, ChevronDown, FileDown, Files, HelpCircle, Wheat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   racoes,
@@ -18,7 +18,7 @@ import {
   enclosureTypes,
 } from "@/data/petbird";
 import { species } from "@/data/feeding";
-import { generateAnnotationPdf } from "@/lib/annotationPdf";
+import { generateAnnotationPdf, generateAllAnnotationPdfs } from "@/lib/annotationPdf";
 
 interface DietCalculatorProps {
   speciesId: string;
@@ -358,23 +358,39 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
             </div>
           )}
 
-          {/* PDF Export button */}
+          {/* PDF Export buttons */}
           {dietResult && selectedRacao && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                generateAnnotationPdf({
-                  speciesId,
-                  phaseId: selectedPhase,
-                  enclosureMultiplier: state.enclosureMultiplier,
-                  racaoId: state.racaoId!,
-                });
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold transition-all"
-            >
-              <FileDown size={14} />
-              Exportar PDF — Anotação (30 dias)
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  generateAnnotationPdf({
+                    speciesId,
+                    phaseId: selectedPhase,
+                    enclosureMultiplier: state.enclosureMultiplier,
+                    racaoId: state.racaoId!,
+                  });
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold transition-all"
+              >
+                <FileDown size={14} />
+                Exportar PDF — Anotação (30 dias)
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  generateAllAnnotationPdfs({
+                    phaseId: selectedPhase,
+                    enclosureMultiplier: state.enclosureMultiplier,
+                    racaoId: state.racaoId!,
+                  });
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-medium transition-all"
+              >
+                <Files size={13} />
+                Exportar TODAS as Espécies (1 PDF)
+              </button>
+            </div>
           )}
 
           {!selectedRacao && (
