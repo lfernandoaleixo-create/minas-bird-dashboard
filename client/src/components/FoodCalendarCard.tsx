@@ -10,7 +10,7 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, X, Leaf, Apple, Wheat,
-  Check, FileDown, Bird, Lock, History, Trash2
+  Check, FileDown, Bird, Lock, History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { vegetais, frutas, proteicos, racoes, lifePeriods } from "@/data/petbird";
@@ -205,23 +205,6 @@ export default function FoodCalendarCard() {
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
-
-  // Reset confirmation state
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-
-  const handleResetAll = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY_FOODS);
-    localStorage.removeItem(STORAGE_KEY_CHECKS);
-    localStorage.removeItem(STORAGE_KEY_SPECIES_FOODS);
-    localStorage.removeItem(STORAGE_KEY_SPECIES_CHECKS);
-    localStorage.removeItem(STORAGE_KEY_SPECIES_PHASE);
-    setFoods([]);
-    setChecks({});
-    setSpeciesFoods({});
-    setSpeciesChecks({});
-    setSpeciesPhase({});
-    setShowResetConfirm(false);
-  }, []);
 
   // UI state
   const [addingCategory, setAddingCategory] = useState<CategoryKey | null>(null);
@@ -915,13 +898,6 @@ export default function FoodCalendarCard() {
                 Hoje
               </button>
             )}
-            <button
-              onClick={() => setShowResetConfirm(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-all border border-red-200"
-              title="Limpar todos os dados do calendário"
-            >
-              <Trash2 size={11} /> Reset
-            </button>
           </div>
         </div>
         {/* Past month indicator */}
@@ -954,40 +930,6 @@ export default function FoodCalendarCard() {
 
       {/* Cards por espécie */}
       {ACTIVE_SPECIES.map(sp => renderSpeciesCard(sp))}
-
-      {/* Reset confirmation dialog */}
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 w-full max-w-sm mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                <Trash2 size={18} className="text-red-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-foreground">Limpar Tudo</h4>
-                <p className="text-[11px] text-muted-foreground">Esta ação não pode ser desfeita</p>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">
-              Isso vai apagar <span className="font-semibold text-foreground">todos os alimentos adicionados</span> e <span className="font-semibold text-foreground">todas as marcações</span> de todos os meses (tabelas gerais e por espécie). Deseja continuar?
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 px-3 py-2 rounded-lg border border-border/50 text-xs font-semibold text-muted-foreground hover:bg-muted/50 transition-all"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleResetAll}
-                className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-all shadow-sm"
-              >
-                Limpar Tudo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Password dialog for unlocking protected item deletion */}
       {unlockDialog.open && (
