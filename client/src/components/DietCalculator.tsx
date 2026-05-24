@@ -124,7 +124,7 @@ export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange
   const filteredRacoes = useMemo(() => {
     if (!racaoSearch.trim()) return racoes.filter(r => r.name !== "Ração Mediana");
     const q = racaoSearch.toLowerCase();
-    return racoes.filter(r => r.name !== "Ração Mediana" && r.name.toLowerCase().includes(q));
+    return racoes.filter(r => r.name !== "Ração Mediana" && (r.name.toLowerCase().includes(q) || r.classification.toLowerCase().includes(q)));
   }, [racaoSearch]);
 
   if (!sp || !birdData) return null;

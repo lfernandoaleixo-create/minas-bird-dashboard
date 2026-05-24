@@ -125,7 +125,7 @@ const FOOD_CATEGORIES: Record<string, CategoryConfig> = {
 const ALL_FOOD_ITEMS_UNIFIED: { name: string; quality: "excelente" | "bom" | "pobre"; category: string }[] = [
   ...racoes
     .filter(f => f.name !== "Ração Mediana")
-    .map(f => ({ name: f.name, quality: getQuality(f.classification), category: "racao" })),
+    .map(f => ({ name: `${f.name} — ${f.classification}`, quality: getQuality(f.classification), category: "racao" })),
   ...FOOD_CATEGORIES.vegetais.items.map(f => ({ ...f, category: "vegetais" })),
   ...FOOD_CATEGORIES.frutas.items.map(f => ({ ...f, category: "frutas" })),
   ...FOOD_CATEGORIES.proteicos.items.map(f => ({ ...f, category: "proteicos" })),
