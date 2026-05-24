@@ -660,31 +660,31 @@ export default function FoodCalendarCard() {
     };
 
     return (
-      <div key={sp.id} className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+      <div key={sp.id} className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden border-l-4 border-l-emerald-400">
         {/* Species Header — clickable */}
         <button
           onClick={() => toggleSpeciesExpand(sp.id)}
-          className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-muted/10 transition-all"
+          className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-stone-50 transition-colors rounded-t-xl"
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-teal-600">
-              <Bird size={16} className="text-white" />
-            </div>
+          <div className="flex items-center gap-3">
+            <Bird size={20} className="text-emerald-600 flex-shrink-0" />
             <div className="text-left">
-              <h4 className="text-sm font-bold text-foreground">{sp.commonName}</h4>
-              <p className="text-[10px] text-muted-foreground">
+              <h4 className="text-base font-bold text-stone-800">{sp.commonName}</h4>
+              <p className="text-[11px] text-stone-500">
                 {sp.currentCount} ave{sp.currentCount !== 1 ? "s" : ""} · {allFoods.length} alimento{allFoods.length !== 1 ? "s" : ""} na tabela
-                {allFoods.filter(f => f.inherited).length > 0 && <span className="text-teal-600 ml-1">({allFoods.filter(f => f.inherited).length} herdados)</span>}
+                {allFoods.filter(f => f.inherited).length > 0 && <span className="text-emerald-600 ml-1">({allFoods.filter(f => f.inherited).length} herdados)</span>}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {allFoods.length > 0 && !isExpanded && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-stone-100 text-stone-600">
                 {allFoods.length} itens
               </span>
             )}
-            <ChevronDown size={18} className={cn("text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
+            {isExpanded
+              ? <ChevronDown size={20} className="text-stone-400" />
+              : <ChevronRight size={20} className="text-stone-400" />}
           </div>
         </button>
 
