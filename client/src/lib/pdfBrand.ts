@@ -59,6 +59,7 @@ export const PDF_MARGIN = {
 // STANDARD SIZES
 // =============================================
 export const PDF_HEADER_H = 16;  // mm - height of green bar
+export const PDF_TOP_SAFE = 5;   // mm - safe zone above header for printer margins
 export const PDF_FOOTER_H = 10;  // mm - reserved footer space
 export const PDF_ACCENT_H = 1.2; // mm - accent line below header
 
@@ -116,28 +117,29 @@ export function drawBrandHeader(
   options?: { rightTitle?: string; rightSubtitle?: string },
 ): number {
   const barH = PDF_HEADER_H;
+  const topSafe = PDF_TOP_SAFE;
 
-  // Light green bar (ink-saving)
+  // Light green bar (ink-saving) — offset by topSafe to avoid printer clipping
   doc.setFillColor(...BRAND.headerBg);
-  doc.rect(0, 0, pageW, barH, "F");
+  doc.rect(0, topSafe, pageW, barH, "F");
 
   // MB symbol logo (legible at small size)
   if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+    try { doc.addImage(logoBase64, "PNG", 3, topSafe + 1.5, 13, 13); } catch { /* skip */ }
   }
 
   // Title — centered in the bar
   doc.setFontSize(PDF_FONT.title);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
-  doc.text(title, pageW / 2, barH * 0.42, { align: "center" });
+  doc.text(title, pageW / 2, topSafe + barH * 0.42, { align: "center" });
 
   // Subtitle — below title, centered
   if (subtitle) {
     doc.setFontSize(PDF_FONT.subtitle);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND.medium);
-    doc.text(subtitle, pageW / 2, barH * 0.75, { align: "center" });
+    doc.text(subtitle, pageW / 2, topSafe + barH * 0.75, { align: "center" });
   }
 
   // Right side info (optional)
@@ -145,20 +147,20 @@ export function drawBrandHeader(
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.headerText);
-    doc.text(options.rightTitle, pageW - 8, barH * 0.42, { align: "right" });
+    doc.text(options.rightTitle, pageW - 8, topSafe + barH * 0.42, { align: "right" });
   }
   if (options?.rightSubtitle) {
     doc.setFontSize(PDF_FONT.small);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND.medium);
-    doc.text(options.rightSubtitle, pageW - 8, barH * 0.75, { align: "right" });
+    doc.text(options.rightSubtitle, pageW - 8, topSafe + barH * 0.75, { align: "right" });
   }
 
   // Accent line (thin green)
   doc.setFillColor(...BRAND.headerAccent);
-  doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
+  doc.rect(0, topSafe + barH, pageW, PDF_ACCENT_H, "F");
 
-  return barH + PDF_ACCENT_H + 4;
+  return topSafe + barH + PDF_ACCENT_H + 4;
 }
 
 // =============================================

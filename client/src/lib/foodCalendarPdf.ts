@@ -15,6 +15,7 @@ import {
   PDF_MARGIN,
   PDF_ACCENT_H,
   PDF_HEADER_H,
+  PDF_TOP_SAFE,
 } from "./pdfBrand";
 
 interface FoodEntry {
@@ -71,42 +72,43 @@ function drawCustomHeader(
   year: number,
 ): number {
   const barH = PDF_HEADER_H;
+  const topSafe = PDF_TOP_SAFE;
 
   doc.setFillColor(...BRAND.headerBg);
-  doc.rect(0, 0, pageW, barH, "F");
+  doc.rect(0, topSafe, pageW, barH, "F");
 
   if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+    try { doc.addImage(logoBase64, "PNG", 3, topSafe + 1.5, 13, 13); } catch { /* skip */ }
   }
 
   // Title (left)
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
-  doc.text(title, 19, barH * 0.45);
+  doc.text(title, 19, topSafe + barH * 0.45);
 
   // Subtitle
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.medium);
-  doc.text(subtitle, 19, barH * 0.78);
+  doc.text(subtitle, 19, topSafe + barH * 0.78);
 
   // MÊS e ANO em grande destaque no lado direito
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
-  doc.text(monthName.toUpperCase(), pageW - 10, barH * 0.45, { align: "right" });
+  doc.text(monthName.toUpperCase(), pageW - 10, topSafe + barH * 0.45, { align: "right" });
 
   doc.setFontSize(14);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.medium);
-  doc.text(String(year), pageW - 10, barH * 0.78, { align: "right" });
+  doc.text(String(year), pageW - 10, topSafe + barH * 0.78, { align: "right" });
 
   // Accent line
   doc.setFillColor(...BRAND.headerAccent);
-  doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
+  doc.rect(0, topSafe + barH, pageW, PDF_ACCENT_H, "F");
 
-  return barH + PDF_ACCENT_H + 3;
+  return topSafe + barH + PDF_ACCENT_H + 3;
 }
 
 /**

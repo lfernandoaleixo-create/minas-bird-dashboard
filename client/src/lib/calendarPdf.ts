@@ -19,6 +19,7 @@ import {
   PDF_HEADER_H,
   PDF_ACCENT_H,
   PDF_FONT,
+  PDF_TOP_SAFE,
 } from "./pdfBrand";
 
 const MONTH_NAMES = [
@@ -132,40 +133,41 @@ function drawCalendarHeader(
 ): number {
   const marginX = PDF_MARGIN.landscape;
   const barH = PDF_HEADER_H;
+  const topSafe = PDF_TOP_SAFE;
 
-  // Light green bar (ink-saving)
+  // Light green bar (ink-saving) — offset by topSafe for printer margin
   doc.setFillColor(...BRAND.headerBg);
-  doc.rect(0, 0, pageW, barH, "F");
+  doc.rect(0, topSafe, pageW, barH, "F");
 
   // MB symbol logo (legible at small size)
   if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+    try { doc.addImage(logoBase64, "PNG", 3, topSafe + 1.5, 13, 13); } catch { /* skip */ }
   }
 
   // "Calendário de Alimentação" — centered
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
-  doc.text("Calendário de Alimentação", pageW / 2, barH * 0.42, { align: "center" });
+  doc.text("Calendário de Alimentação", pageW / 2, topSafe + barH * 0.42, { align: "center" });
 
   // "Manual Operacional" — subtitle centered
   doc.setFontSize(PDF_FONT.subtitle);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.medium);
-  doc.text("Manual Operacional de Alimentação", pageW / 2, barH * 0.75, { align: "center" });
+  doc.text("Manual Operacional de Alimentação", pageW / 2, topSafe + barH * 0.75, { align: "center" });
 
   // Year — right side
   doc.setFontSize(PDF_FONT.title);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
-  doc.text(`${year}`, pageW - marginX, barH * 0.55, { align: "right" });
+  doc.text(`${year}`, pageW - marginX, topSafe + barH * 0.55, { align: "right" });
 
   // Accent line
   doc.setFillColor(...BRAND.headerAccent);
-  doc.rect(0, barH, pageW, PDF_ACCENT_H, "F");
+  doc.rect(0, topSafe + barH, pageW, PDF_ACCENT_H, "F");
 
   // Species name — GIANT title below header
-  const speciesTitleY = barH + PDF_ACCENT_H + 2;
+  const speciesTitleY = topSafe + barH + PDF_ACCENT_H + 2;
   const speciesFontSize = 22;
   doc.setFontSize(speciesFontSize);
   doc.setFont("helvetica", "bold");
@@ -534,9 +536,9 @@ export async function exportAllCalendarsPdf(
 
   if (speciesWithDiets.length === 0) {
     doc.setFillColor(...BRAND.headerBg);
-    doc.rect(0, 0, pageW, PDF_HEADER_H, "F");
+    doc.rect(0, PDF_TOP_SAFE, pageW, PDF_HEADER_H, "F");
     if (logoBase64) {
-      try { doc.addImage(logoBase64, "PNG", 3, 1.5, 13, 13); } catch { /* skip */ }
+      try { doc.addImage(logoBase64, "PNG", 3, PDF_TOP_SAFE + 1.5, 13, 13); } catch { /* skip */ }
     }
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
