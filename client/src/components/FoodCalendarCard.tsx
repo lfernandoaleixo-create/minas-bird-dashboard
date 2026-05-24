@@ -739,7 +739,7 @@ export default function FoodCalendarCard() {
               {allFoods.length > 0 && (
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1">* = exclusivo desta ave</span>
+                    <span className="flex items-center gap-1.5"><span className="text-sm font-black text-violet-600">*</span> = exclusivo desta ave</span>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); exportFoodCalendarSpeciesPdf(allFoods, checks, speciesChecks[sp.id] || {}, currentYear, currentMonth, sp.commonName, sp.id); }}
@@ -783,7 +783,7 @@ export default function FoodCalendarCard() {
                               <div className="flex items-center gap-1.5">
                                 <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", q.dotColor)} title={q.label} />
                                 {!food.inherited && (
-                                  <span className="text-[9px] font-bold text-violet-600 flex-shrink-0">*</span>
+                                  <span className="text-base font-black text-violet-600 flex-shrink-0 leading-none">*</span>
                                 )}
                                 <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
                                 {!food.inherited && (

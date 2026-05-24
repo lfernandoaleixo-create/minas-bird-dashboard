@@ -260,3 +260,5 @@
 - [x] FoodCalendarCard: simplificar legendas — texto direto sem abreviações, fácil para funcionários
 - [x] FoodCalendarCard: remover Q e outros símbolos confusos dos indicadores
 - [x] FoodCalendarCard PDF: mesma simplificação — cores de fundo simples, legendas claras
+- [x] FoodCalendarCard espécie: aumentar símbolo de exclusivo (*) para ficar bem visível
+- [x] FoodCalendarCard espécie: ordem fixa dos alimentos na tabela sempre Ração → Vegetais → Frutas → Sementes
