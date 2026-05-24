@@ -23,6 +23,8 @@ import { generateAnnotationPdf, generateAllAnnotationPdfs } from "@/lib/annotati
 interface DietCalculatorProps {
   speciesId: string;
   selectedPhase: string;
+  onPhaseChange?: (phaseId: string) => void;
+  phases?: { id: string; label: string }[];
 }
 
 const RACAO_PCT_OPTIONS = [50, 60, 70, 80, 90, 100];
@@ -59,7 +61,7 @@ function saveCalcState(speciesId: string, state: CalcState) {
   } catch {}
 }
 
-export default function DietCalculator({ speciesId, selectedPhase }: DietCalculatorProps) {
+export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange, phases }: DietCalculatorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [state, setState] = useState<CalcState>(() => loadCalcState(speciesId));
   const [racaoSearch, setRacaoSearch] = useState("");
@@ -144,29 +146,27 @@ export default function DietCalculator({ speciesId, selectedPhase }: DietCalcula
       {/* Calculator content */}
       {isOpen && (
         <div className="px-5 pb-4 space-y-4">
-          {/* Phase display with multipliers */}
+          {/* Phase selector with multipliers */}
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
               Fase da Vida
             </label>
             <div className="flex items-center gap-1.5 flex-wrap">
               {lifePeriods.map(p => (
-                <div
+                <button
                   key={p.id}
+                  onClick={(e) => { e.stopPropagation(); onPhaseChange?.(p.id); }}
                   className={cn(
-                    "px-2.5 py-1.5 rounded-lg text-[10px] border transition-all",
+                    "px-2.5 py-1.5 rounded-lg text-[10px] border transition-all cursor-pointer",
                     selectedPhase === p.id
                       ? "bg-teal-600 text-white border-teal-600 shadow-sm font-bold"
-                      : "bg-muted/20 border-border/30 text-muted-foreground/60"
+                      : "bg-muted/20 border-border/30 text-muted-foreground/60 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700"
                   )}
                 >
                   {p.label} <span className={cn("font-mono", selectedPhase === p.id ? "text-teal-100" : "text-muted-foreground/40")}>×{p.multiplier}</span>
-                </div>
+                </button>
               ))}
             </div>
-            <p className="text-[9px] text-muted-foreground/50 mt-1 italic">
-              A fase é selecionada no seletor acima do card
-            </p>
           </div>
 
           {/* Enclosure factor — manual input with help tooltip */}

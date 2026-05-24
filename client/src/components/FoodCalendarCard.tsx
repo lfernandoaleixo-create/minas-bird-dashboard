@@ -691,29 +691,13 @@ export default function FoodCalendarCard() {
         {/* Expanded content */}
         {isExpanded && (
           <>
-            {/* Phase selector */}
-            <div className="px-5 py-2.5 border-b border-border/30 bg-gradient-to-r from-teal-50/50 to-transparent">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">Fase:</span>
-                {LIFE_PHASES.map(phase => (
-                  <button
-                    key={phase.id}
-                    onClick={(e) => { e.stopPropagation(); handlePhaseChange(phase.id); }}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all",
-                      selectedPhase === phase.id
-                        ? "bg-teal-600 text-white border-teal-600 shadow-sm"
-                        : "bg-background border-border/50 text-muted-foreground hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700"
-                    )}
-                  >
-                    {phase.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Diet Calculator */}
-            <DietCalculator speciesId={sp.id} selectedPhase={selectedPhase} />
+            {/* Diet Calculator (phase selector is inside, shown when expanded) */}
+            <DietCalculator
+              speciesId={sp.id}
+              selectedPhase={selectedPhase}
+              onPhaseChange={handlePhaseChange}
+              phases={LIFE_PHASES}
+            />
 
             {/* Mini category cards (toggle) — for adding EXCLUSIVE foods */}
             <div className="px-5 py-3 border-b border-border/30 bg-muted/5">
