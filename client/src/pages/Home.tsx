@@ -45,7 +45,7 @@ export default function Home() {
       {/* Header — Green criatório with aviary background */}
       <header className="sticky top-0 z-30 shadow-xl">
         {/* Brand bar — large, green with aviary photo */}
-        <div className="relative h-[5.5rem]">
+        <div className="relative h-[6.5rem] overflow-hidden">
           {/* Background image */}
           <div
             className="absolute inset-0 bg-cover bg-center"
