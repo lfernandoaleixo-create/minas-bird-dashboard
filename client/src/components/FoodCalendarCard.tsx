@@ -566,7 +566,9 @@ export default function FoodCalendarCard() {
                               <div className="flex items-center gap-1.5">
                                 <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", q.dotColor)} title={q.label} />
                                 <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[140px]" title={food.name}>{food.name}</span>
-                                <button onClick={() => removeFood(food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
+                                {count === 0 && (
+                                  <button onClick={() => removeFood(food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
+                                )}
                               </div>
                             </td>
                             {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
@@ -805,7 +807,7 @@ export default function FoodCalendarCard() {
                                   <span className="text-base font-black text-violet-600 flex-shrink-0 leading-none">*</span>
                                 )}
                                 <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
-                                {!food.inherited && (
+                                {!food.inherited && count === 0 && (
                                   <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
                                 )}
                               </div>
