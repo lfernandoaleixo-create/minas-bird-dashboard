@@ -61,7 +61,7 @@ export default function Home() {
               <img
                 src={MB_SYMBOL}
                 alt="Minas Bird"
-                className="h-14 lg:h-16 w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                className="h-[4.5rem] lg:h-[5rem] w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
               />
               <span className="text-white font-bold text-3xl lg:text-4xl tracking-[0.14em] leading-tight drop-shadow-sm">
                 MINAS BIRD
