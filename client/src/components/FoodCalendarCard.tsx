@@ -213,6 +213,23 @@ export default function FoodCalendarCard() {
   // Per-species: which category panel is open (toggle: click opens, click again closes)
   const [speciesOpenCat, setSpeciesOpenCat] = useState<Record<string, string | null>>({});
   const [speciesSearchTerm, setSpeciesSearchTerm] = useState("");
+  // Password dialog for protected item deletion
+  const [unlockDialog, setUnlockDialog] = useState<{ open: boolean; foodName: string; speciesId?: string; password: string; error: boolean }>({
+    open: false, foodName: "", speciesId: undefined, password: "", error: false
+  });
+
+  const handleUnlockDelete = () => {
+    if (unlockDialog.password === "MinasBird") {
+      if (unlockDialog.speciesId) {
+        removeSpeciesFood(unlockDialog.speciesId, unlockDialog.foodName);
+      } else {
+        removeFood(unlockDialog.foodName);
+      }
+      setUnlockDialog({ open: false, foodName: "", speciesId: undefined, password: "", error: false });
+    } else {
+      setUnlockDialog(prev => ({ ...prev, error: true }));
+    }
+  };
 
   // Persistir
   const saveFoods = useCallback((newFoods: FoodEntry[]) => {
@@ -570,9 +587,13 @@ export default function FoodCalendarCard() {
                                 <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", q.dotColor)} title={q.label} />
                                 <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[140px]" title={food.name}>{food.name}</span>
                                 {count > 0 ? (
-                                  <span className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 flex-shrink-0 transition-all" title="Protegido — usado neste mês">
-                                    <Lock size={10} className="text-muted-foreground/50" />
-                                  </span>
+                                  <button
+                                    onClick={() => setUnlockDialog({ open: true, foodName: food.name, speciesId: undefined, password: "", error: false })}
+                                    className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-amber-100 flex-shrink-0 transition-all cursor-pointer"
+                                    title="Protegido — clique para desbloquear com senha"
+                                  >
+                                    <Lock size={10} className="text-amber-500" />
+                                  </button>
                                 ) : (
                                   <button onClick={() => removeFood(food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
                                 )}
@@ -815,9 +836,13 @@ export default function FoodCalendarCard() {
                                 )}
                                 <span className="text-[11px] font-semibold text-foreground/80 truncate max-w-[130px]" title={food.name}>{food.name}</span>
                                 {!food.inherited && (count > 0 ? (
-                                  <span className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 flex-shrink-0 transition-all" title="Protegido — usado neste mês">
-                                    <Lock size={10} className="text-muted-foreground/50" />
-                                  </span>
+                                  <button
+                                    onClick={() => setUnlockDialog({ open: true, foodName: food.name, speciesId: sp.id, password: "", error: false })}
+                                    className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-amber-100 flex-shrink-0 transition-all cursor-pointer"
+                                    title="Protegido — clique para desbloquear com senha"
+                                  >
+                                    <Lock size={10} className="text-amber-500" />
+                                  </button>
                                 ) : (
                                   <button onClick={() => removeSpeciesFood(sp.id, food.name)} className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-all flex-shrink-0" title="Remover"><X size={10} /></button>
                                 ))}
@@ -917,6 +942,55 @@ export default function FoodCalendarCard() {
 
       {/* Cards por espécie */}
       {ACTIVE_SPECIES.map(sp => renderSpeciesCard(sp))}
+
+      {/* Password dialog for unlocking protected item deletion */}
+      {unlockDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-xl p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Lock size={18} className="text-amber-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-foreground">Desbloquear Exclusão</h4>
+                <p className="text-[11px] text-muted-foreground">Item protegido por uso neste mês</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Para excluir <span className="font-semibold text-foreground">{unlockDialog.foodName}</span>, digite a senha de administração:
+            </p>
+            <input
+              type="password"
+              value={unlockDialog.password}
+              onChange={(e) => setUnlockDialog(prev => ({ ...prev, password: e.target.value, error: false }))}
+              onKeyDown={(e) => { if (e.key === "Enter") handleUnlockDelete(); }}
+              placeholder="Senha..."
+              className={cn(
+                "w-full px-3 py-2 rounded-lg border bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 transition-all",
+                unlockDialog.error ? "border-red-400 focus:ring-red-300" : "border-border/50 focus:ring-primary/30"
+              )}
+              autoFocus
+            />
+            {unlockDialog.error && (
+              <p className="text-[11px] text-red-500 mt-1.5 font-medium">Senha incorreta. Tente novamente.</p>
+            )}
+            <div className="flex items-center gap-2 mt-4">
+              <button
+                onClick={() => setUnlockDialog({ open: false, foodName: "", speciesId: undefined, password: "", error: false })}
+                className="flex-1 px-3 py-2 rounded-lg border border-border/50 text-xs font-semibold text-muted-foreground hover:bg-muted/50 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUnlockDelete}
+                className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-all shadow-sm"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
