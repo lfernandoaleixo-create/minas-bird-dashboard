@@ -45,7 +45,7 @@ export default function Home() {
       {/* Header — Green criatório with aviary background */}
       <header className="sticky top-0 z-30 shadow-xl">
         {/* Brand bar — large, green with aviary photo */}
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden h-[5.5rem]">
           {/* Background image */}
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -55,13 +55,13 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a4d2e]/95 via-[#1a4d2e]/88 to-[#1a4d2e]/80" />
 
           {/* Content */}
-          <div className="relative px-5 lg:px-10 py-5 flex items-center justify-between">
+          <div className="relative h-full px-5 lg:px-10 flex items-center justify-between">
             {/* Logo + Brand name */}
             <div className="flex items-center gap-4">
               <img
                 src={MB_SYMBOL}
                 alt="Minas Bird"
-                className="h-[4.5rem] lg:h-[5rem] w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                className="h-[4rem] w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
               />
               <span className="text-white font-bold text-3xl lg:text-4xl tracking-[0.14em] leading-tight drop-shadow-sm">
                 MINAS BIRD
