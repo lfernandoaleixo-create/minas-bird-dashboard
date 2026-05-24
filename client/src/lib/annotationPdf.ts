@@ -5,11 +5,9 @@
  * - Cabeçalho: nome da espécie BEM GRANDE, fase, fator do recinto, ração
  * - Campo "Dia 1 = ___/___/___" para o funcionário preencher
  * - Tabela compacta com as 6 situações de % (50-100%)
- * - Área de anotação: 30 linhas com coluna Sobra (S/N)
+ * - Área de anotação: 30 linhas compactas para tratadores
  *
  * TUDO EM 1 PÁGINA A4 PORTRAIT.
- * 
- * Também exporta generateAllAnnotationPdfs() para gerar todas as espécies em um único PDF.
  */
 import { jsPDF } from "jspdf";
 import {
@@ -37,15 +35,7 @@ interface AnnotationPdfParams {
   racaoId: string;
 }
 
-/**
- * Renders a single species annotation page onto the given jsPDF doc.
- * Returns the doc for chaining.
- */
-function renderSpeciesPage(
-  doc: jsPDF,
-  params: AnnotationPdfParams,
-  logo: string | null,
-): boolean {
+export async function generateAnnotationPdf(params: AnnotationPdfParams): Promise<void> {
   const { speciesId, phaseId, enclosureMultiplier, racaoId } = params;
 
   const sp = species.find(s => s.id === speciesId);
@@ -53,19 +43,24 @@ function renderSpeciesPage(
   const phase = lifePeriods.find(p => p.id === phaseId) || lifePeriods[0];
   const racao = racoes.find(r => r.id === racaoId);
 
-  if (!sp || !birdData || !racao) return false;
+  if (!sp || !birdData || !racao) return;
 
   const weight = birdData.weight || (sp.weightRange.min + sp.weightRange.max) / 2;
   const baseMer = calculateMER(weight, birdData.metabolism, phase.multiplier, "viveiro-voo-interno");
   const mer = baseMer * enclosureMultiplier;
 
+  const logo = await loadLogo();
+
+  // Create PDF — portrait A4
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const margin = 8;
+  const margin = 8; // margens reduzidas para caber tudo
 
   let y = 4;
 
   // ===== HEADER: Logo + Species name GRANDE =====
+  // MB logo small
   if (logo) {
     try { doc.addImage(logo, "PNG", margin, y, 10, 10); } catch { /* skip */ }
   }
@@ -95,7 +90,7 @@ function renderSpeciesPage(
   doc.rect(margin, y, pageW - margin * 2, 0.8, "F");
   y += 3;
 
-  // ===== INFO ROW =====
+  // ===== INFO ROW: Fase | Recinto | Ração | Peso | MER | Plantel =====
   doc.setFontSize(7.5);
   const infoItems = [
     `Fase: ${phase.label} (×${phase.multiplier})`,
@@ -109,7 +104,7 @@ function renderSpeciesPage(
   doc.text(infoItems.join("   |   "), margin, y);
   y += 4;
 
-  // Ração name
+  // Ração name (full, on its own line)
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.text(`Ração: ${racao.name}`, margin, y);
@@ -126,12 +121,12 @@ function renderSpeciesPage(
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.4);
   const fieldX = margin + doc.getTextWidth("Dia 1 corresponde a:") + 3;
-  doc.line(fieldX, y, fieldX + 25, y);
+  doc.line(fieldX, y, fieldX + 25, y); // underline for date
   doc.text("/", fieldX + 8, y);
   doc.text("/", fieldX + 16, y);
   y += 5;
 
-  // ===== TABELA DE PROPORÇÕES =====
+  // ===== TABELA DE PROPORÇÕES (compacta, horizontal) =====
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
@@ -139,7 +134,7 @@ function renderSpeciesPage(
   y += 3.5;
 
   const tableW = pageW - margin * 2;
-  const numCols = 7;
+  const numCols = 7; // header + 6 values
   const colW = tableW / numCols;
   const rowH = 5;
 
@@ -156,11 +151,8 @@ function renderSpeciesPage(
   });
   y += rowH;
 
-  const calcRow = (label: string, fn: (pct: number) => string, altBg?: boolean) => {
-    if (altBg) {
-      doc.setFillColor(248, 250, 252);
-      doc.rect(margin, y, tableW, rowH, "F");
-    }
+  // Calculate values for each %
+  const calcRow = (label: string, fn: (pct: number) => string) => {
     doc.setFontSize(6.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.text);
@@ -172,55 +164,78 @@ function renderSpeciesPage(
     y += rowH;
   };
 
-  calcRow("Ração (g)", (pct) => kcalToGrams(mer * pct / 100, racao.energyKcal).toFixed(1));
-  calcRow("Salada (g)", (pct) => kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL).toFixed(1), true);
+  // Ração (g)
+  calcRow("Ração (g)", (pct) => {
+    const g = kcalToGrams(mer * pct / 100, racao.energyKcal);
+    return g.toFixed(1);
+  });
+
+  // Salada (g)
+  doc.setFillColor(248, 250, 252);
+  doc.rect(margin, y, tableW, rowH, "F");
+  calcRow("Salada (g)", (pct) => {
+    const g = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL);
+    return g.toFixed(1);
+  });
+
+  // Total (g)
   calcRow("Total (g)", (pct) => {
     const rG = kcalToGrams(mer * pct / 100, racao.energyKcal);
     const sG = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL);
     return (rG + sG).toFixed(1);
   });
 
+  // Plantel Ração
   if (sp.currentCount > 1) {
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, y, tableW, rowH, "F");
     calcRow(`Plantel R (${sp.currentCount})`, (pct) => {
-      return (kcalToGrams(mer * pct / 100, racao.energyKcal) * sp.currentCount).toFixed(0);
-    }, true);
+      const g = kcalToGrams(mer * pct / 100, racao.energyKcal) * sp.currentCount;
+      return `${g.toFixed(0)}`;
+    });
+
+    // Plantel Salada
     calcRow(`Plantel S (${sp.currentCount})`, (pct) => {
-      return (kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL) * sp.currentCount).toFixed(0);
+      const g = kcalToGrams(mer * (100 - pct) / 100, AVG_SALADA_KCAL) * sp.currentCount;
+      return `${g.toFixed(0)}`;
     });
   }
 
   // Table border
   const tableRows = sp.currentCount > 1 ? 5 : 3;
-  const tableStartY = y - (tableRows * rowH + rowH);
+  const tableStartY = y - (tableRows * rowH + rowH); // rows + header
   doc.setDrawColor(...BRAND.gridLine);
   doc.setLineWidth(0.25);
   doc.rect(margin, tableStartY, tableW, (tableRows + 1) * rowH);
 
+  // Vertical lines
   for (let i = 1; i < numCols; i++) {
     doc.line(margin + colW * i, tableStartY, margin + colW * i, y);
   }
+  // Horizontal lines
   for (let r = 1; r <= tableRows; r++) {
     doc.line(margin, tableStartY + rowH * r, margin + tableW, tableStartY + rowH * r);
   }
 
   y += 4;
 
-  // ===== ANOTAÇÃO: 30 DIAS com coluna Sobra =====
+  // ===== ANOTAÇÃO: 30 DIAS (compacta) =====
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.dark);
   doc.text("ANOTAÇÕES DIÁRIAS", margin, y);
   y += 3;
 
+  // Calculate available space for 30 rows
   const footerReserve = 9;
   const availableH = pageH - y - footerReserve;
   const annHeaderH = 4.5;
-  const annRowH = Math.min((availableH - annHeaderH) / 30, 5);
+  const annRowH = Math.min((availableH - annHeaderH) / 30, 5); // max 5mm per row
 
-  // Columns: Dia(8) | % Usada(13) | Ração g(15) | Salada g(15) | Sobra(12) | Observações(rest)
-  const annCols = [8, 13, 15, 15, 12, 0];
-  annCols[5] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4];
-  const annHeaders = ["Dia", "%", "Ração", "Salada", "Sobra", "Observações"];
+  // Columns: Dia(8) | % Usada(14) | Ração g(16) | Salada g(16) | Observações(rest)
+  const annCols = [8, 14, 16, 16, 0];
+  annCols[4] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3];
+  const annHeaders = ["Dia", "%", "Ração", "Salada", "Observações"];
 
   // Header
   doc.setFillColor(...BRAND.headerBg);
@@ -244,6 +259,7 @@ function renderSpeciesPage(
       doc.rect(margin, y, tableW, annRowH, "F");
     }
 
+    // Day number
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.text);
     doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.7, { align: "center" });
@@ -257,6 +273,7 @@ function renderSpeciesPage(
   doc.setLineWidth(0.2);
   doc.rect(margin, annTableStart, tableW, 30 * annRowH + annHeaderH);
 
+  // Vertical lines
   let vx = margin;
   annCols.forEach((w, i) => {
     if (i < annCols.length - 1) {
@@ -268,68 +285,9 @@ function renderSpeciesPage(
   // Footer
   drawBrandFooter(doc, pageW, pageH);
 
-  return true;
-}
-
-/**
- * Generate annotation PDF for a single species (downloads immediately)
- */
-export async function generateAnnotationPdf(params: AnnotationPdfParams): Promise<void> {
-  const sp = species.find(s => s.id === params.speciesId);
-  if (!sp) return;
-
-  const logo = await loadLogo();
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  renderSpeciesPage(doc, params, logo);
-
+  // Save
   const now = new Date();
   const monthNames = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
   const filename = `anotacao-${sp.commonName.toLowerCase().replace(/\s+/g, "-")}-${monthNames[now.getMonth()]}-${now.getFullYear()}.pdf`;
-  doc.save(filename);
-}
-
-/**
- * Generate annotation PDF for ALL active species in one file (one page per species).
- * Uses the same phaseId, enclosureMultiplier, and racaoId for all.
- * Species that don't have petbird data are skipped.
- */
-export async function generateAllAnnotationPdfs(params: {
-  phaseId: string;
-  enclosureMultiplier: number;
-  racaoId: string;
-}): Promise<void> {
-  const { phaseId, enclosureMultiplier, racaoId } = params;
-
-  const activeSpecies = species.filter(s => s.inCurrentFlock);
-  if (activeSpecies.length === 0) return;
-
-  const logo = await loadLogo();
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  let firstPage = true;
-  for (const sp of activeSpecies) {
-    const birdData = getPetBirdData(sp.id);
-    if (!birdData) continue;
-
-    if (!firstPage) {
-      doc.addPage();
-    }
-
-    const rendered = renderSpeciesPage(doc, {
-      speciesId: sp.id,
-      phaseId,
-      enclosureMultiplier,
-      racaoId,
-    }, logo);
-
-    if (rendered) {
-      firstPage = false;
-    }
-  }
-
-  const now = new Date();
-  const monthNames = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-  const filename = `anotacao-todas-especies-${monthNames[now.getMonth()]}-${now.getFullYear()}.pdf`;
   doc.save(filename);
 }

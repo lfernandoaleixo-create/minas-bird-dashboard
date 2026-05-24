@@ -279,5 +279,3 @@
 - [x] Calculadora de dieta no card de espécie (selecionar ração, % ração, proporção salada, resultado em gramas)
 - [x] Simplificar calculadora: fases com fator visível, recinto com input manual + tooltip, métrica simples ração→salada
 - [x] PDF Anotação por espécie: fase, recinto, ração, 6 situações de %, área de anotação 30 dias
-- [x] PDF Anotação: botão gerar todas as espécies de uma vez
-- [x] PDF Anotação: coluna Sobra (S/N) na tabela de 30 dias
