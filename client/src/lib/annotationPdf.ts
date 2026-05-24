@@ -202,7 +202,7 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   y += 3;
 
   // Calculate available space for 30 rows — fill all remaining space
-  const footerReserve = 9;
+  const footerReserve = 12;
   const availableH = pageH - y - footerReserve;
   const annHeaderH = 4.5;
   const annRowH = (availableH - annHeaderH) / 30;
@@ -448,7 +448,7 @@ export async function generateAllAnnotationPdfs(params: {
     doc.text(`Anotações — ${monthYear}`, margin, y);
     y += 3;
 
-    const footerReserve = 9;
+    const footerReserve = 12;
     const availableH = pageH - y - footerReserve;
     const annHeaderH = 4.5;
     const annRowH = (availableH - annHeaderH) / 30;
