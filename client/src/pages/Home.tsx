@@ -55,13 +55,13 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a4d2e]/95 via-[#1a4d2e]/88 to-[#1a4d2e]/80" />
 
           {/* Content */}
-          <div className="relative px-5 lg:px-10 py-6 flex items-center justify-between">
+          <div className="relative px-5 lg:px-10 py-5 flex items-center justify-between">
             {/* Logo + Brand name */}
             <div className="flex items-center gap-4">
               <img
                 src={MB_SYMBOL}
                 alt="Minas Bird"
-                className="h-20 lg:h-24 w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                className="h-14 lg:h-16 w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
               />
               <span className="text-white font-bold text-3xl lg:text-4xl tracking-[0.14em] leading-tight drop-shadow-sm">
                 MINAS BIRD
