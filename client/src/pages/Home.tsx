@@ -11,12 +11,14 @@ import Sidebar from "@/components/Sidebar";
 import SettingsPanel from "@/components/SettingsPanel";
 import { sectors } from "@/data/sectors";
 import { useState, useEffect, useRef } from "react";
-import { BookOpen, ChevronLeft, ChevronRight, Utensils, Settings, LayoutGrid } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Utensils, Settings, LayoutGrid, Users, FlaskConical } from "lucide-react";
 
 // All navigable items: sectors + special modules
 const HOME_ID = "__home__";
+const INITIAL_ID = "__inicial__";
 const FEEDING_ID = "__alimentacao__";
 const FEEDING_TEST_ID = "__alimentacao_teste__";
+const CLIENTS_ID = "__cadastro_clientes__";
 const SETTINGS_ID = "__configuracoes__";
 
 type NavItem = {
@@ -27,21 +29,25 @@ type NavItem = {
 };
 
 const allNavItems: NavItem[] = [
+  { id: INITIAL_ID, title: "Início", subtitle: "Painel principal" },
   { id: HOME_ID, title: "Mapa de Progresso", subtitle: "Visão geral de todos os módulos" },
   { id: FEEDING_ID, title: "Alimentação", subtitle: "39 espécies · Protocolos · Calculadora" },
   { id: FEEDING_TEST_ID, title: "Alimentação Teste", subtitle: "Versão de teste para mudanças" },
+  { id: CLIENTS_ID, title: "Cadastro de Clientes", subtitle: "Gerenciamento de clientes" },
   ...sectors.map(s => ({ id: s.id, title: s.title, subtitle: s.subtitle })),
   { id: SETTINGS_ID, title: "Configurações", subtitle: "Equipe e acessos" },
 ];
 
 export default function Home() {
-  const [activeItem, setActiveItem] = useState(HOME_ID);
+  const [activeItem, setActiveItem] = useState(INITIAL_ID);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const currentSector = sectors.find((s) => s.id === activeItem);
+  const isInitial = activeItem === INITIAL_ID;
   const isHome = activeItem === HOME_ID;
   const isFeeding = activeItem === FEEDING_ID;
   const isFeedingTest = activeItem === FEEDING_TEST_ID;
+  const isClients = activeItem === CLIENTS_ID;
   const isSettings = activeItem === SETTINGS_ID;
   const currentIndex = allNavItems.findIndex((item) => item.id === activeItem);
   const currentNav = allNavItems[currentIndex];
@@ -128,12 +134,62 @@ export default function Home() {
 
         {/* Content */}
         <div className="px-6 lg:px-10 py-8 pb-20">
-          {isHome ? (
+          {isInitial ? (
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-2xl font-bold text-stone-800 mb-2">Bem-vindo ao Minas Bird</h1>
+              <p className="text-stone-500 mb-8">Selecione um módulo para começar</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Card Alimentação */}
+                <button
+                  onClick={() => setActiveItem(FEEDING_ID)}
+                  className="group bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all p-6 text-left"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                    <Utensils className="w-6 h-6 text-emerald-700" />
+                  </div>
+                  <h3 className="font-bold text-stone-800 text-lg mb-1">Alimentação</h3>
+                  <p className="text-sm text-stone-500">39 espécies · Protocolos · Calculadora</p>
+                </button>
+                {/* Card Alimentação Teste */}
+                <button
+                  onClick={() => setActiveItem(FEEDING_TEST_ID)}
+                  className="group bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all p-6 text-left"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4 group-hover:bg-amber-200 transition-colors">
+                    <FlaskConical className="w-6 h-6 text-amber-700" />
+                  </div>
+                  <h3 className="font-bold text-stone-800 text-lg mb-1">Alimentação Teste</h3>
+                  <p className="text-sm text-stone-500">Versão de teste para mudanças</p>
+                </button>
+                {/* Card Cadastro de Clientes */}
+                <button
+                  onClick={() => setActiveItem(CLIENTS_ID)}
+                  className="group bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all p-6 text-left"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
+                    <Users className="w-6 h-6 text-blue-700" />
+                  </div>
+                  <h3 className="font-bold text-stone-800 text-lg mb-1">Cadastro de Clientes</h3>
+                  <p className="text-sm text-stone-500">Gerenciamento de clientes</p>
+                </button>
+              </div>
+            </div>
+          ) : isHome ? (
             <ProgressMap onNavigate={setActiveItem} />
           ) : isFeeding ? (
             <FeedingModule />
           ) : isFeedingTest ? (
             <FeedingModuleTest />
+          ) : isClients ? (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-8 text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-blue-600" />
+                </div>
+                <h2 className="text-xl font-bold text-stone-800 mb-2">Cadastro de Clientes</h2>
+                <p className="text-stone-500">Módulo em desenvolvimento. Em breve você poderá gerenciar seus clientes aqui.</p>
+              </div>
+            </div>
           ) : isSettings ? (
             <SettingsPanel />
           ) : currentSector ? (

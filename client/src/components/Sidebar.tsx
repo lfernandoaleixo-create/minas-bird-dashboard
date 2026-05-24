@@ -7,7 +7,7 @@
 import { sectors } from "@/data/sectors";
 import type { Sector } from "@/data/sectors";
 import { cn } from "@/lib/utils";
-import { Menu, X, Feather, Utensils, Settings, LayoutGrid } from "lucide-react";
+import { Menu, X, Feather, Utensils, Settings, LayoutGrid, Users, FlaskConical, Home } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,9 +17,11 @@ interface SidebarProps {
 }
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
+const INITIAL_ID = "__inicial__";
 const HOME_ID = "__home__";
 const FEEDING_ID = "__alimentacao__";
 const FEEDING_TEST_ID = "__alimentacao_teste__";
+const CLIENTS_ID = "__cadastro_clientes__";
 const SETTINGS_ID = "__configuracoes__";
 
 type NavEntry = {
@@ -41,7 +43,13 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
     const feedingTestItem: NavEntry = {
       id: FEEDING_TEST_ID,
       title: "Alimentação Teste",
-      icon: Utensils,
+      icon: FlaskConical,
+    };
+
+    const clientsItem: NavEntry = {
+      id: CLIENTS_ID,
+      title: "Cadastro de Clientes",
+      icon: Users,
     };
 
     const sectorItems = sectors.map((s: Sector) => ({
@@ -50,7 +58,7 @@ export default function Sidebar({ activeSector, onSectorChange }: SidebarProps) 
       icon: s.icon,
     }));
 
-    return [feedingItem, feedingTestItem, ...sectorItems];
+    return [feedingItem, feedingTestItem, clientsItem, ...sectorItems];
   }, []);
 
   const handleSelect = (id: string) => {
