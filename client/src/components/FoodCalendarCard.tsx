@@ -40,7 +40,7 @@ const QUALITY_CONFIG = {
   },
   bom: {
     label: "Bom",
-    symbol: "+/\u2212",
+    symbol: "+/-",
     color: "text-blue-700",
     bg: "bg-blue-100",
     border: "border-blue-300",
@@ -48,7 +48,7 @@ const QUALITY_CONFIG = {
   },
   pobre: {
     label: "Pobre",
-    symbol: "\u2212",
+    symbol: "-",
     color: "text-amber-700",
     bg: "bg-amber-100",
     border: "border-amber-300",
@@ -727,13 +727,14 @@ export default function FoodCalendarCard() {
                       <div className="flex gap-1.5 flex-wrap">
                         {available.map(food => {
                           const q = QUALITY_CONFIG[food.quality];
+                          const isRacao = food.category === "racao";
                           return (
                             <button
                               key={food.name}
                               onClick={() => addSpeciesFood(sp.id, food.name, food.category, food.quality)}
-                              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", q.bg, q.border, q.color)}
+                              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all hover:shadow-sm", isRacao ? "bg-amber-50 border-amber-300 text-amber-800" : `${q.bg} ${q.border} ${q.color}`)}
                             >
-                              <span className={cn("w-2 h-2 rounded-full flex-shrink-0", q.dotColor)} />
+                              {!isRacao && <span className={cn("w-2 h-2 rounded-full flex-shrink-0", q.dotColor)} />}
                               {food.name}
                             </button>
                           );
@@ -748,13 +749,13 @@ export default function FoodCalendarCard() {
             {/* PDF button + Table */}
             <div className="p-4">
               {allFoods.length > 0 && (
-                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1"><span className="text-sm font-black text-violet-600">*</span> = exclusivo</span>
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                  <div className="flex items-center gap-4 text-sm text-foreground/70 flex-wrap">
+                    <span className="flex items-center gap-1.5"><span className="text-lg font-black text-violet-600">*</span> <span className="font-medium">Exclusivo desta ave</span></span>
                     <span className="text-muted-foreground/30">|</span>
-                    <span className="flex items-center gap-1"><span className="font-bold text-emerald-700">+</span> Excelente</span>
-                    <span className="flex items-center gap-1"><span className="font-bold text-blue-700">+/\u2212</span> Bom</span>
-                    <span className="flex items-center gap-1"><span className="font-bold text-amber-700">\u2212</span> Pobre</span>
+                    <span className="flex items-center gap-1.5"><span className="text-base font-extrabold text-emerald-700">+</span> <span className="font-medium">Excelente</span></span>
+                    <span className="flex items-center gap-1.5"><span className="text-base font-extrabold text-blue-700">+/-</span> <span className="font-medium">Bom</span></span>
+                    <span className="flex items-center gap-1.5"><span className="text-base font-extrabold text-amber-700">-</span> <span className="font-medium">Pobre</span></span>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); exportFoodCalendarSpeciesPdf(allFoods, checks, speciesChecks[sp.id] || {}, currentYear, currentMonth, sp.commonName, sp.id); }}
@@ -797,7 +798,7 @@ export default function FoodCalendarCard() {
                           <tr key={food.name} className={cn("group hover:opacity-80 transition-colors", rowBg)}>
                             <td className={cn("sticky left-0 z-10 px-2 py-1.5 border-b border-border/30", rowBg)}>
                               <div className="flex items-center gap-1.5">
-                                {food.category !== "racoes" && (
+                                {food.category !== "racao" && (
                                   <span className={cn("text-xs font-bold flex-shrink-0 min-w-[20px]", q.color)} title={q.label}>{q.symbol}</span>
                                 )}
                                 {!food.inherited && (

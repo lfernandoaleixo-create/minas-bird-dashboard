@@ -32,12 +32,13 @@ const CATEGORY_COLORS: Record<string, [number, number, number]> = {
 
 const QUALITY_COLORS: Record<string, { color: [number, number, number]; label: string; symbol: string }> = {
   excelente: { color: [16, 185, 129], label: "Excelente", symbol: "+" },
-  bom: { color: [37, 99, 235], label: "Bom", symbol: "+/\u2212" },
-  pobre: { color: [217, 119, 6], label: "Pobre", symbol: "\u2212" },
+  bom: { color: [37, 99, 235], label: "Bom", symbol: "+/-" },
+  pobre: { color: [217, 119, 6], label: "Pobre", symbol: "-" },
 };
 
 const CATEGORY_ROW_BG: Record<string, [number, number, number]> = {
-  racoes: [255, 251, 235],    // amber-50
+  racao: [255, 251, 235],     // amber-50
+  racoes: [255, 251, 235],    // amber-50 (legacy key)
   vegetais: [240, 253, 244],  // green-50
   frutas: [254, 242, 242],    // red-50
   proteicos: [250, 245, 255], // purple-50
@@ -356,7 +357,7 @@ export async function exportFoodCalendarSpeciesPdf(
 
     // Quality symbol (skip for ração)
     let nameOffset = 3;
-    if (food.category !== "racoes") {
+    if (food.category !== "racao" && food.category !== "racoes") {
       const q = QUALITY_COLORS[food.quality] || QUALITY_COLORS.bom;
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
@@ -420,9 +421,9 @@ export async function exportFoodCalendarSpeciesPdf(
   doc.line(tableX + nameColW, tableStartY, tableX + nameColW, y);
   doc.line(tableX + nameColW + totalDays * dayColW, tableStartY, tableX + nameColW + totalDays * dayColW, y);
 
-  // Legend — simple and clean
-  const legendY = y + 5;
-  doc.setFontSize(7.5);
+  // Legend — large and clear
+  const legendY = y + 6;
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   let lx = tableX;
 
@@ -432,28 +433,32 @@ export async function exportFoodCalendarSpeciesPdf(
   doc.text("+", lx, legendY);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.text);
-  doc.text("Excelente", lx + 4, legendY);
-  lx += 24;
+  doc.text("Excelente", lx + 5, legendY);
+  lx += 32;
 
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...QUALITY_COLORS.bom.color);
-  doc.text("+/\u2212", lx, legendY);
+  doc.text("+/-", lx, legendY);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.text);
-  doc.text("Bom", lx + 6, legendY);
-  lx += 18;
+  doc.text("Bom", lx + 9, legendY);
+  lx += 24;
 
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...QUALITY_COLORS.pobre.color);
-  doc.text("\u2212", lx, legendY);
+  doc.text("-", lx, legendY);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND.text);
-  doc.text("Pobre", lx + 4, legendY);
-  lx += 18;
+  doc.text("Pobre", lx + 5, legendY);
+  lx += 24;
 
   // Exclusive indicator
-  doc.setTextColor(...BRAND.muted);
-  doc.text("* = exclusivo desta ave", lx, legendY);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(124, 58, 237);
+  doc.text("*", lx, legendY);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.text);
+  doc.text("= Exclusivo desta ave", lx + 5, legendY);
 
   // Info (right side)
   doc.setTextColor(...BRAND.muted);

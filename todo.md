@@ -266,3 +266,7 @@
 - [x] FoodCalendarCard espécie: trocar indicador de qualidade para símbolos textuais (+ Excelente, +/− Bom, − Pobre)
 - [x] FoodCalendarCard espécie: remover indicador de qualidade (+, +/−, −) dos itens de ração (somente nome)
 - [x] FoodCalendarCard PDF espécie: aplicar cor de fundo por categoria + símbolos textuais + sem qualidade na ração
+- [x] FoodCalendarCard espécie: fix key mismatch (racao vs racoes) — ração agora sem indicador de qualidade
+- [x] FoodCalendarCard espécie: corrigir símbolos estranhos na legenda (usar texto puro +, +/-, -)
+- [x] FoodCalendarCard espécie: aumentar bastante o tamanho da legenda para fácil leitura
+- [x] FoodCalendarCard PDF espécie: mesmas correções (key, símbolos, legenda maior)
