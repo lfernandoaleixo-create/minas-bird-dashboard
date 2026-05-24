@@ -67,7 +67,7 @@ export const PDF_ACCENT_H = 1.2; // mm - accent line below header
 // =============================================
 export const PDF_FONT = {
   title: 14,      // main title in header
-  subtitle: 9,    // subtitle in header
+  subtitle: 11,   // subtitle in header (species name)
   sectionTitle: 10, // section headers
   body: 8,        // body text
   small: 7,       // smallest allowed (notes, captions)

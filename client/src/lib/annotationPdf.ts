@@ -207,8 +207,8 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   const annHeaderH = 4.5;
   const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
 
-  // Columns: Dia(7) | Data(14) | % Usada(12) | Ração(14) | Salada(14) | Sobra(10) | Observações(rest)
-  const annCols = [7, 14, 12, 14, 14, 10, 0];
+  // Columns: Dia(8) | Data(18) | % Usada(15) | Ração(18) | Salada(18) | Sobra(14) | Observações(rest)
+  const annCols = [8, 18, 15, 18, 18, 14, 0];
   annCols[6] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4] - annCols[5];
   const annHeaders = ["Dia", "Data", "% Usada", "Ração (g)", "Salada (g)", "Sobra", "Observações"];
 
@@ -442,7 +442,7 @@ export async function generateAllAnnotationPdfs(params: {
     const annHeaderH = 4.5;
     const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
 
-    const annCols = [7, 14, 12, 14, 14, 10, 0];
+    const annCols = [8, 18, 15, 18, 18, 14, 0];
     annCols[6] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4] - annCols[5];
     const annHeaders = ["Dia", "Data", "% Usada", "Ração (g)", "Salada (g)", "Sobra", "Observações"];
 
