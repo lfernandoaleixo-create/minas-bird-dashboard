@@ -1,7 +1,7 @@
 /**
  * Home Page — Minas Bird
- * Top navigation layout with 4 modules
- * Clean, refined, professional design
+ * Professional-grade top navigation layout
+ * Dark header with strong identity, clear hierarchy, proper contrast
  */
 import FeedingModule from "@/components/FeedingModule";
 import FeedingModuleTest from "@/components/FeedingModuleTest";
@@ -17,45 +17,15 @@ type TabId = "alimentacao" | "alimentacao_teste" | "clientes" | "mapa";
 interface Tab {
   id: TabId;
   label: string;
+  shortLabel: string;
   icon: typeof Utensils;
-  color: string;
-  activeColor: string;
-  activeBg: string;
 }
 
 const tabs: Tab[] = [
-  {
-    id: "alimentacao",
-    label: "Alimentação",
-    icon: Utensils,
-    color: "text-stone-500",
-    activeColor: "text-emerald-700",
-    activeBg: "bg-emerald-50 border-emerald-600",
-  },
-  {
-    id: "alimentacao_teste",
-    label: "Alimentação Teste",
-    icon: FlaskConical,
-    color: "text-stone-500",
-    activeColor: "text-amber-700",
-    activeBg: "bg-amber-50 border-amber-600",
-  },
-  {
-    id: "clientes",
-    label: "Clientes",
-    icon: Users,
-    color: "text-stone-500",
-    activeColor: "text-blue-700",
-    activeBg: "bg-blue-50 border-blue-600",
-  },
-  {
-    id: "mapa",
-    label: "Mapa de Progresso",
-    icon: LayoutGrid,
-    color: "text-stone-500",
-    activeColor: "text-violet-700",
-    activeBg: "bg-violet-50 border-violet-600",
-  },
+  { id: "alimentacao", label: "Alimentação", shortLabel: "Alimentação", icon: Utensils },
+  { id: "alimentacao_teste", label: "Alimentação Teste", shortLabel: "Teste", icon: FlaskConical },
+  { id: "clientes", label: "Clientes", shortLabel: "Clientes", icon: Users },
+  { id: "mapa", label: "Mapa de Progresso", shortLabel: "Progresso", icon: LayoutGrid },
 ];
 
 export default function Home() {
@@ -69,34 +39,38 @@ export default function Home() {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white sticky top-0 z-30 shadow-sm">
-        {/* Brand bar */}
-        <div className="px-6 lg:px-10 py-3.5 flex items-center justify-between border-b border-stone-100">
-          <div className="flex items-center gap-3.5">
-            <img
-              src={LOGO_URL}
-              alt="Minas Bird"
-              className="w-10 h-10 rounded-xl object-cover shadow-sm"
-            />
-            <div>
-              <h1 className="text-lg font-bold text-stone-800 leading-tight" style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
-                Minas Bird
-              </h1>
-              <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-[0.15em]">
-                Manual Operacional
-              </p>
+    <div className="min-h-screen bg-stone-100 flex flex-col">
+      {/* Professional Header — Dark with strong identity */}
+      <header className="sticky top-0 z-30">
+        {/* Top brand bar — dark green */}
+        <div className="bg-[#1a3a2a] px-5 lg:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/20 shadow-lg">
+              <img
+                src={LOGO_URL}
+                alt="Minas Bird"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-white font-bold text-sm tracking-wide">
+                MINAS BIRD
+              </span>
+              <span className="text-emerald-300/60 text-[10px] font-medium tracking-wider hidden sm:inline">
+                MANUAL OPERACIONAL
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-stone-50 px-3 py-1.5 rounded-full">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] text-stone-500 font-semibold">v1.1</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-emerald-300/50 text-[10px] font-mono">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
+              <span>v1.1</span>
+            </div>
           </div>
         </div>
 
-        {/* Navigation tabs */}
-        <nav className="px-4 lg:px-8 pt-1 flex gap-0.5 overflow-x-auto scrollbar-hide">
+        {/* Navigation bar — slightly lighter dark */}
+        <div className="bg-[#223d30] px-3 lg:px-6 flex items-center gap-0.5 overflow-x-auto scrollbar-hide shadow-md">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -105,35 +79,33 @@ export default function Home() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all duration-200 whitespace-nowrap rounded-t-xl",
+                  "relative flex items-center gap-2 px-4 lg:px-5 py-3 text-xs lg:text-sm font-medium transition-all duration-150 whitespace-nowrap border-b-2",
                   isActive
-                    ? `${tab.activeColor} ${tab.activeBg}`
-                    : "text-stone-400 hover:text-stone-600 hover:bg-stone-50/70"
+                    ? "text-white bg-white/10 border-emerald-400"
+                    : "text-white/50 border-transparent hover:text-white/80 hover:bg-white/5"
                 )}
               >
-                <Icon size={15} className={isActive ? "" : "opacity-70"} />
-                <span>{tab.label}</span>
-                {isActive && (
-                  <span className="absolute bottom-0 left-3 right-3 h-[2.5px] rounded-full bg-current" />
-                )}
+                <Icon size={15} />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.shortLabel}</span>
               </button>
             );
           })}
-        </nav>
+        </div>
       </header>
 
       {/* Content area */}
       <main ref={contentRef} className="flex-1 overflow-y-auto">
-        <div className="px-4 lg:px-8 py-6 pb-20">
+        <div className="px-4 lg:px-8 py-6 pb-16">
           {activeTab === "alimentacao" && <FeedingModule />}
           {activeTab === "alimentacao_teste" && <FeedingModuleTest />}
           {activeTab === "clientes" && (
             <div className="max-w-4xl mx-auto mt-8">
               <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-10 text-center">
-                <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-5">
-                  <Users className="w-7 h-7 text-blue-600" />
+                <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-blue-600" />
                 </div>
-                <h2 className="text-xl font-bold text-stone-800 mb-2" style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
+                <h2 className="text-lg font-bold text-stone-800 mb-2">
                   Clientes
                 </h2>
                 <p className="text-stone-500 text-sm max-w-md mx-auto">
@@ -146,11 +118,11 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-stone-100 py-2.5 px-6 flex items-center justify-center gap-2">
-        <Feather size={12} className="text-stone-300" />
-        <p className="text-[10px] text-stone-400 font-medium tracking-wide">
-          CRIATÓRIO MINAS BIRD · Ribeirão Vermelho — MG — 2026
+      {/* Footer — minimal */}
+      <footer className="bg-[#1a3a2a] py-2.5 px-6 flex items-center justify-center gap-2">
+        <Feather size={11} className="text-emerald-400/40" />
+        <p className="text-[10px] text-white/30 font-medium tracking-wider">
+          CRIATÓRIO MINAS BIRD · RIBEIRÃO VERMELHO — MG — 2026
         </p>
       </footer>
     </div>
