@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 // Brand assets
 const MB_SYMBOL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663487476806/GbyPqTQ4WPAeZLRC6VPuta/mb-symbol_eba1d647.png";
-const AVIARY_BG = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663487476806/pRBfRHwhMGkMmxvS.jpg";
+const AVIARY_BG = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663487476806/hxUogTsXUMSRebXV.png";
 
 type TabId = "alimentacao" | "alimentacao_teste" | "clientes" | "mapa";
 
@@ -61,16 +61,11 @@ export default function Home() {
               <img
                 src={MB_SYMBOL}
                 alt="Minas Bird"
-                className="h-12 w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                className="h-16 w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
               />
-              <div className="flex flex-col">
-                <span className="text-white font-bold text-lg tracking-[0.12em] leading-tight drop-shadow-sm">
-                  MINAS BIRD
-                </span>
-                <span className="text-white/50 text-[10px] font-medium tracking-[0.2em] leading-tight mt-0.5">
-                  CRIATÓRIO
-                </span>
-              </div>
+              <span className="text-white font-bold text-xl tracking-[0.14em] leading-tight drop-shadow-sm">
+                MINAS BIRD
+              </span>
             </div>
 
             {/* Version badge */}
