@@ -281,3 +281,4 @@
 - [x] PDF Anotação por espécie: fase, recinto, ração, 6 situações de %, área de anotação 30 dias
 - [x] PDF Anotação: botão gerar todas as espécies de uma vez
 - [x] PDF Anotação: coluna Sobra (S/N) na tabela de 30 dias
+- [x] Remover 8 cards antigos de espécie do FeedingModule e FeedingModuleTest (manter novos)
