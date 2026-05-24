@@ -1,225 +1,158 @@
 /**
- * Home Page — Minas Bird Manual Operacional Dashboard
- * Tropical Craft Design: sidebar + content area with smooth transitions
- * Includes special Feeding module alongside sector-based tasks
+ * Home Page — Minas Bird
+ * Top navigation layout with 4 modules
+ * Clean, refined, professional design
  */
-import SectorContent from "@/components/SectorContent";
 import FeedingModule from "@/components/FeedingModule";
 import FeedingModuleTest from "@/components/FeedingModuleTest";
 import ProgressMap from "@/components/ProgressMap";
-import Sidebar from "@/components/Sidebar";
-import SettingsPanel from "@/components/SettingsPanel";
-import { sectors } from "@/data/sectors";
-import { useState, useEffect, useRef } from "react";
-import { BookOpen, ChevronLeft, ChevronRight, Utensils, Settings, LayoutGrid, Users, FlaskConical } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Utensils, FlaskConical, Users, LayoutGrid, Feather } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// All navigable items: sectors + special modules
-const HOME_ID = "__home__";
-const INITIAL_ID = "__inicial__";
-const FEEDING_ID = "__alimentacao__";
-const FEEDING_TEST_ID = "__alimentacao_teste__";
-const CLIENTS_ID = "__cadastro_clientes__";
-const SETTINGS_ID = "__configuracoes__";
+const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663426530649/GUVCZBcaMUVxbcauwK97Fr/logo3d_d58b8c94.png";
 
-type NavItem = {
-  id: string;
-  title: string;
-  subtitle: string;
-  isSpecial?: boolean;
-};
+type TabId = "alimentacao" | "alimentacao_teste" | "clientes" | "mapa";
 
-const allNavItems: NavItem[] = [
-  { id: INITIAL_ID, title: "Início", subtitle: "Painel principal" },
-  { id: HOME_ID, title: "Mapa de Progresso", subtitle: "Visão geral de todos os módulos" },
-  { id: FEEDING_ID, title: "Alimentação", subtitle: "39 espécies · Protocolos · Calculadora" },
-  { id: FEEDING_TEST_ID, title: "Alimentação Teste", subtitle: "Versão de teste para mudanças" },
-  { id: CLIENTS_ID, title: "Cadastro de Clientes", subtitle: "Gerenciamento de clientes" },
-  ...sectors.map(s => ({ id: s.id, title: s.title, subtitle: s.subtitle })),
-  { id: SETTINGS_ID, title: "Configurações", subtitle: "Equipe e acessos" },
+interface Tab {
+  id: TabId;
+  label: string;
+  icon: typeof Utensils;
+  color: string;
+  activeColor: string;
+  activeBg: string;
+}
+
+const tabs: Tab[] = [
+  {
+    id: "alimentacao",
+    label: "Alimentação",
+    icon: Utensils,
+    color: "text-stone-500",
+    activeColor: "text-emerald-700",
+    activeBg: "bg-emerald-50 border-emerald-600",
+  },
+  {
+    id: "alimentacao_teste",
+    label: "Alimentação Teste",
+    icon: FlaskConical,
+    color: "text-stone-500",
+    activeColor: "text-amber-700",
+    activeBg: "bg-amber-50 border-amber-600",
+  },
+  {
+    id: "clientes",
+    label: "Clientes",
+    icon: Users,
+    color: "text-stone-500",
+    activeColor: "text-blue-700",
+    activeBg: "bg-blue-50 border-blue-600",
+  },
+  {
+    id: "mapa",
+    label: "Mapa de Progresso",
+    icon: LayoutGrid,
+    color: "text-stone-500",
+    activeColor: "text-violet-700",
+    activeBg: "bg-violet-50 border-violet-600",
+  },
 ];
 
 export default function Home() {
-  const [activeItem, setActiveItem] = useState(INITIAL_ID);
+  const [activeTab, setActiveTab] = useState<TabId>("alimentacao");
   const contentRef = useRef<HTMLDivElement>(null);
-
-  const currentSector = sectors.find((s) => s.id === activeItem);
-  const isInitial = activeItem === INITIAL_ID;
-  const isHome = activeItem === HOME_ID;
-  const isFeeding = activeItem === FEEDING_ID;
-  const isFeedingTest = activeItem === FEEDING_TEST_ID;
-  const isClients = activeItem === CLIENTS_ID;
-  const isSettings = activeItem === SETTINGS_ID;
-  const currentIndex = allNavItems.findIndex((item) => item.id === activeItem);
-  const currentNav = allNavItems[currentIndex];
 
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [activeItem]);
-
-  const goToPrev = () => {
-    if (currentIndex > 0) {
-      setActiveItem(allNavItems[currentIndex - 1].id);
-    }
-  };
-
-  const goToNext = () => {
-    if (currentIndex < allNavItems.length - 1) {
-      setActiveItem(allNavItems[currentIndex + 1].id);
-    }
-  };
+  }, [activeTab]);
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <Sidebar activeSector={activeItem} onSectorChange={setActiveItem} />
-
-      {/* Main content */}
-      <main
-        ref={contentRef}
-        className="flex-1 lg:ml-72 h-screen overflow-y-auto"
-      >
-        {/* Top bar */}
-        <div className="sticky top-0 z-20 bg-background/85 backdrop-blur-lg border-b border-border/30">
-          <div className="px-6 lg:px-10 py-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-3 ml-12 lg:ml-0">
-              <div className="flex items-center gap-2">
-                {isHome ? (
-                  <LayoutGrid size={14} className="text-primary/50" />
-                ) : isFeeding ? (
-                  <Utensils size={14} className="text-primary/50" />
-                ) : isSettings ? (
-                  <Settings size={14} className="text-primary/50" />
-                ) : (
-                  <BookOpen size={14} className="text-primary/50" />
-                )}
-                <p className="text-sm font-semibold text-foreground/70">
-                  {currentNav?.title || ""}
-                </p>
-              </div>
-              <span className="text-muted-foreground/20 hidden sm:inline">|</span>
-              <p className="text-xs text-muted-foreground/50 hidden sm:block">
-                {currentNav?.subtitle || ""}
+    <div className="min-h-screen bg-stone-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-white sticky top-0 z-30 shadow-sm">
+        {/* Brand bar */}
+        <div className="px-6 lg:px-10 py-3.5 flex items-center justify-between border-b border-stone-100">
+          <div className="flex items-center gap-3.5">
+            <img
+              src={LOGO_URL}
+              alt="Minas Bird"
+              className="w-10 h-10 rounded-xl object-cover shadow-sm"
+            />
+            <div>
+              <h1 className="text-lg font-bold text-stone-800 leading-tight" style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
+                Minas Bird
+              </h1>
+              <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-[0.15em]">
+                Manual Operacional
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={goToPrev}
-                disabled={currentIndex === 0}
-                className="p-1.5 rounded-lg hover:bg-muted/50 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                aria-label="Anterior"
-              >
-                <ChevronLeft size={16} className="text-muted-foreground" />
-              </button>
-              <span className="text-[11px] text-muted-foreground/40 font-semibold tabular-nums min-w-[32px] text-center">
-                {currentIndex + 1}/{allNavItems.length}
-              </span>
-              <button
-                onClick={goToNext}
-                disabled={currentIndex === allNavItems.length - 1}
-                className="p-1.5 rounded-lg hover:bg-muted/50 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                aria-label="Próximo"
-              >
-                <ChevronRight size={16} className="text-muted-foreground" />
-              </button>
-              <div className="hidden sm:flex items-center gap-2 ml-3 pl-3 border-l border-border/30">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <p className="text-[10px] text-muted-foreground/40 font-medium">
-                  v1.1
-                </p>
-              </div>
-            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-stone-50 px-3 py-1.5 rounded-full">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] text-stone-500 font-semibold">v1.1</span>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="px-6 lg:px-10 py-8 pb-20">
-          {isInitial ? (
-            <div className="max-w-4xl mx-auto">
-              <h1 className="text-2xl font-bold text-stone-800 mb-2">Bem-vindo ao Minas Bird</h1>
-              <p className="text-stone-500 mb-8">Selecione um módulo para começar</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Card Alimentação */}
-                <button
-                  onClick={() => setActiveItem(FEEDING_ID)}
-                  className="group bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all p-6 text-left"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
-                    <Utensils className="w-6 h-6 text-emerald-700" />
-                  </div>
-                  <h3 className="font-bold text-stone-800 text-lg mb-1">Alimentação</h3>
-                  <p className="text-sm text-stone-500">39 espécies · Protocolos · Calculadora</p>
-                </button>
-                {/* Card Alimentação Teste */}
-                <button
-                  onClick={() => setActiveItem(FEEDING_TEST_ID)}
-                  className="group bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all p-6 text-left"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4 group-hover:bg-amber-200 transition-colors">
-                    <FlaskConical className="w-6 h-6 text-amber-700" />
-                  </div>
-                  <h3 className="font-bold text-stone-800 text-lg mb-1">Alimentação Teste</h3>
-                  <p className="text-sm text-stone-500">Versão de teste para mudanças</p>
-                </button>
-                {/* Card Cadastro de Clientes */}
-                <button
-                  onClick={() => setActiveItem(CLIENTS_ID)}
-                  className="group bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all p-6 text-left"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
-                    <Users className="w-6 h-6 text-blue-700" />
-                  </div>
-                  <h3 className="font-bold text-stone-800 text-lg mb-1">Cadastro de Clientes</h3>
-                  <p className="text-sm text-stone-500">Gerenciamento de clientes</p>
-                </button>
-              </div>
-            </div>
-          ) : isHome ? (
-            <ProgressMap onNavigate={setActiveItem} />
-          ) : isFeeding ? (
-            <FeedingModule />
-          ) : isFeedingTest ? (
-            <FeedingModuleTest />
-          ) : isClients ? (
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-8 text-center">
-                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-8 h-8 text-blue-600" />
-                </div>
-                <h2 className="text-xl font-bold text-stone-800 mb-2">Cadastro de Clientes</h2>
-                <p className="text-stone-500">Módulo em desenvolvimento. Em breve você poderá gerenciar seus clientes aqui.</p>
-              </div>
-            </div>
-          ) : isSettings ? (
-            <SettingsPanel />
-          ) : currentSector ? (
-            <SectorContent sector={currentSector} />
-          ) : null}
-        </div>
+        {/* Navigation tabs */}
+        <nav className="px-4 lg:px-8 pt-1 flex gap-0.5 overflow-x-auto scrollbar-hide">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all duration-200 whitespace-nowrap rounded-t-xl",
+                  isActive
+                    ? `${tab.activeColor} ${tab.activeBg}`
+                    : "text-stone-400 hover:text-stone-600 hover:bg-stone-50/70"
+                )}
+              >
+                <Icon size={15} className={isActive ? "" : "opacity-70"} />
+                <span>{tab.label}</span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-3 right-3 h-[2.5px] rounded-full bg-current" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </header>
 
-        {/* Bottom navigation for mobile */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-lg border-t border-border/30 px-4 py-3 flex items-center justify-between z-20">
-          <button
-            onClick={goToPrev}
-            disabled={currentIndex === 0}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted/30 disabled:opacity-20 disabled:cursor-not-allowed transition-all text-sm text-muted-foreground"
-          >
-            <ChevronLeft size={14} />
-            <span className="text-xs font-medium">Anterior</span>
-          </button>
-          <span className="text-[11px] text-muted-foreground/50 font-semibold">
-            {currentIndex + 1} de {allNavItems.length}
-          </span>
-          <button
-            onClick={goToNext}
-            disabled={currentIndex === allNavItems.length - 1}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted/30 disabled:opacity-20 disabled:cursor-not-allowed transition-all text-sm text-muted-foreground"
-          >
-            <span className="text-xs font-medium">Próximo</span>
-            <ChevronRight size={14} />
-          </button>
+      {/* Content area */}
+      <main ref={contentRef} className="flex-1 overflow-y-auto">
+        <div className="px-4 lg:px-8 py-6 pb-20">
+          {activeTab === "alimentacao" && <FeedingModule />}
+          {activeTab === "alimentacao_teste" && <FeedingModuleTest />}
+          {activeTab === "clientes" && (
+            <div className="max-w-4xl mx-auto mt-8">
+              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-10 text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-5">
+                  <Users className="w-7 h-7 text-blue-600" />
+                </div>
+                <h2 className="text-xl font-bold text-stone-800 mb-2" style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
+                  Clientes
+                </h2>
+                <p className="text-stone-500 text-sm max-w-md mx-auto">
+                  Módulo em desenvolvimento. Em breve você poderá gerenciar seus clientes aqui.
+                </p>
+              </div>
+            </div>
+          )}
+          {activeTab === "mapa" && <ProgressMap onNavigate={() => {}} />}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-stone-100 py-2.5 px-6 flex items-center justify-center gap-2">
+        <Feather size={12} className="text-stone-300" />
+        <p className="text-[10px] text-stone-400 font-medium tracking-wide">
+          CRIATÓRIO MINAS BIRD · Ribeirão Vermelho — MG — 2026
+        </p>
+      </footer>
     </div>
   );
 }

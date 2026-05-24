@@ -285,3 +285,4 @@
 - [x] Remover cards Dietas, Calendário de Alimentação e Exportar Calendários do FeedingModule e FeedingModuleTest
 - [x] CORREÇÃO: Restaurar FeedingModule.tsx (aba Alimentação) ao estado original — nunca deveria ter sido alterado
 - [x] Tela inicial com 3 cards: Alimentação, Alimentação Teste, Cadastro de Clientes
+- [x] Redesign radical: remover sidebar, navegação no topo, 4 módulos (Alimentação, Alimentação Teste, Clientes, Mapa de Progresso)
