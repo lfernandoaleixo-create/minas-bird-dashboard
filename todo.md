@@ -299,3 +299,4 @@
 - [x] Vendas: status de cada parcela (Pendente, Pago, Atrasado)
 - [x] Vendas: visualização do histórico de pagamentos no detalhe do cliente
 - [x] Vendas: testes automatizados para parcelas
+- [x] Alimentação Teste: botão de reset para limpar todas as marcações (localStorage)
