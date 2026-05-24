@@ -276,3 +276,4 @@
 - [x] FoodCalendarCard: ícone de cadeado sutil nos alimentos protegidos (≥1 check no mês)
 - [x] FoodCalendarCard: histórico mensal — meses anteriores com checks preservados visíveis ao navegar
 - [x] FoodCalendarCard: clicar no cadeado abre dialog de senha (MinasBird) para permitir exclusão de item protegido
+- [x] Calculadora de dieta no card de espécie (selecionar ração, % ração, proporção salada, resultado em gramas)

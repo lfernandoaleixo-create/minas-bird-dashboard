@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { vegetais, frutas, proteicos, racoes, lifePeriods } from "@/data/petbird";
 import { species } from "@/data/feeding";
 import { exportFoodCalendarCategoryPdf, exportFoodCalendarSpeciesPdf } from "@/lib/foodCalendarPdf";
+import DietCalculator from "@/components/DietCalculator";
 
 // Vegetais a excluir (marcados com ⚠️ na aba original)
 const VEGETAIS_EXCLUIDOS = ["Alface Romana, Folha, Crua \u26a0\ufe0f", "Alface Lisa, Folha, Crua \u26a0\ufe0f", "Espinafre Comum, Folha, Crua \u26a0\ufe0f"];
@@ -710,6 +711,9 @@ export default function FoodCalendarCard() {
                 ))}
               </div>
             </div>
+
+            {/* Diet Calculator */}
+            <DietCalculator speciesId={sp.id} selectedPhase={selectedPhase} />
 
             {/* Mini category cards (toggle) — for adding EXCLUSIVE foods */}
             <div className="px-5 py-3 border-b border-border/30 bg-muted/5">
