@@ -26,6 +26,8 @@ interface DietCalculatorProps {
   selectedPhase: string;
   onPhaseChange?: (phaseId: string) => void;
   phases?: { id: string; label: string }[];
+  /** When a ração is selected externally (e.g. from species food card), auto-fill the calculator */
+  externalRacaoId?: string | null;
 }
 
 const RACAO_PCT_OPTIONS = [50, 60, 70, 80, 90, 100];
@@ -42,7 +44,7 @@ const DEFAULT_STATE: CalcState = {
   enclosureMultiplier: 1.0,
 };
 
-export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange, phases }: DietCalculatorProps) {
+export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange, phases, externalRacaoId }: DietCalculatorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [state, setState] = useState<CalcState>(DEFAULT_STATE);
   const [racaoSearch, setRacaoSearch] = useState("");
@@ -68,6 +70,14 @@ export default function DietCalculator({ speciesId, selectedPhase, onPhaseChange
       setState(DEFAULT_STATE);
     }
   }, [allConfigs, speciesId]);
+
+  // Sync external ração selection into calculator
+  useEffect(() => {
+    if (externalRacaoId && externalRacaoId !== state.racaoId) {
+      const newState = { ...state, racaoId: externalRacaoId };
+      persist(newState);
+    }
+  }, [externalRacaoId]);
 
   const persist = useCallback((newState: CalcState) => {
     setState(newState);

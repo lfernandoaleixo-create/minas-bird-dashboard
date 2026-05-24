@@ -222,6 +222,8 @@ export default function FoodCalendarCard() {
   // Per-species: which category panel is open (toggle: click opens, click again closes)
   const [speciesOpenCat, setSpeciesOpenCat] = useState<Record<string, string | null>>({});
   const [speciesSearchTerm, setSpeciesSearchTerm] = useState("");
+  // Track the last selected ração per species to auto-fill DietCalculator
+  const [speciesSelectedRacao, setSpeciesSelectedRacao] = useState<Record<string, string | null>>({});
   // Password dialog for protected item deletion
   const [unlockDialog, setUnlockDialog] = useState<{ open: boolean; foodName: string; speciesId?: string; password: string; error: boolean }>({
     open: false, foodName: "", speciesId: undefined, password: "", error: false
@@ -338,6 +340,16 @@ export default function FoodCalendarCard() {
     addSpeciesFoodMut.mutate({ speciesId, name, category, quality }, {
       onSuccess: () => utils.foodCalendar.getSpeciesFoods.invalidate(),
     });
+
+    // If a ração was selected, auto-fill the DietCalculator
+    if (category === "racao") {
+      // Find the original racao by matching the display name ("Name — Brand")
+      const originalName = name.split(" \u2014 ")[0];
+      const racao = racoes.find(r => r.name === originalName);
+      if (racao) {
+        setSpeciesSelectedRacao(prev => ({ ...prev, [speciesId]: racao.id }));
+      }
+    }
   };
 
   const removeSpeciesFood = (speciesId: string, name: string) => {
@@ -729,6 +741,7 @@ export default function FoodCalendarCard() {
               selectedPhase={selectedPhase}
               onPhaseChange={handlePhaseChange}
               phases={LIFE_PHASES}
+              externalRacaoId={speciesSelectedRacao[sp.id] || null}
             />
 
             {/* Mini category cards (toggle) — for adding EXCLUSIVE foods */}
