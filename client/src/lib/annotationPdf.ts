@@ -80,14 +80,14 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   doc.text(`Fator Recinto:`, recintoX, y);
   doc.setFont("helvetica", "normal");
   doc.text(`×${enclosureMultiplier.toFixed(2)}`, recintoX + doc.getTextWidth("Fator Recinto:") + 2, y);
-  y += 4;
+  y += 5.5;
 
   // Row 2: Ração
   doc.setFont("helvetica", "bold");
   doc.text(`Ração:`, margin, y);
   doc.setFont("helvetica", "normal");
   doc.text(`${racao.name} (${racao.energyKcal} kcal/kg)`, margin + doc.getTextWidth("Ração:") + 2, y);
-  y += 4;
+  y += 5.5;
 
   // Row 3: Peso + MER + Plantel
   doc.setFont("helvetica", "bold");
@@ -106,7 +106,7 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   doc.text(`Plantel:`, plantelX, y);
   doc.setFont("helvetica", "normal");
   doc.text(`${sp.currentCount} aves`, plantelX + doc.getTextWidth("Plantel:") + 2, y);
-  y += 5;
+  y += 6;
 
   // ===== TABELA DE PROPORÇÕES — Ração vs Salada =====
   doc.setFontSize(8);
@@ -201,11 +201,11 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   doc.text(`Anotações — ${monthYear}`, margin, y);
   y += 3;
 
-  // Calculate available space for 30 rows
+  // Calculate available space for 30 rows — fill all remaining space
   const footerReserve = 9;
   const availableH = pageH - y - footerReserve;
   const annHeaderH = 4.5;
-  const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
+  const annRowH = (availableH - annHeaderH) / 30;
 
   // Columns: Dia(10) | Data/% Usada/Ração/Salada/Sobra (equal) | Observações (smaller)
   const equalColW = Math.floor((tableW - 10) / 7); // 6 equal cols + Observações slightly smaller
@@ -337,13 +337,13 @@ export async function generateAllAnnotationPdfs(params: {
     doc.text(`Fator Recinto:`, recintoX, y);
     doc.setFont("helvetica", "normal");
     doc.text(`×${enclosureMultiplier.toFixed(2)}`, recintoX + doc.getTextWidth("Fator Recinto:") + 2, y);
-    y += 4;
+    y += 5.5;
 
     doc.setFont("helvetica", "bold");
     doc.text(`Ração:`, margin, y);
     doc.setFont("helvetica", "normal");
     doc.text(`${racao.name} (${racao.energyKcal} kcal/kg)`, margin + doc.getTextWidth("Ração:") + 2, y);
-    y += 4;
+    y += 5.5;
 
     doc.setFont("helvetica", "bold");
     doc.text(`Peso:`, margin, y);
@@ -359,7 +359,7 @@ export async function generateAllAnnotationPdfs(params: {
     doc.text(`Plantel:`, plantelX, y);
     doc.setFont("helvetica", "normal");
     doc.text(`${sp.currentCount} aves`, plantelX + doc.getTextWidth("Plantel:") + 2, y);
-    y += 5;
+    y += 6;
 
     // Proportions table
     doc.setFontSize(8);
@@ -451,7 +451,7 @@ export async function generateAllAnnotationPdfs(params: {
     const footerReserve = 9;
     const availableH = pageH - y - footerReserve;
     const annHeaderH = 4.5;
-    const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
+    const annRowH = (availableH - annHeaderH) / 30;
 
     const equalColW = Math.floor((tableW - 10) / 7);
     const annCols = [10, equalColW, equalColW, equalColW, equalColW, equalColW, 0];
