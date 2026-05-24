@@ -207,15 +207,16 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   const annHeaderH = 4.5;
   const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
 
-  // Columns: Dia(8) | Data(18) | % Usada(15) | Ração(18) | Salada(18) | Sobra(14) | Observações(rest)
-  const annCols = [8, 18, 15, 18, 18, 14, 0];
+  // Columns: Dia(10) | Data/% Usada/Ração/Salada/Sobra (equal) | Observações (smaller)
+  const equalColW = Math.floor((tableW - 10) / 7); // 6 equal cols + Observações slightly smaller
+  const annCols = [10, equalColW, equalColW, equalColW, equalColW, equalColW, 0];
   annCols[6] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4] - annCols[5];
   const annHeaders = ["Dia", "Data", "% Usada", "Ração (g)", "Salada (g)", "Sobra", "Observações"];
 
   // Header
   doc.setFillColor(...BRAND.headerBg);
   doc.rect(margin, y, tableW, annHeaderH, "F");
-  doc.setFontSize(5.5);
+  doc.setFontSize(6.5);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.headerText);
 
@@ -227,28 +228,38 @@ export async function generateAnnotationPdf(params: AnnotationPdfParams): Promis
   y += annHeaderH;
 
   // 30 rows
-  doc.setFontSize(5.5);
   for (let d = 1; d <= 30; d++) {
     if (d % 2 === 0) {
       doc.setFillColor(250, 251, 252);
       doc.rect(margin, y, tableW, annRowH, "F");
     }
 
-    // Day number
+    // Day number — larger font
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.text);
-    doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.6, { align: "center" });
+    doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.8, { align: "center" });
 
     y += annRowH;
   }
 
-  // Table border and lines
+  // Table border and lines — thicker for better visibility
   const annTableStart = y - (30 * annRowH + annHeaderH);
   doc.setDrawColor(...BRAND.gridLine);
-  doc.setLineWidth(0.2);
+  doc.setLineWidth(0.4);
   doc.rect(margin, annTableStart, tableW, 30 * annRowH + annHeaderH);
 
+  // Horizontal lines between rows
+  doc.setLineWidth(0.3);
+  for (let r = 1; r <= 30; r++) {
+    doc.line(margin, annTableStart + annHeaderH + annRowH * r, margin + tableW, annTableStart + annHeaderH + annRowH * r);
+  }
+  // Header separator (thicker)
+  doc.setLineWidth(0.5);
+  doc.line(margin, annTableStart + annHeaderH, margin + tableW, annTableStart + annHeaderH);
+
   // Vertical lines
+  doc.setLineWidth(0.3);
   let vx = margin;
   annCols.forEach((w, i) => {
     if (i < annCols.length - 1) {
@@ -442,13 +453,14 @@ export async function generateAllAnnotationPdfs(params: {
     const annHeaderH = 4.5;
     const annRowH = Math.min((availableH - annHeaderH) / 30, 4.8);
 
-    const annCols = [8, 18, 15, 18, 18, 14, 0];
+    const equalColW = Math.floor((tableW - 10) / 7);
+    const annCols = [10, equalColW, equalColW, equalColW, equalColW, equalColW, 0];
     annCols[6] = tableW - annCols[0] - annCols[1] - annCols[2] - annCols[3] - annCols[4] - annCols[5];
     const annHeaders = ["Dia", "Data", "% Usada", "Ração (g)", "Salada (g)", "Sobra", "Observações"];
 
     doc.setFillColor(...BRAND.headerBg);
     doc.rect(margin, y, tableW, annHeaderH, "F");
-    doc.setFontSize(5.5);
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND.headerText);
 
@@ -459,22 +471,31 @@ export async function generateAllAnnotationPdfs(params: {
     });
     y += annHeaderH;
 
-    doc.setFontSize(5.5);
     for (let d = 1; d <= 30; d++) {
       if (d % 2 === 0) {
         doc.setFillColor(250, 251, 252);
         doc.rect(margin, y, tableW, annRowH, "F");
       }
+      doc.setFontSize(7.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.text);
-      doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.6, { align: "center" });
+      doc.text(`${d}`, margin + annCols[0] / 2, y + annRowH / 2 + 0.8, { align: "center" });
       y += annRowH;
     }
 
     const annTableStart = y - (30 * annRowH + annHeaderH);
     doc.setDrawColor(...BRAND.gridLine);
-    doc.setLineWidth(0.2);
+    doc.setLineWidth(0.4);
     doc.rect(margin, annTableStart, tableW, 30 * annRowH + annHeaderH);
+
+    doc.setLineWidth(0.3);
+    for (let r = 1; r <= 30; r++) {
+      doc.line(margin, annTableStart + annHeaderH + annRowH * r, margin + tableW, annTableStart + annHeaderH + annRowH * r);
+    }
+    doc.setLineWidth(0.5);
+    doc.line(margin, annTableStart + annHeaderH, margin + tableW, annTableStart + annHeaderH);
+
+    doc.setLineWidth(0.3);
     let vx = margin;
     annCols.forEach((w, i) => {
       if (i < annCols.length - 1) {
