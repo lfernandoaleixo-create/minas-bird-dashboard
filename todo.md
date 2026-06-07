@@ -317,3 +317,4 @@
 - [x] Nova aba Plantel: formulário de cadastro com seletor de espécie
 - [x] Nova aba Plantel: card de detalhe da ave com informações completas
 - [x] Nova aba Plantel: integrar na navegação principal (4ª aba)
+- [x] Plantel: código único da ave = prefixo 2 letras (espécie) + número (RN001, CA002, etc.) — preenchimento automático do prefixo ao selecionar espécie

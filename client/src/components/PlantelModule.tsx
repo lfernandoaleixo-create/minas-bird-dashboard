@@ -19,6 +19,23 @@ const SPECIES_LIST = species
 
 const ALL_SPECIES = species.sort((a, b) => a.commonName.localeCompare(b.commonName));
 
+// Código único da ave: prefixo 2 letras (espécie) + número
+// Cada código é único e nunca se repete no criatório
+const SPECIES_PREFIX: Record<string, string> = {
+  ringneck: "RN",
+  cabeca_ameixa: "CA",
+  alexandrino: "GA",
+  ecletus: "EC",
+  moustache: "MT",
+  regente: "RG",
+  king_parrot: "KP",
+};
+
+// Função para obter o prefixo a partir do speciesId
+function getSpeciesPrefix(speciesId: string): string {
+  return SPECIES_PREFIX[speciesId] || speciesId.substring(0, 2).toUpperCase();
+}
+
 type BirdStatus = "ativo" | "vendido" | "obito" | "doado" | "emprestado";
 type BirdSex = "macho" | "femea" | "indefinido";
 type BirdOrigin = "nascido_criadouro" | "comprado" | "doado" | "troca";
@@ -55,7 +72,7 @@ const ORIGIN_LABELS: Record<BirdOrigin, string> = {
 interface BirdForm {
   speciesId: string;
   speciesName: string;
-  ringNumber: string;
+  birdNumber: string; // Número da ave (sem prefixo)
   sex: BirdSex;
   birthDate: string;
   mutation: string;
@@ -70,7 +87,7 @@ interface BirdForm {
 const EMPTY_FORM: BirdForm = {
   speciesId: "",
   speciesName: "",
-  ringNumber: "",
+  birdNumber: "",
   sex: "indefinido",
   birthDate: "",
   mutation: "",
@@ -143,10 +160,15 @@ export default function PlantelModule() {
   };
 
   const handleEditBird = (bird: typeof birds[0]) => {
+    // Extrair número do código (remover prefixo de 2 letras)
+    const prefix = getSpeciesPrefix(bird.speciesId);
+    const num = bird.ringNumber && bird.ringNumber.startsWith(prefix)
+      ? bird.ringNumber.substring(prefix.length)
+      : bird.ringNumber || "";
     setForm({
       speciesId: bird.speciesId,
       speciesName: bird.speciesName,
-      ringNumber: bird.ringNumber || "",
+      birdNumber: num,
       sex: bird.sex as BirdSex,
       birthDate: bird.birthDate ? new Date(bird.birthDate).toISOString().split("T")[0] : "",
       mutation: bird.mutation || "",
@@ -170,10 +192,14 @@ export default function PlantelModule() {
   const handleSubmit = async () => {
     if (!form.speciesId) return;
 
+    // Montar código completo: prefixo + número
+    const prefix = getSpeciesPrefix(form.speciesId);
+    const fullCode = form.birdNumber ? `${prefix}${form.birdNumber}` : null;
+
     const payload = {
       speciesId: form.speciesId,
       speciesName: form.speciesName,
-      ringNumber: form.ringNumber || null,
+      ringNumber: fullCode,
       sex: form.sex,
       birthDate: form.birthDate ? new Date(form.birthDate) : null,
       mutation: form.mutation || null,
@@ -414,17 +440,31 @@ export default function PlantelModule() {
             </div>
           </div>
 
-          {/* Row: Ring + Sex */}
+          {/* Row: Código da Ave + Sex */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-stone-600 mb-1.5">Número da Anilha</label>
-              <input
-                type="text"
-                value={form.ringNumber}
-                onChange={e => setForm(prev => ({ ...prev, ringNumber: e.target.value }))}
-                placeholder="Ex: MB-2026-001"
-                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              />
+              <label className="block text-xs font-semibold text-stone-600 mb-1.5">
+                Código da Ave <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-stretch">
+                {/* Prefixo automático (baseado na espécie) */}
+                <div className="flex items-center px-3 py-2.5 rounded-l-lg border border-r-0 border-stone-200 bg-emerald-50 text-emerald-700 font-bold text-sm min-w-[48px] justify-center">
+                  {form.speciesId ? getSpeciesPrefix(form.speciesId) : "??"}
+                </div>
+                {/* Número digitado pelo usuário */}
+                <input
+                  type="text"
+                  value={form.birdNumber}
+                  onChange={e => setForm(prev => ({ ...prev, birdNumber: e.target.value.replace(/[^0-9]/g, '') }))}
+                  placeholder="001"
+                  className="flex-1 px-4 py-2.5 rounded-r-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 font-mono"
+                />
+              </div>
+              {form.speciesId && form.birdNumber && (
+                <p className="text-[11px] text-stone-500 mt-1">
+                  Código final: <span className="font-bold text-emerald-700">{getSpeciesPrefix(form.speciesId)}{form.birdNumber}</span>
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-600 mb-1.5">Sexo</label>
