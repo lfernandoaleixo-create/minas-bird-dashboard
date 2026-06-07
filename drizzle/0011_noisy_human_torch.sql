@@ -1,0 +1,1 @@
+ALTER TABLE `plantel` ADD `anilha` varchar(64);

@@ -72,6 +72,10 @@ interface BirdForm {
   speciesId: string;
   speciesName: string;
   birdNumber: string; // Número da ave (sem prefixo)
+  anilha: string; // Número da anilha física
+  hasInvoice: boolean; // Nota Fiscal Sim/Não
+  documents: string[]; // Documentos que acompanham a NF
+  otherDocuments: string; // Campo livre para outros documentos
   sex: BirdSex;
   birthDate: string;
   mutation: string;
@@ -82,10 +86,23 @@ interface BirdForm {
   notes: string;
 }
 
+const DOCUMENT_OPTIONS = [
+  { id: "nota_fiscal", label: "Nota Fiscal" },
+  { id: "certificado_origem", label: "Certificado de Origem" },
+  { id: "atestado_saude", label: "Atestado de Saúde" },
+  { id: "gta", label: "Guia de Transporte (GTA)" },
+  { id: "sexagem", label: "Sexagem" },
+  { id: "exame_sanidade", label: "Exame de Sanidade" },
+];
+
 const EMPTY_FORM: BirdForm = {
   speciesId: "",
   speciesName: "",
   birdNumber: "",
+  anilha: "",
+  hasInvoice: false,
+  documents: [],
+  otherDocuments: "",
   sex: "indefinido",
   birthDate: "",
   mutation: "",
@@ -162,10 +179,26 @@ export default function PlantelModule() {
     const num = bird.ringNumber && bird.ringNumber.startsWith(prefix)
       ? bird.ringNumber.substring(prefix.length)
       : bird.ringNumber || "";
+    // Parse documents from notes JSON if stored there
+    let docs: string[] = [];
+    let otherDocs = "";
+    let hasNF = false;
+    try {
+      const meta = bird.notes ? JSON.parse(bird.notes) : null;
+      if (meta && meta._docMeta) {
+        docs = meta._docMeta.documents || [];
+        otherDocs = meta._docMeta.otherDocuments || "";
+        hasNF = meta._docMeta.hasInvoice || false;
+      }
+    } catch { /* notes is plain text */ }
     setForm({
       speciesId: bird.speciesId,
       speciesName: bird.speciesName,
       birdNumber: num,
+      anilha: (bird as any).anilha || "",
+      hasInvoice: hasNF,
+      documents: docs,
+      otherDocuments: otherDocs,
       sex: bird.sex as BirdSex,
       birthDate: bird.birthDate ? new Date(bird.birthDate).toISOString().split("T")[0] : "",
       mutation: bird.mutation || "",
@@ -173,7 +206,13 @@ export default function PlantelModule() {
       originBreeder: bird.originBreeder || "",
       status: bird.status as BirdStatus,
       enclosure: bird.enclosure || "",
-      notes: bird.notes || "",
+      notes: (() => {
+        try {
+          const parsed = bird.notes ? JSON.parse(bird.notes) : null;
+          if (parsed && parsed._docMeta) return parsed.text || "";
+        } catch { /* plain text */ }
+        return bird.notes || "";
+      })(),
     });
     setEditingId(bird.id);
     setView("form");
@@ -201,6 +240,20 @@ export default function PlantelModule() {
     const prefix = getSpeciesPrefix(form.speciesId);
     const fullCode = form.birdNumber ? `${prefix}${form.birdNumber}` : null;
 
+    // Incluir metadados de documentos no campo notes como JSON
+    let notesValue = form.notes || null;
+    if (form.hasInvoice) {
+      const docMeta = {
+        _docMeta: {
+          hasInvoice: true,
+          documents: form.documents,
+          otherDocuments: form.otherDocuments,
+        },
+        text: form.notes || "",
+      };
+      notesValue = JSON.stringify(docMeta);
+    }
+
     const payload = {
       speciesId: form.speciesId,
       speciesName: form.speciesName,
@@ -213,7 +266,8 @@ export default function PlantelModule() {
       status: form.status,
       enclosure: form.enclosure || null,
       weightGrams: null,
-      notes: form.notes || null,
+      notes: notesValue,
+      anilha: form.anilha || null,
     };
 
     if (editingId) {
@@ -345,7 +399,7 @@ export default function PlantelModule() {
                       </div>
                       <div className="flex items-center gap-3 mt-0.5">
                         {bird.ringNumber && (
-                          <span className="text-[11px] text-stone-500">Anilha: <span className="font-semibold text-stone-700">{bird.ringNumber}</span></span>
+                          <span className="text-[11px] text-stone-500">Código: <span className="font-semibold text-emerald-700 font-mono">{bird.ringNumber}</span></span>
                         )}
                         <span className="text-[11px] text-stone-500">{SEX_LABELS[bird.sex as BirdSex]}</span>
                         {bird.mutation && (
@@ -485,6 +539,81 @@ export default function PlantelModule() {
             </div>
           </div>
 
+          {/* Row: Anilha + Nota Fiscal */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-stone-600 mb-1.5">Anilha</label>
+              <input
+                type="text"
+                value={form.anilha}
+                onChange={e => setForm(prev => ({ ...prev, anilha: e.target.value }))}
+                placeholder="Número da anilha física"
+                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-stone-600 mb-1.5">Nota Fiscal</label>
+              <div className="flex items-center gap-4 py-2.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="hasInvoice"
+                    checked={form.hasInvoice === true}
+                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: true, documents: prev.documents.length === 0 ? ["nota_fiscal"] : prev.documents }))}
+                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-200"
+                  />
+                  <span className="text-sm text-stone-700 font-medium">Sim</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="hasInvoice"
+                    checked={form.hasInvoice === false}
+                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: false, documents: [], otherDocuments: "" }))}
+                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-200"
+                  />
+                  <span className="text-sm text-stone-700 font-medium">Não</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Documentos que acompanham a NF */}
+          {form.hasInvoice && (
+            <div className="p-4 rounded-lg border border-emerald-100 bg-emerald-50/50">
+              <label className="block text-xs font-semibold text-stone-600 mb-3">Documentos que acompanham</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {DOCUMENT_OPTIONS.map(doc => (
+                  <label key={doc.id} className="flex items-center gap-2.5 cursor-pointer py-1">
+                    <input
+                      type="checkbox"
+                      checked={form.documents.includes(doc.id)}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setForm(prev => ({ ...prev, documents: [...prev.documents, doc.id] }));
+                        } else {
+                          setForm(prev => ({ ...prev, documents: prev.documents.filter(d => d !== doc.id) }));
+                        }
+                      }}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-200"
+                    />
+                    <span className="text-sm text-stone-700">{doc.label}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-3">
+                <label className="block text-xs font-semibold text-stone-600 mb-1.5">Outros documentos</label>
+                <input
+                  type="text"
+                  value={form.otherDocuments}
+                  onChange={e => setForm(prev => ({ ...prev, otherDocuments: e.target.value }))}
+                  placeholder="Descreva outros documentos..."
+                  className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Row: Birth date + Mutation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -608,7 +737,7 @@ export default function PlantelModule() {
             <div>
               <h2 className="text-lg font-bold text-stone-800">{selectedBird.speciesName}</h2>
               {selectedBird.ringNumber && (
-                <p className="text-xs text-stone-500">Anilha: {selectedBird.ringNumber}</p>
+                <p className="text-xs text-stone-500 font-mono">Código: <span className="font-semibold text-emerald-700">{selectedBird.ringNumber}</span></p>
               )}
             </div>
           </div>
@@ -649,8 +778,12 @@ export default function PlantelModule() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
             <div>
+              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Código</p>
+              <p className="text-sm font-semibold text-emerald-700 mt-0.5 font-mono">{selectedBird.ringNumber || "—"}</p>
+            </div>
+            <div>
               <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Anilha</p>
-              <p className="text-sm font-semibold text-stone-800 mt-0.5">{selectedBird.ringNumber || "—"}</p>
+              <p className="text-sm font-semibold text-stone-800 mt-0.5">{(selectedBird as any).anilha || "—"}</p>
             </div>
             <div>
               <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Sexo</p>
@@ -672,7 +805,7 @@ export default function PlantelModule() {
             </div>
             {selectedBird.originBreeder && (
               <div>
-                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Criatório de Origem</p>
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Criatório / Dono de Origem</p>
                 <p className="text-sm font-semibold text-stone-800 mt-0.5">{selectedBird.originBreeder}</p>
               </div>
             )}
@@ -680,20 +813,53 @@ export default function PlantelModule() {
               <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Recinto / Viveiro</p>
               <p className="text-sm font-semibold text-stone-800 mt-0.5">{selectedBird.enclosure || "—"}</p>
             </div>
-            <div>
-              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Peso</p>
-              <p className="text-sm font-semibold text-stone-800 mt-0.5">
-                {selectedBird.weightGrams ? `${selectedBird.weightGrams}g` : "—"}
-              </p>
-            </div>
           </div>
 
-          {selectedBird.notes && (
-            <div className="mt-5 pt-4 border-t border-stone-100">
-              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-1">Observações</p>
-              <p className="text-sm text-stone-700 whitespace-pre-wrap">{selectedBird.notes}</p>
-            </div>
-          )}
+          {/* Nota Fiscal e Documentos */}
+          {(() => {
+            let docMeta: any = null;
+            try {
+              const parsed = selectedBird.notes ? JSON.parse(selectedBird.notes) : null;
+              if (parsed && parsed._docMeta) docMeta = parsed._docMeta;
+            } catch { /* plain text notes */ }
+            if (!docMeta) return null;
+            return (
+              <div className="mt-5 pt-4 border-t border-stone-100">
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-2">Nota Fiscal e Documentos</p>
+                <div className="flex flex-wrap gap-2">
+                  {docMeta.documents?.map((docId: string) => {
+                    const doc = DOCUMENT_OPTIONS.find(d => d.id === docId);
+                    return doc ? (
+                      <span key={docId} className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
+                        ✓ {doc.label}
+                      </span>
+                    ) : null;
+                  })}
+                  {docMeta.otherDocuments && (
+                    <span className="px-2.5 py-1 rounded-full bg-stone-100 text-stone-700 text-xs font-medium border border-stone-200">
+                      {docMeta.otherDocuments}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Observações */}
+          {(() => {
+            let notesText = selectedBird.notes || "";
+            try {
+              const parsed = JSON.parse(notesText);
+              if (parsed && parsed._docMeta) notesText = parsed.text || "";
+            } catch { /* plain text */ }
+            if (!notesText) return null;
+            return (
+              <div className="mt-5 pt-4 border-t border-stone-100">
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-1">Observações</p>
+                <p className="text-sm text-stone-700 whitespace-pre-wrap">{notesText}</p>
+              </div>
+            );
+          })()}
 
           <div className="mt-5 pt-4 border-t border-stone-100">
             <p className="text-[10px] text-stone-400">

@@ -362,8 +362,10 @@ export const plantel = mysqlTable("plantel", {
   speciesId: varchar("speciesId", { length: 128 }).notNull(),
   /** Nome comum da espécie (desnormalizado para facilitar listagem) */
   speciesName: varchar("speciesName", { length: 255 }).notNull(),
-  /** Número da anilha (identificação única da ave) */
+  /** Código da ave (prefixo + número, ex: RN001) */
   ringNumber: varchar("ringNumber", { length: 64 }),
+  /** Número da anilha física */
+  anilha: varchar("anilha", { length: 64 }),
   /** Sexo da ave */
   sex: mysqlEnum("sex", ["macho", "femea", "indefinido"]).default("indefinido").notNull(),
   /** Data de nascimento / eclosão */

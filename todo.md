@@ -323,3 +323,6 @@
 - [x] Plantel: remover campo peso do formulário
 - [x] Plantel: sugerir próximo número automaticamente ao selecionar espécie
 - [x] Plantel: vincular plantel às vendas — ao registrar venda, selecionar ave e atualizar status para "Vendido"
+- [x] Plantel: campo "Anilha" abaixo do código da ave
+- [x] Plantel: campo "Nota Fiscal" (Sim/Não) ao lado da anilha
+- [x] Plantel: se NF = Sim, abrir seletor de documentos (NF ticada por padrão, Certificado de Origem, Atestado de Saúde, GTA, Sexagem, Exame de Sanidade, campo Outros)
