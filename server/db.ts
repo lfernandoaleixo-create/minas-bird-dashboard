@@ -470,3 +470,23 @@ export async function deletePlantelBird(id: number) {
   await db.delete(plantel).where(eq(plantel.id, id));
   return { success: true };
 }
+
+export async function getNextBirdNumber(speciesId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Get all birds of this species and find the highest number
+  const birds = await db.select({ ringNumber: plantel.ringNumber })
+    .from(plantel)
+    .where(eq(plantel.speciesId, speciesId));
+  
+  let maxNum = 0;
+  for (const bird of birds) {
+    if (bird.ringNumber) {
+      // Extract numeric part (after the 2-letter prefix)
+      const numPart = bird.ringNumber.replace(/^[A-Z]+/, "");
+      const num = parseInt(numPart, 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  }
+  return { nextNumber: String(maxNum + 1).padStart(3, "0") };
+}

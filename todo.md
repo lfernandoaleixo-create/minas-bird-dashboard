@@ -319,3 +319,7 @@
 - [x] Nova aba Plantel: integrar na navegação principal (4ª aba)
 - [x] Plantel: código único da ave = prefixo 2 letras (espécie) + número (RN001, CA002, etc.) — preenchimento automático do prefixo ao selecionar espécie
 - [x] Plantel: seletor mostra apenas espécies do plantel (8 aves) + siglas corretas (RN, CA, GA, EC, MT, RG, KP, PC)
+- [x] Plantel: campo "Nome do Criatório/Dono" aparece para Doado e Troca também (não só Comprado)
+- [x] Plantel: remover campo peso do formulário
+- [x] Plantel: sugerir próximo número automaticamente ao selecionar espécie
+- [x] Plantel: vincular plantel às vendas — ao registrar venda, selecionar ave e atualizar status para "Vendido"

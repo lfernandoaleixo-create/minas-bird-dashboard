@@ -34,6 +34,7 @@ import {
   createPlantelBird,
   updatePlantelBird,
   deletePlantelBird,
+  getNextBirdNumber,
 } from "./db";
 import {
   getFoodCalendarFoods,
@@ -728,6 +729,13 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
         return updatePlantelBird(id, data);
+      }),
+
+    /** Get the next available number for a species */
+    nextNumber: publicProcedure
+      .input(z.object({ speciesId: z.string() }))
+      .query(async ({ input }) => {
+        return getNextBirdNumber(input.speciesId);
       }),
 
     /** Delete a bird */

@@ -79,7 +79,6 @@ interface BirdForm {
   originBreeder: string;
   status: BirdStatus;
   enclosure: string;
-  weightGrams: string;
   notes: string;
 }
 
@@ -94,7 +93,6 @@ const EMPTY_FORM: BirdForm = {
   originBreeder: "",
   status: "ativo",
   enclosure: "",
-  weightGrams: "",
   notes: "",
 };
 
@@ -175,17 +173,25 @@ export default function PlantelModule() {
       originBreeder: bird.originBreeder || "",
       status: bird.status as BirdStatus,
       enclosure: bird.enclosure || "",
-      weightGrams: bird.weightGrams ? String(bird.weightGrams) : "",
       notes: bird.notes || "",
     });
     setEditingId(bird.id);
     setView("form");
   };
 
-  const handleSelectSpecies = (sp: typeof SPECIES_LIST[0]) => {
+  const handleSelectSpecies = async (sp: typeof SPECIES_LIST[0]) => {
     setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName }));
     setShowSpeciesDropdown(false);
     setSpeciesSearch("");
+    // Auto-fill next available number for this species
+    try {
+      const result = await utils.plantel.nextNumber.fetch({ speciesId: sp.id });
+      if (result?.nextNumber) {
+        setForm(prev => ({ ...prev, birdNumber: result.nextNumber }));
+      }
+    } catch (e) {
+      // Silently fail - user can still type manually
+    }
   };
 
   const handleSubmit = async () => {
@@ -206,7 +212,7 @@ export default function PlantelModule() {
       originBreeder: form.originBreeder || null,
       status: form.status,
       enclosure: form.enclosure || null,
-      weightGrams: form.weightGrams ? parseInt(form.weightGrams) : null,
+      weightGrams: null,
       notes: form.notes || null,
     };
 
@@ -516,16 +522,17 @@ export default function PlantelModule() {
                 ))}
               </select>
             </div>
-            {form.origin === "comprado" && (
+            {(form.origin === "comprado" || form.origin === "doado" || form.origin === "troca") && (
               <div>
                 <label className="block text-xs font-semibold text-stone-600 mb-1.5">
-                  Nome do Criatório / Dono <span className="text-red-500">*</span>
+                  {form.origin === "comprado" ? "Nome do Criatório / Dono" : form.origin === "doado" ? "Quem doou" : "Trocado com"}
+                  {" "}<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={form.originBreeder}
                   onChange={e => setForm(prev => ({ ...prev, originBreeder: e.target.value }))}
-                  placeholder="Ex: Criatório Aves do Sul, João Silva..."
+                  placeholder={form.origin === "comprado" ? "Ex: Criatório Aves do Sul, João Silva..." : form.origin === "doado" ? "Ex: Criatório XYZ, Maria..." : "Ex: Criatório ABC..."}
                   className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
                 />
               </div>
@@ -558,19 +565,6 @@ export default function PlantelModule() {
             </div>
           </div>
 
-          {/* Weight */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-stone-600 mb-1.5">Peso (gramas)</label>
-              <input
-                type="number"
-                value={form.weightGrams}
-                onChange={e => setForm(prev => ({ ...prev, weightGrams: e.target.value }))}
-                placeholder="Ex: 350"
-                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              />
-            </div>
-          </div>
 
           {/* Notes */}
           <div>

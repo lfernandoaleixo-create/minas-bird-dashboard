@@ -108,6 +108,8 @@ interface InstallmentInput {
 
 interface PurchaseFormData {
   species: string;
+  birdId: number | null; // ID da ave no plantel (para vincular)
+  birdCode: string; // Código da ave (ex: RN001)
   quantity: number;
   valueCents: number | null;
   paymentMethod: PaymentMethod | "";
@@ -120,6 +122,8 @@ interface PurchaseFormData {
 
 const emptyPurchaseForm: PurchaseFormData = {
   species: "",
+  birdId: null,
+  birdCode: "",
   quantity: 1,
   valueCents: null,
   paymentMethod: "",
@@ -229,6 +233,11 @@ export default function ClientsModule() {
     { id: selectedClientId! },
     { enabled: selectedClientId !== null && view === "detail" }
   );
+  // Plantel query for bird selection in purchase form
+  const plantelQuery = trpc.plantel.list.useQuery();
+  const activeBirds = useMemo(() => {
+    return (plantelQuery.data || []).filter(b => b.status === "ativo");
+  }, [plantelQuery.data]);
 
   const utils = trpc.useUtils();
 
@@ -256,9 +265,18 @@ export default function ClientsModule() {
       if (view === "detail") setView("list");
     },
   });
+  const updateBirdStatusMut = trpc.plantel.update.useMutation({
+    onSuccess: () => {
+      utils.plantel.list.invalidate();
+    },
+  });
   const createPurchaseMutation = trpc.purchase.create.useMutation({
     onSuccess: () => {
       utils.cliente.getById.invalidate();
+      // Se uma ave do plantel foi vinculada, atualizar status para "vendido"
+      if (purchaseForm.birdId) {
+        updateBirdStatusMut.mutate({ id: purchaseForm.birdId, status: "vendido" });
+      }
       setShowPurchaseForm(false);
       setPurchaseForm(emptyPurchaseForm);
     },
@@ -342,7 +360,7 @@ export default function ClientsModule() {
   });
 
   const handlePurchaseSubmit = () => {
-    if (!purchaseForm.species.trim() || !selectedClientId) return;
+    if ((!purchaseForm.species.trim() && !purchaseForm.birdId) || !selectedClientId) return;
     const hasInstallments = (purchaseForm.paymentMethod === "cartao_credito" || purchaseForm.paymentMethod === "boleto") && purchaseForm.installmentsCount > 1;
     createPurchaseMutation.mutate({
       clientId: selectedClientId,
@@ -553,17 +571,33 @@ export default function ClientsModule() {
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Espécie *</label>
+                  <label className="text-xs font-medium text-stone-600 mb-1 block">Ave do Plantel *</label>
                   <select
-                    value={purchaseForm.species}
-                    onChange={(e) => setPurchaseForm((p) => ({ ...p, species: e.target.value }))}
+                    value={purchaseForm.birdId ? String(purchaseForm.birdId) : ""}
+                    onChange={(e) => {
+                      const birdId = e.target.value ? parseInt(e.target.value) : null;
+                      const bird = activeBirds.find(b => b.id === birdId);
+                      setPurchaseForm((p) => ({
+                        ...p,
+                        birdId,
+                        birdCode: bird?.ringNumber || "",
+                        species: bird?.speciesName || "",
+                      }));
+                    }}
                     className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
                   >
-                    <option value="">Selecione...</option>
-                    {SPECIES_LIST.map((sp) => (
-                      <option key={sp} value={sp}>{sp}</option>
+                    <option value="">Selecione a ave...</option>
+                    {activeBirds.map((bird) => (
+                      <option key={bird.id} value={String(bird.id)}>
+                        {bird.ringNumber ? `${bird.ringNumber} — ` : ""}{bird.speciesName}{bird.mutation ? ` (${bird.mutation})` : ""}
+                      </option>
                     ))}
                   </select>
+                  {purchaseForm.birdCode && (
+                    <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
+                      Código: {purchaseForm.birdCode} · Status será atualizado para "Vendido"
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-stone-600 mb-1 block">Quantidade</label>
