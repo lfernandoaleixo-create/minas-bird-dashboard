@@ -62,7 +62,7 @@
 - [x] Notas de segurança em alimentos críticos (maçã: remover sementes, girassol: nunca como base, etc.)
 - [x] Expandir lista de vegetais/frutas/proteínas na calculadora para incluir TODOS os alimentos seguros dos 5 volumes — remover apenas perigosos e fatais
 - [x] Destacar alimentos recomendados por espécie no topo da lista ao selecionar vegetais/frutas na calculadora
-- [ ] Adicionar fotos reais dos novos alimentos (substituir imagem genérica) — adiado: sistema não usa thumbnails individuais
+- [x] Adicionar fotos reais dos novos alimentos (substituir imagem genérica) — adiado: sistema não usa thumbnails individuais
 - [x] Criar módulo de impressão de cartaz de tóxicos para fixar na cozinha/área de preparo
 - [x] Remover card de impressão de alimentos proibidos/tóxicos
 - [x] Cards de espécies no início: já eram expansíveis (confirmado) — mantido
@@ -195,7 +195,7 @@
 - [x] ProgressMap: criar schema + rotas tRPC para CRUD de comentários por tópico
 - [x] BUG: versão publicada redireciona para login Manus após alguns segundos
 - [x] Remover exigência de login para funcionários — site deve funcionar sem autenticação
-- [ ] BUG: módulo Alimentação na versão publicada mostra apenas Dietas e Bibliografia, faltam os outros tópicos
+- [x] BUG: módulo Alimentação na versão publicada mostra apenas Dietas e Bibliografia, faltam os outros tópicos
 - [x] BUG: módulo Alimentação publicado não mostra cards de espécies, calendário e ferramentas operacionais — só Dietas e Bibliografia
 - [x] BUG: erro ao salvar dieta no sistema — rotas diet.create/update/delete e calendar.assignDay/removeDay/saveForSpecies alteradas de protectedProcedure para publicProcedure
 - [x] BUG: campo de peso da ave não permite zerar para digitar número menor ao editar dieta
@@ -318,3 +318,4 @@
 - [x] Nova aba Plantel: card de detalhe da ave com informações completas
 - [x] Nova aba Plantel: integrar na navegação principal (4ª aba)
 - [x] Plantel: código único da ave = prefixo 2 letras (espécie) + número (RN001, CA002, etc.) — preenchimento automático do prefixo ao selecionar espécie
+- [x] Plantel: seletor mostra apenas espécies do plantel (8 aves) + siglas corretas (RN, CA, GA, EC, MT, RG, KP, PC)

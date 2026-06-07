@@ -12,23 +12,22 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Species list for the selector
+// Apenas as espécies do plantel (inCurrentFlock: true)
 const SPECIES_LIST = species
   .filter(s => s.inCurrentFlock)
   .sort((a, b) => a.commonName.localeCompare(b.commonName));
 
-const ALL_SPECIES = species.sort((a, b) => a.commonName.localeCompare(b.commonName));
-
 // Código único da ave: prefixo 2 letras (espécie) + número
 // Cada código é único e nunca se repete no criatório
 const SPECIES_PREFIX: Record<string, string> = {
-  ringneck: "RN",
-  cabeca_ameixa: "CA",
-  alexandrino: "GA",
-  ecletus: "EC",
-  moustache: "MT",
-  regente: "RG",
-  king_parrot: "KP",
+  "psittacula-krameri": "RN",       // Ringneck
+  "psittacula-cyanocephala": "CA",  // Cabeça de Ameixa
+  "psittacula-eupatria": "GA",      // Grande Alexandre (Alexandrino)
+  "eclectus-roratus": "EC",         // Ecletus
+  "psittacula-alexandri": "MT",     // Moustache
+  "polytelis-anthopeplus": "RG",    // Regente
+  "alisterus-scapularis": "KP",     // King Parrot
+  "psittacus-erithacus": "PC",      // Papagaio do Congo
 };
 
 // Função para obter o prefixo a partir do speciesId
@@ -137,8 +136,8 @@ export default function PlantelModule() {
 
   // Species in the dropdown filtered by search
   const filteredSpeciesList = useMemo(() => {
-    if (!speciesSearch) return ALL_SPECIES;
-    return ALL_SPECIES.filter(s =>
+    if (!speciesSearch) return SPECIES_LIST;
+    return SPECIES_LIST.filter(s =>
       s.commonName.toLowerCase().includes(speciesSearch.toLowerCase()) ||
       s.scientificName.toLowerCase().includes(speciesSearch.toLowerCase())
     );
@@ -183,7 +182,7 @@ export default function PlantelModule() {
     setView("form");
   };
 
-  const handleSelectSpecies = (sp: typeof ALL_SPECIES[0]) => {
+  const handleSelectSpecies = (sp: typeof SPECIES_LIST[0]) => {
     setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName }));
     setShowSpeciesDropdown(false);
     setSpeciesSearch("");
@@ -644,7 +643,7 @@ export default function PlantelModule() {
             <div>
               <h3 className="text-xl font-bold text-stone-800">{selectedBird.speciesName}</h3>
               <p className="text-xs text-stone-500 italic">
-                {ALL_SPECIES.find(s => s.id === selectedBird.speciesId)?.scientificName || ""}
+                {SPECIES_LIST.find(s => s.id === selectedBird.speciesId)?.scientificName || ""}
               </p>
             </div>
             <span className={cn("ml-auto px-3 py-1 rounded-full text-xs font-semibold border", STATUS_COLORS[selectedBird.status as BirdStatus])}>
