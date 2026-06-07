@@ -334,3 +334,6 @@
 - [x] Clientes: filtro de aves disponíveis para venda por espécie e mutação ao registrar venda
 - [x] Plantel: mover genealogia para abaixo de Mutação/Cor, com opção "Do Plantel" (seletor) ou "Externo" (campo texto livre)
 - [x] Plantel: documentação independente da NF — permitir selecionar documentos mesmo sem NF
+- [x] Plantel: alerta de consanguinidade quando pai e mãe compartilham ancestrais comuns
+- [x] Plantel: exibir lista de filhos no detalhe da ave (aves que têm este pássaro como pai/mãe)
+- [x] Plantel: relatório de linhagem em PDF para documentação oficial do criatório

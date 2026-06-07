@@ -9,9 +9,11 @@ import { trpc } from "@/lib/trpc";
 import { species } from "@/data/feeding";
 import {
   Bird, Plus, Search, Edit2, Trash2, ArrowLeft, Save,
-  Filter, ChevronDown, X, Upload, FileText, ExternalLink
+  Filter, ChevronDown, X, Upload, FileText, ExternalLink,
+  AlertTriangle, Download, Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { generateLineagePdf } from "@/lib/lineagePdf";
 
 // Apenas as espécies do plantel (inCurrentFlock: true)
 const SPECIES_LIST = species
@@ -426,6 +428,60 @@ export default function PlantelModule() {
       utils.plantel.getDocuments.invalidate({ birdId: selectedBirdId });
     }
   };
+
+  // === CONSANGUINITY DETECTION ===
+  // Traverse ancestors up to 3 generations and check for shared ancestors
+  const getAncestors = (birdId: number | null, depth: number = 3): Set<number> => {
+    const ancestors = new Set<number>();
+    if (!birdId || depth === 0) return ancestors;
+    const bird = birds.find(b => b.id === birdId);
+    if (!bird) return ancestors;
+    const fId = (bird as any).fatherId;
+    const mId = (bird as any).motherId;
+    if (fId) {
+      ancestors.add(fId);
+      getAncestors(fId, depth - 1).forEach(a => ancestors.add(a));
+    }
+    if (mId) {
+      ancestors.add(mId);
+      getAncestors(mId, depth - 1).forEach(a => ancestors.add(a));
+    }
+    return ancestors;
+  };
+
+  // Check consanguinity between selected father and mother in the form
+  const consanguinityAlert = useMemo(() => {
+    if (form.fatherSource !== "plantel" || form.motherSource !== "plantel") return null;
+    if (!form.fatherId || !form.motherId) return null;
+    // Check if father and mother share any ancestors (up to 3 generations)
+    const fatherAncestors = getAncestors(form.fatherId, 3);
+    const motherAncestors = getAncestors(form.motherId, 3);
+    // Also check if one is ancestor of the other
+    if (fatherAncestors.has(form.motherId) || motherAncestors.has(form.fatherId)) {
+      return "Alerta: Pai e Mãe possuem relação direta de parentesco!";
+    }
+    // Check shared ancestors
+    const shared: number[] = [];
+    fatherAncestors.forEach(a => {
+      if (motherAncestors.has(a)) shared.push(a);
+    });
+    if (shared.length > 0) {
+      const names = shared.map(id => {
+        const b = birds.find(x => x.id === id);
+        return b ? (b.ringNumber || b.speciesName) : `#${id}`;
+      });
+      return `Alerta de Consanguinidade: Pai e Mãe compartilham ancestral(is) comum(ns): ${names.join(", ")}`;
+    }
+    return null;
+  }, [form.fatherId, form.motherId, form.fatherSource, form.motherSource, birds]);
+
+  // === CHILDREN LIST (for detail view) ===
+  const childrenOfBird = useMemo(() => {
+    if (!selectedBirdId) return [];
+    return birds.filter(b =>
+      (b as any).fatherId === selectedBirdId || (b as any).motherId === selectedBirdId
+    );
+  }, [birds, selectedBirdId]);
 
   // === RENDER: LIST VIEW ===
   if (view === "list") {
@@ -888,6 +944,14 @@ export default function PlantelModule() {
                   )}
                 </div>
               </div>
+
+              {/* Consanguinity Alert */}
+              {consanguinityAlert && (
+                <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
+                  <AlertTriangle size={16} className="text-red-600 mt-0.5 shrink-0" />
+                  <p className="text-xs font-semibold text-red-700">{consanguinityAlert}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1243,6 +1307,35 @@ export default function PlantelModule() {
             </div>
           </div>
 
+          {/* Filhos */}
+          {childrenOfBird.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-stone-100">
+              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-2">
+                <Users size={11} className="inline mr-1" />
+                Filhos ({childrenOfBird.length})
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {childrenOfBird.map(child => (
+                  <button
+                    key={child.id}
+                    onClick={() => { setSelectedBirdId(child.id); }}
+                    className="flex items-center gap-2 p-2.5 rounded-lg bg-stone-50 border border-stone-100 hover:bg-stone-100 transition-colors text-left"
+                  >
+                    <Bird size={14} className="text-emerald-600" />
+                    <div>
+                      <p className="text-xs font-semibold text-stone-800">
+                        {child.ringNumber || "?"} {child.mutation ? `— ${child.mutation}` : ""}
+                      </p>
+                      <p className="text-[10px] text-stone-500">
+                        {SEX_LABELS[child.sex as BirdSex]} · {STATUS_LABELS[child.status as BirdStatus]}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Observações */}
           {(() => {
             let notesText = selectedBird.notes || "";
@@ -1259,10 +1352,18 @@ export default function PlantelModule() {
             );
           })()}
 
-          <div className="mt-5 pt-4 border-t border-stone-100">
+          {/* Footer: dates + PDF button */}
+          <div className="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between">
             <p className="text-[10px] text-stone-400">
               Cadastrado em {new Date(selectedBird.createdAt).toLocaleDateString("pt-BR")} · Atualizado em {new Date(selectedBird.updatedAt).toLocaleDateString("pt-BR")}
             </p>
+            <button
+              onClick={() => generateLineagePdf(selectedBird as any, birds as any)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 transition-all"
+            >
+              <Download size={13} />
+              Relatório de Linhagem
+            </button>
           </div>
         </div>
 
