@@ -69,6 +69,8 @@ const ORIGIN_LABELS: Record<BirdOrigin, string> = {
   troca: "Troca",
 };
 
+type ParentSource = "plantel" | "externo";
+
 interface BirdForm {
   speciesId: string;
   speciesName: string;
@@ -76,7 +78,7 @@ interface BirdForm {
   anilha: string; // Número da anilha física
   hasInvoice: boolean; // Nota Fiscal Sim/Não
   invoiceNumber: string; // Número da NF
-  documents: string[]; // Documentos que acompanham a NF
+  documents: string[]; // Documentos que acompanham
   otherDocuments: string; // Campo livre para outros documentos
   sex: BirdSex;
   birthDate: string;
@@ -87,7 +89,11 @@ interface BirdForm {
   enclosure: string;
   notes: string;
   fatherId: number | null;
+  fatherSource: ParentSource;
+  fatherNote: string; // Observação para pai externo
   motherId: number | null;
+  motherSource: ParentSource;
+  motherNote: string; // Observação para mãe externa
 }
 
 const DOCUMENT_OPTIONS = [
@@ -117,7 +123,11 @@ const EMPTY_FORM: BirdForm = {
   enclosure: "",
   notes: "",
   fatherId: null,
+  fatherSource: "plantel",
+  fatherNote: "",
   motherId: null,
+  motherSource: "plantel",
+  motherNote: "",
 };
 
 type View = "list" | "form" | "detail";
@@ -279,14 +289,18 @@ export default function PlantelModule() {
         return bird.notes || "";
       })(),
       fatherId: (bird as any).fatherId || null,
+      fatherSource: (bird as any).fatherId ? "plantel" : ((() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.fatherNote ? "externo" : "plantel"; } catch { return "plantel"; } })()),
+      fatherNote: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.fatherNote || ""; } catch { return ""; } })(),
       motherId: (bird as any).motherId || null,
+      motherSource: (bird as any).motherId ? "plantel" : ((() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherNote ? "externo" : "plantel"; } catch { return "plantel"; } })()),
+      motherNote: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherNote || ""; } catch { return ""; } })(),
     });
     setEditingId(bird.id);
     setView("form");
   };
 
   const handleSelectSpecies = async (sp: typeof SPECIES_LIST[0]) => {
-    setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName, fatherId: null, motherId: null }));
+    setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName, fatherId: null, fatherNote: "", fatherSource: "plantel", motherId: null, motherNote: "", motherSource: "plantel" }));
     setShowSpeciesDropdown(false);
     setSpeciesSearch("");
     // Auto-fill next available number for this species
@@ -307,14 +321,17 @@ export default function PlantelModule() {
     const prefix = getSpeciesPrefix(form.speciesId);
     const fullCode = form.birdNumber ? `${prefix}${form.birdNumber}` : null;
 
-    // Incluir metadados de documentos no campo notes como JSON
+    // Incluir metadados de documentos e genealogia no campo notes como JSON
+    const hasDocMeta = form.hasInvoice || form.documents.length > 0 || form.otherDocuments || form.fatherNote || form.motherNote;
     let notesValue = form.notes || null;
-    if (form.hasInvoice) {
+    if (hasDocMeta) {
       const docMeta = {
         _docMeta: {
-          hasInvoice: true,
+          hasInvoice: form.hasInvoice,
           documents: form.documents,
           otherDocuments: form.otherDocuments,
+          fatherNote: form.fatherSource === "externo" ? form.fatherNote : "",
+          motherNote: form.motherSource === "externo" ? form.motherNote : "",
         },
         text: form.notes || "",
       };
@@ -335,8 +352,8 @@ export default function PlantelModule() {
       weightGrams: null,
       notes: notesValue,
       anilha: form.anilha || null,
-      fatherId: form.fatherId || null,
-      motherId: form.motherId || null,
+      fatherId: form.fatherSource === "plantel" ? (form.fatherId || null) : null,
+      motherId: form.motherSource === "plantel" ? (form.motherId || null) : null,
       invoiceNumber: form.hasInvoice && form.invoiceNumber ? form.invoiceNumber : null,
     };
 
@@ -679,7 +696,7 @@ export default function PlantelModule() {
                     type="radio"
                     name="hasInvoice"
                     checked={form.hasInvoice === true}
-                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: true, documents: prev.documents.length === 0 ? ["nota_fiscal"] : prev.documents }))}
+                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: true }))}
                     className="w-4 h-4 text-emerald-600 focus:ring-emerald-200"
                   />
                   <span className="text-sm text-stone-700 font-medium">Sim</span>
@@ -689,7 +706,7 @@ export default function PlantelModule() {
                     type="radio"
                     name="hasInvoice"
                     checked={form.hasInvoice === false}
-                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: false, documents: [], otherDocuments: "", invoiceNumber: "" }))}
+                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: false, invoiceNumber: "" }))}
                     className="w-4 h-4 text-emerald-600 focus:ring-emerald-200"
                   />
                   <span className="text-sm text-stone-700 font-medium">Não</span>
@@ -698,91 +715,53 @@ export default function PlantelModule() {
             </div>
           </div>
 
-          {/* Documentos que acompanham a NF */}
+          {/* Número da NF (só aparece quando NF = Sim) */}
           {form.hasInvoice && (
-            <div className="p-4 rounded-lg border border-emerald-100 bg-emerald-50/50">
-              {/* Número da NF */}
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-stone-600 mb-1.5">Número da Nota Fiscal</label>
-                <input
-                  type="text"
-                  value={form.invoiceNumber}
-                  onChange={e => setForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                  placeholder="Ex: 001234, NF-e 35..."
-                  className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
-                />
-              </div>
-              <label className="block text-xs font-semibold text-stone-600 mb-3">Documentos que acompanham</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {DOCUMENT_OPTIONS.map(doc => (
-                  <label key={doc.id} className="flex items-center gap-2.5 cursor-pointer py-1">
-                    <input
-                      type="checkbox"
-                      checked={form.documents.includes(doc.id)}
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setForm(prev => ({ ...prev, documents: [...prev.documents, doc.id] }));
-                        } else {
-                          setForm(prev => ({ ...prev, documents: prev.documents.filter(d => d !== doc.id) }));
-                        }
-                      }}
-                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-200"
-                    />
-                    <span className="text-sm text-stone-700">{doc.label}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="mt-3">
-                <label className="block text-xs font-semibold text-stone-600 mb-1.5">Outros documentos</label>
-                <input
-                  type="text"
-                  value={form.otherDocuments}
-                  onChange={e => setForm(prev => ({ ...prev, otherDocuments: e.target.value }))}
-                  placeholder="Descreva outros documentos..."
-                  className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-stone-600 mb-1.5">Número da Nota Fiscal</label>
+              <input
+                type="text"
+                value={form.invoiceNumber}
+                onChange={e => setForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                placeholder="Ex: 001234, NF-e 35..."
+                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              />
             </div>
           )}
 
-          {/* Árvore Genealógica (Pai / Mãe) */}
-          {form.speciesId && (
-            <div className="p-4 rounded-lg border border-stone-200 bg-stone-50/50">
-              <label className="block text-xs font-semibold text-stone-600 mb-3">Árvore Genealógica</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] text-stone-500 mb-1">Pai (Macho)</label>
-                  <select
-                    value={form.fatherId ?? ""}
-                    onChange={e => setForm(prev => ({ ...prev, fatherId: e.target.value ? Number(e.target.value) : null }))}
-                    className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
-                  >
-                    <option value="">— Não informado —</option>
-                    {availableFathers.map(b => (
-                      <option key={b.id} value={b.id}>
-                        {b.ringNumber || "?"} — {b.mutation || b.speciesName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] text-stone-500 mb-1">Mãe (Fêmea)</label>
-                  <select
-                    value={form.motherId ?? ""}
-                    onChange={e => setForm(prev => ({ ...prev, motherId: e.target.value ? Number(e.target.value) : null }))}
-                    className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
-                  >
-                    <option value="">— Não informado —</option>
-                    {availableMothers.map(b => (
-                      <option key={b.id} value={b.id}>
-                        {b.ringNumber || "?"} — {b.mutation || b.speciesName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+          {/* Documentação (independente da NF — sempre visível) */}
+          <div className="p-4 rounded-lg border border-stone-200 bg-stone-50/50">
+            <label className="block text-xs font-semibold text-stone-600 mb-3">Documentação</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {DOCUMENT_OPTIONS.map(doc => (
+                <label key={doc.id} className="flex items-center gap-2.5 cursor-pointer py-1">
+                  <input
+                    type="checkbox"
+                    checked={form.documents.includes(doc.id)}
+                    onChange={e => {
+                      if (e.target.checked) {
+                        setForm(prev => ({ ...prev, documents: [...prev.documents, doc.id] }));
+                      } else {
+                        setForm(prev => ({ ...prev, documents: prev.documents.filter(d => d !== doc.id) }));
+                      }
+                    }}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-200"
+                  />
+                  <span className="text-sm text-stone-700">{doc.label}</span>
+                </label>
+              ))}
             </div>
-          )}
+            <div className="mt-3">
+              <label className="block text-xs font-semibold text-stone-600 mb-1.5">Outros documentos</label>
+              <input
+                type="text"
+                value={form.otherDocuments}
+                onChange={e => setForm(prev => ({ ...prev, otherDocuments: e.target.value }))}
+                placeholder="Descreva outros documentos..."
+                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+              />
+            </div>
+          </div>
 
           {/* Row: Birth date + Mutation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -806,6 +785,111 @@ export default function PlantelModule() {
               />
             </div>
           </div>
+
+          {/* Árvore Genealógica (abaixo de Mutação) */}
+          {form.speciesId && (
+            <div className="p-4 rounded-lg border border-stone-200 bg-stone-50/50">
+              <label className="block text-xs font-semibold text-stone-600 mb-3">Árvore Genealógica</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* PAI */}
+                <div>
+                  <label className="block text-[11px] text-stone-500 mb-1">Pai (Macho)</label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="fatherSource"
+                        checked={form.fatherSource === "plantel"}
+                        onChange={() => setForm(prev => ({ ...prev, fatherSource: "plantel", fatherNote: "" }))}
+                        className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-200"
+                      />
+                      <span className="text-[11px] text-stone-600">Do Plantel</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="fatherSource"
+                        checked={form.fatherSource === "externo"}
+                        onChange={() => setForm(prev => ({ ...prev, fatherSource: "externo", fatherId: null }))}
+                        className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-200"
+                      />
+                      <span className="text-[11px] text-stone-600">Externo</span>
+                    </label>
+                  </div>
+                  {form.fatherSource === "plantel" ? (
+                    <select
+                      value={form.fatherId ?? ""}
+                      onChange={e => setForm(prev => ({ ...prev, fatherId: e.target.value ? Number(e.target.value) : null }))}
+                      className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                    >
+                      <option value="">— Não informado —</option>
+                      {availableFathers.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.ringNumber || "?"} — {b.mutation || b.speciesName}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={form.fatherNote}
+                      onChange={e => setForm(prev => ({ ...prev, fatherNote: e.target.value }))}
+                      placeholder="Ex: Macho do Criatório XYZ, anilha 123..."
+                      className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                    />
+                  )}
+                </div>
+                {/* MÃE */}
+                <div>
+                  <label className="block text-[11px] text-stone-500 mb-1">Mãe (Fêmea)</label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="motherSource"
+                        checked={form.motherSource === "plantel"}
+                        onChange={() => setForm(prev => ({ ...prev, motherSource: "plantel", motherNote: "" }))}
+                        className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-200"
+                      />
+                      <span className="text-[11px] text-stone-600">Do Plantel</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="motherSource"
+                        checked={form.motherSource === "externo"}
+                        onChange={() => setForm(prev => ({ ...prev, motherSource: "externo", motherId: null }))}
+                        className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-200"
+                      />
+                      <span className="text-[11px] text-stone-600">Externo</span>
+                    </label>
+                  </div>
+                  {form.motherSource === "plantel" ? (
+                    <select
+                      value={form.motherId ?? ""}
+                      onChange={e => setForm(prev => ({ ...prev, motherId: e.target.value ? Number(e.target.value) : null }))}
+                      className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                    >
+                      <option value="">— Não informado —</option>
+                      {availableMothers.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.ringNumber || "?"} — {b.mutation || b.speciesName}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={form.motherNote}
+                      onChange={e => setForm(prev => ({ ...prev, motherNote: e.target.value }))}
+                      placeholder="Ex: Fêmea do Criatório ABC, anilha 456..."
+                      className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Row: Origin + Origin Breeder */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -990,35 +1074,65 @@ export default function PlantelModule() {
           </div>
 
           {/* Árvore Genealógica */}
-          {(fatherBird || motherBird) && (
-            <div className="mt-5 pt-4 border-t border-stone-100">
-              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-2">Árvore Genealógica</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {fatherBird && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 border border-blue-100">
-                    <Bird size={14} className="text-blue-600" />
-                    <div>
-                      <p className="text-[10px] text-blue-500 font-medium">Pai</p>
-                      <p className="text-xs font-semibold text-blue-800">
-                        {fatherBird.ringNumber || "?"} {fatherBird.mutation ? `— ${fatherBird.mutation}` : ""}
-                      </p>
+          {(() => {
+            let fatherNote = "";
+            let motherNote = "";
+            try {
+              const parsed = selectedBird.notes ? JSON.parse(selectedBird.notes) : null;
+              if (parsed && parsed._docMeta) {
+                fatherNote = parsed._docMeta.fatherNote || "";
+                motherNote = parsed._docMeta.motherNote || "";
+              }
+            } catch { /* plain text */ }
+            if (!fatherBird && !motherBird && !fatherNote && !motherNote) return null;
+            return (
+              <div className="mt-5 pt-4 border-t border-stone-100">
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-2">Árvore Genealógica</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {fatherBird && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 border border-blue-100">
+                      <Bird size={14} className="text-blue-600" />
+                      <div>
+                        <p className="text-[10px] text-blue-500 font-medium">Pai (Plantel)</p>
+                        <p className="text-xs font-semibold text-blue-800">
+                          {fatherBird.ringNumber || "?"} {fatherBird.mutation ? `— ${fatherBird.mutation}` : ""}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {motherBird && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-pink-50 border border-pink-100">
-                    <Bird size={14} className="text-pink-600" />
-                    <div>
-                      <p className="text-[10px] text-pink-500 font-medium">Mãe</p>
-                      <p className="text-xs font-semibold text-pink-800">
-                        {motherBird.ringNumber || "?"} {motherBird.mutation ? `— ${motherBird.mutation}` : ""}
-                      </p>
+                  )}
+                  {!fatherBird && fatherNote && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 border border-blue-100">
+                      <Bird size={14} className="text-blue-600" />
+                      <div>
+                        <p className="text-[10px] text-blue-500 font-medium">Pai (Externo)</p>
+                        <p className="text-xs font-semibold text-blue-800">{fatherNote}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {motherBird && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-pink-50 border border-pink-100">
+                      <Bird size={14} className="text-pink-600" />
+                      <div>
+                        <p className="text-[10px] text-pink-500 font-medium">Mãe (Plantel)</p>
+                        <p className="text-xs font-semibold text-pink-800">
+                          {motherBird.ringNumber || "?"} {motherBird.mutation ? `— ${motherBird.mutation}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {!motherBird && motherNote && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-pink-50 border border-pink-100">
+                      <Bird size={14} className="text-pink-600" />
+                      <div>
+                        <p className="text-[10px] text-pink-500 font-medium">Mãe (Externa)</p>
+                        <p className="text-xs font-semibold text-pink-800">{motherNote}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Nota Fiscal e Documentos */}
           {(() => {

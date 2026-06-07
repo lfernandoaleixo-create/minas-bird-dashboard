@@ -332,3 +332,5 @@
 - [x] Plantel: upload de documentos — anexar foto/scan da NF e documentos no cadastro da ave (S3)
 - [x] Plantel: filtro por documentação na listagem (com NF / sem NF)
 - [x] Clientes: filtro de aves disponíveis para venda por espécie e mutação ao registrar venda
+- [x] Plantel: mover genealogia para abaixo de Mutação/Cor, com opção "Do Plantel" (seletor) ou "Externo" (campo texto livre)
+- [x] Plantel: documentação independente da NF — permitir selecionar documentos mesmo sem NF
