@@ -458,6 +458,19 @@ export const appRouter = router({
           }));
           createdInstallments = await createInstallments(installmentData);
         }
+        // Auto-link: create a Caixa entry for this sale
+        if (purchase && input.valueCents && input.valueCents > 0) {
+          await createFinancialTransaction({
+            type: "venda",
+            category: "Venda de Ave",
+            description: `Venda: ${input.species} (${input.quantity}x) — Cliente #${input.clientId}`,
+            valueCents: input.valueCents,
+            transactionDate: new Date(input.saleDate),
+            paymentMethod: input.paymentMethod ?? null,
+            reference: input.invoiceNumber ? `NF ${input.invoiceNumber}` : `Venda #${purchase.id}`,
+            notes: input.notes ?? null,
+          });
+        }
         return { success: true, purchase: purchase ? { ...purchase, installments: createdInstallments } : null };
       }),
 

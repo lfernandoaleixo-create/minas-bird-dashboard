@@ -9,9 +9,11 @@ import { trpc } from "@/lib/trpc";
 import {
   DollarSign, Plus, Search, Edit2, Trash2, ArrowLeft, Save,
   Filter, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle,
-  Calendar, X
+  Calendar, X, BarChart3, Download, FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { generateFinancialPdf } from "@/lib/financialPdf";
 
 // Types
 type TransactionType = "aporte" | "venda" | "despesa";
@@ -177,6 +179,34 @@ export default function CaixaModule() {
     return Array.from(cats).sort();
   }, [transactions]);
 
+  // Monthly chart data (last 12 months)
+  const monthlyData = useMemo(() => {
+    const now = new Date();
+    const months: { key: string; label: string; entradas: number; saidas: number; saldo: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
+      months.push({ key, label, entradas: 0, saidas: 0, saldo: 0 });
+    }
+    for (const t of transactions) {
+      const tDate = new Date(t.transactionDate);
+      const key = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, "0")}`;
+      const month = months.find(m => m.key === key);
+      if (month) {
+        if (t.type === "aporte" || t.type === "venda") {
+          month.entradas += t.valueCents;
+        } else {
+          month.saidas += t.valueCents;
+        }
+      }
+    }
+    months.forEach(m => { m.saldo = m.entradas - m.saidas; });
+    return months;
+  }, [transactions]);
+
+  const [showChart, setShowChart] = useState(true);
+
   // Handlers
   const handleNewTransaction = (type?: TransactionType) => {
     setForm({ ...EMPTY_FORM, type: type || "despesa" });
@@ -279,6 +309,53 @@ export default function CaixaModule() {
               {formatCurrency(stats.saldo)}
             </p>
           </div>
+        </div>
+
+        {/* Monthly Evolution Chart */}
+        <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 size={14} className="text-stone-500" />
+              <p className="text-xs font-semibold text-stone-700">Evolução Mensal (12 meses)</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => generateFinancialPdf(transactions)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 text-[11px] font-medium hover:bg-stone-50 transition-all"
+              >
+                <Download size={12} />
+                Relatório PDF
+              </button>
+              <button
+                onClick={() => setShowChart(!showChart)}
+                className="text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
+              >
+                {showChart ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
+          </div>
+          {showChart && (
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#78716c" }} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "#78716c" }}
+                    tickFormatter={(v: number) => `R$${(v / 100).toLocaleString("pt-BR", { notation: "compact" } as any)}`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [(value / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })]}
+                    labelStyle={{ fontSize: 11, fontWeight: 600 }}
+                    contentStyle={{ borderRadius: 8, border: "1px solid #e7e5e4", fontSize: 11 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="entradas" name="Entradas" fill="#059669" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="saidas" name="Saídas" fill="#dc2626" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* Quick Action Buttons */}

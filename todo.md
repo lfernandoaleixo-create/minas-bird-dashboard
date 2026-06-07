@@ -344,3 +344,6 @@
 - [x] Nova aba Caixa: listagem de transações com filtros (tipo, período, categoria)
 - [x] Nova aba Caixa: integrar na navegação principal (5ª aba)
 - [x] Nova aba Caixa: testes automatizados
+- [x] Caixa: gráfico mensal de evolução financeira (entradas vs saídas por mês)
+- [x] Caixa: vincular automaticamente vendas do módulo Clientes ao Caixa como receita
+- [x] Caixa: relatório financeiro em PDF com resumo mensal para controle contábil
