@@ -347,3 +347,6 @@
 - [x] Caixa: gráfico mensal de evolução financeira (entradas vs saídas por mês)
 - [x] Caixa: vincular automaticamente vendas do módulo Clientes ao Caixa como receita
 - [x] Caixa: relatório financeiro em PDF com resumo mensal para controle contábil
+- [x] Caixa: remover aporte fantasma de R$12.500 do banco de dados (eram vendas auto-vinculadas, limpamos tudo)
+- [x] Caixa: gráfico mostrar apenas mês atual com evolução por dias (não 12 meses)
+- [x] Nova aba Planta: exibir planta baixa do criatório com zoom/pan interativo

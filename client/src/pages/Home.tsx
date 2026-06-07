@@ -9,15 +9,16 @@ import ProgressMap from "@/components/ProgressMap";
 import ClientsModule from "@/components/ClientsModule";
 import PlantelModule from "@/components/PlantelModule";
 import CaixaModule from "@/components/CaixaModule";
+import PlantaModule from "@/components/PlantaModule";
 import { useState, useRef, useEffect } from "react";
-import { Utensils, FlaskConical, Users, LayoutGrid, Bird, DollarSign } from "lucide-react";
+import { Utensils, FlaskConical, Users, LayoutGrid, Bird, DollarSign, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Brand assets
 const MB_SYMBOL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663487476806/GbyPqTQ4WPAeZLRC6VPuta/mb-symbol_eba1d647.png";
 const AVIARY_BG = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663487476806/hxUogTsXUMSRebXV.png";
 
-type TabId = "alimentacao" | "plantel" | "clientes" | "caixa" | "mapa";
+type TabId = "alimentacao" | "plantel" | "clientes" | "caixa" | "planta" | "mapa";
 type SubTab = "original" | "teste";
 
 interface Tab {
@@ -32,6 +33,7 @@ const tabs: Tab[] = [
   { id: "plantel", label: "Plantel", shortLabel: "Plantel", icon: Bird },
   { id: "clientes", label: "Clientes", shortLabel: "Clientes", icon: Users },
   { id: "caixa", label: "Caixa", shortLabel: "Caixa", icon: DollarSign },
+  { id: "planta", label: "Planta", shortLabel: "Planta", icon: Map },
   { id: "mapa", label: "Mapa de Progresso", shortLabel: "Progresso", icon: LayoutGrid },
 ];
 
@@ -152,6 +154,7 @@ export default function Home() {
           {activeTab === "plantel" && <PlantelModule />}
           {activeTab === "clientes" && <ClientsModule />}
           {activeTab === "caixa" && <CaixaModule />}
+          {activeTab === "planta" && <PlantaModule />}
           {activeTab === "mapa" && <ProgressMap onNavigate={() => {}} />}
         </div>
       </main>

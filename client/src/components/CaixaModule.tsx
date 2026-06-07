@@ -179,31 +179,36 @@ export default function CaixaModule() {
     return Array.from(cats).sort();
   }, [transactions]);
 
-  // Monthly chart data (last 12 months)
-  const monthlyData = useMemo(() => {
+  // Daily chart data for current month
+  const dailyData = useMemo(() => {
     const now = new Date();
-    const months: { key: string; label: string; entradas: number; saidas: number; saldo: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const label = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
-      months.push({ key, label, entradas: 0, saidas: 0, saldo: 0 });
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days: { day: number; label: string; entradas: number; saidas: number }[] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push({ day: d, label: String(d), entradas: 0, saidas: 0 });
     }
     for (const t of transactions) {
       const tDate = new Date(t.transactionDate);
-      const key = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, "0")}`;
-      const month = months.find(m => m.key === key);
-      if (month) {
-        if (t.type === "aporte" || t.type === "venda") {
-          month.entradas += t.valueCents;
-        } else {
-          month.saidas += t.valueCents;
+      if (tDate.getFullYear() === year && tDate.getMonth() === month) {
+        const dayIdx = tDate.getDate() - 1;
+        if (dayIdx >= 0 && dayIdx < days.length) {
+          if (t.type === "aporte" || t.type === "venda") {
+            days[dayIdx].entradas += t.valueCents;
+          } else {
+            days[dayIdx].saidas += t.valueCents;
+          }
         }
       }
     }
-    months.forEach(m => { m.saldo = m.entradas - m.saidas; });
-    return months;
+    return days;
   }, [transactions]);
+
+  const currentMonthLabel = useMemo(() => {
+    const now = new Date();
+    return now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  }, []);
 
   const [showChart, setShowChart] = useState(true);
 
@@ -311,12 +316,14 @@ export default function CaixaModule() {
           </div>
         </div>
 
-        {/* Monthly Evolution Chart */}
+        {/* Daily Evolution Chart — Current Month */}
         <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <BarChart3 size={14} className="text-stone-500" />
-              <p className="text-xs font-semibold text-stone-700">Evolução Mensal (12 meses)</p>
+              <p className="text-xs font-semibold text-stone-700">
+                Evolução Diária — {currentMonthLabel.charAt(0).toUpperCase() + currentMonthLabel.slice(1)}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -337,21 +344,31 @@ export default function CaixaModule() {
           {showChart && (
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#78716c" }} />
+                <BarChart data={dailyData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 9, fill: "#78716c" }}
+                    interval={0}
+                    tickFormatter={(v: string) => {
+                      const d = parseInt(v);
+                      return d % 5 === 1 || d === 1 ? v : "";
+                    }}
+                  />
                   <YAxis
-                    tick={{ fontSize: 10, fill: "#78716c" }}
-                    tickFormatter={(v: number) => `R$${(v / 100).toLocaleString("pt-BR", { notation: "compact" } as any)}`}
+                    tick={{ fontSize: 9, fill: "#78716c" }}
+                    tickFormatter={(v: number) => v > 0 ? `R$${(v / 100).toLocaleString("pt-BR", { notation: "compact" } as any)}` : ""}
+                    width={50}
                   />
                   <Tooltip
                     formatter={(value: number) => [(value / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })]}
+                    labelFormatter={(label: string) => `Dia ${label}`}
                     labelStyle={{ fontSize: 11, fontWeight: 600 }}
                     contentStyle={{ borderRadius: 8, border: "1px solid #e7e5e4", fontSize: 11 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="entradas" name="Entradas" fill="#059669" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="saidas" name="Saídas" fill="#dc2626" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="entradas" name="Entradas" fill="#059669" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="saidas" name="Saídas" fill="#dc2626" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
