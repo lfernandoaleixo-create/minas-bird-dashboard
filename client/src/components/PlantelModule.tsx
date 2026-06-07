@@ -2,13 +2,14 @@
  * PlantelModule — Cadastro completo das aves do criatório
  * Listagem com filtros, formulário de cadastro, card de detalhe
  * Seleção de espécie ao entrar no card
+ * Inclui: árvore genealógica (pai/mãe), número da NF, upload de documentos, filtro por documentação
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { species } from "@/data/feeding";
 import {
   Bird, Plus, Search, Edit2, Trash2, ArrowLeft, Save,
-  Filter, ChevronDown, X
+  Filter, ChevronDown, X, Upload, FileText, ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +75,7 @@ interface BirdForm {
   birdNumber: string; // Número da ave (sem prefixo)
   anilha: string; // Número da anilha física
   hasInvoice: boolean; // Nota Fiscal Sim/Não
+  invoiceNumber: string; // Número da NF
   documents: string[]; // Documentos que acompanham a NF
   otherDocuments: string; // Campo livre para outros documentos
   sex: BirdSex;
@@ -84,6 +86,8 @@ interface BirdForm {
   status: BirdStatus;
   enclosure: string;
   notes: string;
+  fatherId: number | null;
+  motherId: number | null;
 }
 
 const DOCUMENT_OPTIONS = [
@@ -101,6 +105,7 @@ const EMPTY_FORM: BirdForm = {
   birdNumber: "",
   anilha: "",
   hasInvoice: false,
+  invoiceNumber: "",
   documents: [],
   otherDocuments: "",
   sex: "indefinido",
@@ -111,9 +116,12 @@ const EMPTY_FORM: BirdForm = {
   status: "ativo",
   enclosure: "",
   notes: "",
+  fatherId: null,
+  motherId: null,
 };
 
 type View = "list" | "form" | "detail";
+type DocFilter = "todos" | "com_nf" | "sem_nf";
 
 export default function PlantelModule() {
   const [view, setView] = useState<View>("list");
@@ -123,16 +131,28 @@ export default function PlantelModule() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<BirdStatus | "todos">("todos");
   const [filterSpecies, setFilterSpecies] = useState<string>("todos");
+  const [filterDoc, setFilterDoc] = useState<DocFilter>("todos");
   const [speciesSearch, setSpeciesSearch] = useState("");
   const [showSpeciesDropdown, setShowSpeciesDropdown] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadDocType, setUploadDocType] = useState("outro");
 
   // tRPC
   const { data: birds = [], isLoading } = trpc.plantel.list.useQuery();
   const createMut = trpc.plantel.create.useMutation();
   const updateMut = trpc.plantel.update.useMutation();
   const deleteMut = trpc.plantel.delete.useMutation();
+  const uploadDocMut = trpc.plantel.uploadDocument.useMutation();
+  const deleteDocMut = trpc.plantel.deleteDocument.useMutation();
   const utils = trpc.useUtils();
+
+  // Documents for selected bird
+  const { data: birdDocs = [] } = trpc.plantel.getDocuments.useQuery(
+    { birdId: selectedBirdId! },
+    { enabled: !!selectedBirdId && view === "detail" }
+  );
 
   // Filtered birds
   const filteredBirds = useMemo(() => {
@@ -142,12 +162,35 @@ export default function PlantelModule() {
         b.speciesName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (b.ringNumber && b.ringNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (b.mutation && b.mutation.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (b.enclosure && b.enclosure.toLowerCase().includes(searchTerm.toLowerCase()));
+        (b.enclosure && b.enclosure.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        ((b as any).anilha && (b as any).anilha.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesStatus = filterStatus === "todos" || b.status === filterStatus;
       const matchesSpecies = filterSpecies === "todos" || b.speciesId === filterSpecies;
-      return matchesSearch && matchesStatus && matchesSpecies;
+      // Documentation filter
+      let matchesDoc = true;
+      if (filterDoc === "com_nf") {
+        // Has NF: either invoiceNumber is set, or notes has _docMeta.hasInvoice
+        let hasNF = !!(b as any).invoiceNumber;
+        if (!hasNF) {
+          try {
+            const parsed = b.notes ? JSON.parse(b.notes) : null;
+            if (parsed && parsed._docMeta && parsed._docMeta.hasInvoice) hasNF = true;
+          } catch { /* plain text */ }
+        }
+        matchesDoc = hasNF;
+      } else if (filterDoc === "sem_nf") {
+        let hasNF = !!(b as any).invoiceNumber;
+        if (!hasNF) {
+          try {
+            const parsed = b.notes ? JSON.parse(b.notes) : null;
+            if (parsed && parsed._docMeta && parsed._docMeta.hasInvoice) hasNF = true;
+          } catch { /* plain text */ }
+        }
+        matchesDoc = !hasNF;
+      }
+      return matchesSearch && matchesStatus && matchesSpecies && matchesDoc;
     });
-  }, [birds, searchTerm, filterStatus, filterSpecies]);
+  }, [birds, searchTerm, filterStatus, filterSpecies, filterDoc]);
 
   // Species in the dropdown filtered by search
   const filteredSpeciesList = useMemo(() => {
@@ -157,6 +200,25 @@ export default function PlantelModule() {
       s.scientificName.toLowerCase().includes(speciesSearch.toLowerCase())
     );
   }, [speciesSearch]);
+
+  // Available parents for genealogy (same species, filtered by sex)
+  const availableFathers = useMemo(() => {
+    if (!form.speciesId) return [];
+    return birds.filter(b =>
+      b.speciesId === form.speciesId &&
+      b.sex === "macho" &&
+      b.id !== editingId
+    );
+  }, [birds, form.speciesId, editingId]);
+
+  const availableMothers = useMemo(() => {
+    if (!form.speciesId) return [];
+    return birds.filter(b =>
+      b.speciesId === form.speciesId &&
+      b.sex === "femea" &&
+      b.id !== editingId
+    );
+  }, [birds, form.speciesId, editingId]);
 
   // Stats
   const stats = useMemo(() => {
@@ -191,12 +253,15 @@ export default function PlantelModule() {
         hasNF = meta._docMeta.hasInvoice || false;
       }
     } catch { /* notes is plain text */ }
+    // If invoiceNumber is set on the bird record, it has NF
+    if ((bird as any).invoiceNumber) hasNF = true;
     setForm({
       speciesId: bird.speciesId,
       speciesName: bird.speciesName,
       birdNumber: num,
       anilha: (bird as any).anilha || "",
       hasInvoice: hasNF,
+      invoiceNumber: (bird as any).invoiceNumber || "",
       documents: docs,
       otherDocuments: otherDocs,
       sex: bird.sex as BirdSex,
@@ -213,13 +278,15 @@ export default function PlantelModule() {
         } catch { /* plain text */ }
         return bird.notes || "";
       })(),
+      fatherId: (bird as any).fatherId || null,
+      motherId: (bird as any).motherId || null,
     });
     setEditingId(bird.id);
     setView("form");
   };
 
   const handleSelectSpecies = async (sp: typeof SPECIES_LIST[0]) => {
-    setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName }));
+    setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName, fatherId: null, motherId: null }));
     setShowSpeciesDropdown(false);
     setSpeciesSearch("");
     // Auto-fill next available number for this species
@@ -268,6 +335,9 @@ export default function PlantelModule() {
       weightGrams: null,
       notes: notesValue,
       anilha: form.anilha || null,
+      fatherId: form.fatherId || null,
+      motherId: form.motherId || null,
+      invoiceNumber: form.hasInvoice && form.invoiceNumber ? form.invoiceNumber : null,
     };
 
     if (editingId) {
@@ -298,6 +368,47 @@ export default function PlantelModule() {
     if (!selectedBirdId) return null;
     return birds.find(b => b.id === selectedBirdId) || null;
   }, [birds, selectedBirdId]);
+
+  // File upload handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedBirdId) return;
+    setUploading(true);
+    try {
+      // Read file as base64
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix (data:mime;base64,...)
+          const base64Data = result.split(",")[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await uploadDocMut.mutateAsync({
+        birdId: selectedBirdId,
+        docType: uploadDocType,
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        fileBase64: base64,
+      });
+      utils.plantel.getDocuments.invalidate({ birdId: selectedBirdId });
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteDoc = async (docId: number) => {
+    await deleteDocMut.mutateAsync({ id: docId });
+    if (selectedBirdId) {
+      utils.plantel.getDocuments.invalidate({ birdId: selectedBirdId });
+    }
+  };
 
   // === RENDER: LIST VIEW ===
   if (view === "list") {
@@ -331,7 +442,7 @@ export default function PlantelModule() {
               className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-stone-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value as BirdStatus | "todos")}
@@ -351,6 +462,15 @@ export default function PlantelModule() {
               {SPECIES_LIST.map(sp => (
                 <option key={sp.id} value={sp.id}>{sp.commonName}</option>
               ))}
+            </select>
+            <select
+              value={filterDoc}
+              onChange={e => setFilterDoc(e.target.value as DocFilter)}
+              className="px-3 py-2.5 rounded-lg border border-stone-200 bg-white text-xs font-medium text-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            >
+              <option value="todos">Documentação</option>
+              <option value="com_nf">Com NF</option>
+              <option value="sem_nf">Sem NF</option>
             </select>
             <button
               onClick={handleNewBird}
@@ -569,7 +689,7 @@ export default function PlantelModule() {
                     type="radio"
                     name="hasInvoice"
                     checked={form.hasInvoice === false}
-                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: false, documents: [], otherDocuments: "" }))}
+                    onChange={() => setForm(prev => ({ ...prev, hasInvoice: false, documents: [], otherDocuments: "", invoiceNumber: "" }))}
                     className="w-4 h-4 text-emerald-600 focus:ring-emerald-200"
                   />
                   <span className="text-sm text-stone-700 font-medium">Não</span>
@@ -581,6 +701,17 @@ export default function PlantelModule() {
           {/* Documentos que acompanham a NF */}
           {form.hasInvoice && (
             <div className="p-4 rounded-lg border border-emerald-100 bg-emerald-50/50">
+              {/* Número da NF */}
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-stone-600 mb-1.5">Número da Nota Fiscal</label>
+                <input
+                  type="text"
+                  value={form.invoiceNumber}
+                  onChange={e => setForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                  placeholder="Ex: 001234, NF-e 35..."
+                  className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                />
+              </div>
               <label className="block text-xs font-semibold text-stone-600 mb-3">Documentos que acompanham</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {DOCUMENT_OPTIONS.map(doc => (
@@ -610,6 +741,45 @@ export default function PlantelModule() {
                   placeholder="Descreva outros documentos..."
                   className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Árvore Genealógica (Pai / Mãe) */}
+          {form.speciesId && (
+            <div className="p-4 rounded-lg border border-stone-200 bg-stone-50/50">
+              <label className="block text-xs font-semibold text-stone-600 mb-3">Árvore Genealógica</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] text-stone-500 mb-1">Pai (Macho)</label>
+                  <select
+                    value={form.fatherId ?? ""}
+                    onChange={e => setForm(prev => ({ ...prev, fatherId: e.target.value ? Number(e.target.value) : null }))}
+                    className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                  >
+                    <option value="">— Não informado —</option>
+                    {availableFathers.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.ringNumber || "?"} — {b.mutation || b.speciesName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-500 mb-1">Mãe (Fêmea)</label>
+                  <select
+                    value={form.motherId ?? ""}
+                    onChange={e => setForm(prev => ({ ...prev, motherId: e.target.value ? Number(e.target.value) : null }))}
+                    className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                  >
+                    <option value="">— Não informado —</option>
+                    {availableMothers.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.ringNumber || "?"} — {b.mutation || b.speciesName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           )}
@@ -723,6 +893,10 @@ export default function PlantelModule() {
 
   // === RENDER: DETAIL VIEW ===
   if (view === "detail" && selectedBird) {
+    // Resolve father/mother names
+    const fatherBird = (selectedBird as any).fatherId ? birds.find(b => b.id === (selectedBird as any).fatherId) : null;
+    const motherBird = (selectedBird as any).motherId ? birds.find(b => b.id === (selectedBird as any).motherId) : null;
+
     return (
       <div className="space-y-5">
         {/* Header */}
@@ -815,19 +989,56 @@ export default function PlantelModule() {
             </div>
           </div>
 
+          {/* Árvore Genealógica */}
+          {(fatherBird || motherBird) && (
+            <div className="mt-5 pt-4 border-t border-stone-100">
+              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-2">Árvore Genealógica</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {fatherBird && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 border border-blue-100">
+                    <Bird size={14} className="text-blue-600" />
+                    <div>
+                      <p className="text-[10px] text-blue-500 font-medium">Pai</p>
+                      <p className="text-xs font-semibold text-blue-800">
+                        {fatherBird.ringNumber || "?"} {fatherBird.mutation ? `— ${fatherBird.mutation}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {motherBird && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-pink-50 border border-pink-100">
+                    <Bird size={14} className="text-pink-600" />
+                    <div>
+                      <p className="text-[10px] text-pink-500 font-medium">Mãe</p>
+                      <p className="text-xs font-semibold text-pink-800">
+                        {motherBird.ringNumber || "?"} {motherBird.mutation ? `— ${motherBird.mutation}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Nota Fiscal e Documentos */}
           {(() => {
+            const invoiceNum = (selectedBird as any).invoiceNumber;
             let docMeta: any = null;
             try {
               const parsed = selectedBird.notes ? JSON.parse(selectedBird.notes) : null;
               if (parsed && parsed._docMeta) docMeta = parsed._docMeta;
             } catch { /* plain text notes */ }
-            if (!docMeta) return null;
+            if (!docMeta && !invoiceNum) return null;
             return (
               <div className="mt-5 pt-4 border-t border-stone-100">
                 <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider mb-2">Nota Fiscal e Documentos</p>
+                {invoiceNum && (
+                  <p className="text-sm text-stone-700 mb-2">
+                    NF: <span className="font-semibold text-emerald-700">{invoiceNum}</span>
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
-                  {docMeta.documents?.map((docId: string) => {
+                  {docMeta?.documents?.map((docId: string) => {
                     const doc = DOCUMENT_OPTIONS.find(d => d.id === docId);
                     return doc ? (
                       <span key={docId} className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
@@ -835,7 +1046,7 @@ export default function PlantelModule() {
                       </span>
                     ) : null;
                   })}
-                  {docMeta.otherDocuments && (
+                  {docMeta?.otherDocuments && (
                     <span className="px-2.5 py-1 rounded-full bg-stone-100 text-stone-700 text-xs font-medium border border-stone-200">
                       {docMeta.otherDocuments}
                     </span>
@@ -844,6 +1055,79 @@ export default function PlantelModule() {
               </div>
             );
           })()}
+
+          {/* Documentos Anexados (uploads) */}
+          <div className="mt-5 pt-4 border-t border-stone-100">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Documentos Anexados</p>
+            </div>
+            {birdDocs.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {birdDocs.map((doc: any) => (
+                  <div key={doc.id} className="flex items-center justify-between p-2.5 rounded-lg bg-stone-50 border border-stone-100">
+                    <div className="flex items-center gap-2">
+                      <FileText size={14} className="text-stone-500" />
+                      <div>
+                        <p className="text-xs font-medium text-stone-700">{doc.fileName}</p>
+                        <p className="text-[10px] text-stone-400">{doc.docType}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={doc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded hover:bg-stone-200 text-stone-500 hover:text-emerald-600 transition-colors"
+                        title="Abrir documento"
+                      >
+                        <ExternalLink size={13} />
+                      </a>
+                      <button
+                        onClick={() => handleDeleteDoc(doc.id)}
+                        className="p-1.5 rounded hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors"
+                        title="Excluir documento"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Upload section */}
+            <div className="flex items-center gap-2">
+              <select
+                value={uploadDocType}
+                onChange={e => setUploadDocType(e.target.value)}
+                className="px-2.5 py-2 rounded-lg border border-stone-200 text-xs text-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              >
+                <option value="nota_fiscal">Nota Fiscal</option>
+                <option value="certificado_origem">Certificado de Origem</option>
+                <option value="atestado_saude">Atestado de Saúde</option>
+                <option value="gta">GTA</option>
+                <option value="sexagem">Sexagem</option>
+                <option value="exame_sanidade">Exame de Sanidade</option>
+                <option value="outro">Outro</option>
+              </select>
+              <label className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-all",
+                uploading
+                  ? "border-stone-200 bg-stone-100 text-stone-400 cursor-wait"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              )}>
+                <Upload size={13} />
+                {uploading ? "Enviando..." : "Anexar Arquivo"}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                />
+              </label>
+            </div>
+          </div>
 
           {/* Observações */}
           {(() => {

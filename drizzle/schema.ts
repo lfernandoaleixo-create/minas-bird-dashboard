@@ -386,6 +386,8 @@ export const plantel = mysqlTable("plantel", {
   fatherId: int("fatherId"),
   /** ID da mãe (referencia outra ave do plantel) */
   motherId: int("motherId"),
+  /** Número da Nota Fiscal (quando possui NF) */
+  invoiceNumber: varchar("invoiceNumber", { length: 128 }),
   /** Observações gerais */
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -394,3 +396,26 @@ export const plantel = mysqlTable("plantel", {
 
 export type Plantel = typeof plantel.$inferSelect;
 export type InsertPlantel = typeof plantel.$inferInsert;
+
+/**
+ * Documentos anexados às aves do plantel (NF, certificados, exames, etc.)
+ */
+export const birdDocuments = mysqlTable("bird_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da ave no plantel */
+  birdId: int("birdId").notNull(),
+  /** Tipo do documento (nf, certificado_origem, atestado_saude, gta, sexagem, exame_sanidade, outro) */
+  docType: varchar("docType", { length: 64 }).notNull(),
+  /** Nome original do arquivo */
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  /** URL do arquivo no S3 */
+  fileUrl: text("fileUrl").notNull(),
+  /** Chave do arquivo no S3 */
+  fileKey: varchar("fileKey", { length: 512 }).notNull(),
+  /** MIME type */
+  mimeType: varchar("mimeType", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BirdDocument = typeof birdDocuments.$inferSelect;
+export type InsertBirdDocument = typeof birdDocuments.$inferInsert;

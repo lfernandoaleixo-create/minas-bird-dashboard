@@ -326,3 +326,9 @@
 - [x] Plantel: campo "Anilha" abaixo do código da ave
 - [x] Plantel: campo "Nota Fiscal" (Sim/Não) ao lado da anilha
 - [x] Plantel: se NF = Sim, abrir seletor de documentos (NF ticada por padrão, Certificado de Origem, Atestado de Saúde, GTA, Sexagem, Exame de Sanidade, campo Outros)
+- [x] Plantel: árvore genealógica — seletor de pai e mãe (aves do mesmo plantel) no cadastro
+- [x] Plantel: exibir linhagem no detalhe da ave (pai, mãe, filhos)
+- [x] Plantel: número da NF — campo para digitar número da nota fiscal quando NF = Sim
+- [x] Plantel: upload de documentos — anexar foto/scan da NF e documentos no cadastro da ave (S3)
+- [x] Plantel: filtro por documentação na listagem (com NF / sem NF)
+- [x] Clientes: filtro de aves disponíveis para venda por espécie e mutação ao registrar venda

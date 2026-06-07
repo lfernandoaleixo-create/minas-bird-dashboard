@@ -490,3 +490,29 @@ export async function getNextBirdNumber(speciesId: string) {
   }
   return { nextNumber: String(maxNum + 1).padStart(3, "0") };
 }
+
+// ===== BIRD DOCUMENTS CRUD =====
+
+import { birdDocuments } from "../drizzle/schema";
+import type { InsertBirdDocument } from "../drizzle/schema";
+
+export async function getDocumentsByBird(birdId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(birdDocuments).where(eq(birdDocuments.birdId, birdId)).orderBy(birdDocuments.createdAt);
+}
+
+export async function createBirdDocument(data: Omit<InsertBirdDocument, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(birdDocuments).values(data);
+  const rows = await db.select().from(birdDocuments).where(eq(birdDocuments.id, result[0].insertId)).limit(1);
+  return rows[0];
+}
+
+export async function deleteBirdDocument(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(birdDocuments).where(eq(birdDocuments.id, id));
+  return { success: true };
+}

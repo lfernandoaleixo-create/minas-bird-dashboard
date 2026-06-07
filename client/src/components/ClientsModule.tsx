@@ -226,6 +226,8 @@ export default function ClientsModule() {
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
   const [purchaseForm, setPurchaseForm] = useState<PurchaseFormData>(emptyPurchaseForm);
   const [speciesDropdownOpen, setSpeciesDropdownOpen] = useState(false);
+  const [birdFilterSpecies, setBirdFilterSpecies] = useState<string>("todos");
+  const [birdFilterMutation, setBirdFilterMutation] = useState<string>("todos");
 
   // tRPC queries
   const clientsQuery = trpc.cliente.list.useQuery();
@@ -238,6 +240,35 @@ export default function ClientsModule() {
   const activeBirds = useMemo(() => {
     return (plantelQuery.data || []).filter(b => b.status === "ativo");
   }, [plantelQuery.data]);
+
+  // Filtered active birds for sale form (by species and mutation)
+  const filteredActiveBirds = useMemo(() => {
+    let list = activeBirds;
+    if (birdFilterSpecies !== "todos") {
+      list = list.filter(b => b.speciesId === birdFilterSpecies);
+    }
+    if (birdFilterMutation !== "todos") {
+      list = list.filter(b => b.mutation === birdFilterMutation);
+    }
+    return list;
+  }, [activeBirds, birdFilterSpecies, birdFilterMutation]);
+
+  // Unique species and mutations from active birds for filter dropdowns
+  const birdSpeciesOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    activeBirds.forEach(b => map.set(b.speciesId, b.speciesName));
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [activeBirds]);
+
+  const birdMutationOptions = useMemo(() => {
+    let list = activeBirds;
+    if (birdFilterSpecies !== "todos") {
+      list = list.filter(b => b.speciesId === birdFilterSpecies);
+    }
+    const mutations = new Set<string>();
+    list.forEach(b => { if (b.mutation) mutations.add(b.mutation); });
+    return Array.from(mutations).sort();
+  }, [activeBirds, birdFilterSpecies]);
 
   const utils = trpc.useUtils();
 
@@ -570,8 +601,34 @@ export default function ClientsModule() {
                 Nova Venda
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div className="sm:col-span-2">
                   <label className="text-xs font-medium text-stone-600 mb-1 block">Ave do Plantel *</label>
+                  {/* Filtros de espécie e mutação */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <select
+                      value={birdFilterSpecies}
+                      onChange={e => { setBirdFilterSpecies(e.target.value); setBirdFilterMutation("todos"); }}
+                      className="px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs bg-white text-stone-600"
+                    >
+                      <option value="todos">Todas Espécies</option>
+                      {birdSpeciesOptions.map(([id, name]) => (
+                        <option key={id} value={id}>{name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={birdFilterMutation}
+                      onChange={e => setBirdFilterMutation(e.target.value)}
+                      className="px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs bg-white text-stone-600"
+                    >
+                      <option value="todos">Todas Mutações</option>
+                      {birdMutationOptions.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-stone-400">
+                      {filteredActiveBirds.length} disponíve{filteredActiveBirds.length !== 1 ? "is" : "l"}
+                    </span>
+                  </div>
                   <select
                     value={purchaseForm.birdId ? String(purchaseForm.birdId) : ""}
                     onChange={(e) => {
@@ -587,7 +644,7 @@ export default function ClientsModule() {
                     className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
                   >
                     <option value="">Selecione a ave...</option>
-                    {activeBirds.map((bird) => (
+                    {filteredActiveBirds.map((bird) => (
                       <option key={bird.id} value={String(bird.id)}>
                         {bird.ringNumber ? `${bird.ringNumber} — ` : ""}{bird.speciesName}{bird.mutation ? ` (${bird.mutation})` : ""}
                       </option>

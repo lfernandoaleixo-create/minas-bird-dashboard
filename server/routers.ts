@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
+import { storagePut } from "./storage";
 import {
   getDietsByUser,
   getAllDiets,
@@ -35,6 +36,9 @@ import {
   updatePlantelBird,
   deletePlantelBird,
   getNextBirdNumber,
+  getDocumentsByBird,
+  createBirdDocument,
+  deleteBirdDocument,
 } from "./db";
 import {
   getFoodCalendarFoods,
@@ -702,6 +706,7 @@ export const appRouter = router({
         weightGrams: z.number().nullable().optional(),
         fatherId: z.number().nullable().optional(),
         motherId: z.number().nullable().optional(),
+        invoiceNumber: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -726,6 +731,7 @@ export const appRouter = router({
         weightGrams: z.number().nullable().optional(),
         fatherId: z.number().nullable().optional(),
         motherId: z.number().nullable().optional(),
+        invoiceNumber: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -745,6 +751,63 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return deletePlantelBird(input.id);
+      }),
+
+    /** Get documents for a bird */
+    getDocuments: publicProcedure
+      .input(z.object({ birdId: z.number() }))
+      .query(async ({ input }) => {
+        return getDocumentsByBird(input.birdId);
+      }),
+
+    /** Upload a document for a bird */
+    addDocument: publicProcedure
+      .input(z.object({
+        birdId: z.number(),
+        docType: z.string(),
+        fileName: z.string(),
+        fileUrl: z.string(),
+        fileKey: z.string(),
+        mimeType: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createBirdDocument(input);
+      }),
+
+    /** Upload a document file to S3 and save metadata */
+    uploadDocument: publicProcedure
+      .input(z.object({
+        birdId: z.number(),
+        docType: z.string(),
+        fileName: z.string(),
+        mimeType: z.string(),
+        fileBase64: z.string(), // base64-encoded file content
+      }))
+      .mutation(async ({ input }) => {
+        // Decode base64 to buffer
+        const buffer = Buffer.from(input.fileBase64, "base64");
+        // Generate unique key
+        const suffix = Math.random().toString(36).substring(2, 10);
+        const safeFileName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const fileKey = `plantel-docs/${input.birdId}/${suffix}-${safeFileName}`;
+        // Upload to S3
+        const { url } = await storagePut(fileKey, buffer, input.mimeType);
+        // Save metadata in DB
+        return createBirdDocument({
+          birdId: input.birdId,
+          docType: input.docType,
+          fileName: input.fileName,
+          fileUrl: url,
+          fileKey,
+          mimeType: input.mimeType,
+        });
+      }),
+
+    /** Delete a document */
+    deleteDocument: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteBirdDocument(input.id);
       }),
   }),
 });
