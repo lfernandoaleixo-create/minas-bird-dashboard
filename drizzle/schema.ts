@@ -419,3 +419,32 @@ export const birdDocuments = mysqlTable("bird_documents", {
 
 export type BirdDocument = typeof birdDocuments.$inferSelect;
 export type InsertBirdDocument = typeof birdDocuments.$inferInsert;
+
+/**
+ * Caixa do Criatório — Controle Financeiro
+ * Cada registro é uma transação financeira (aporte, venda, despesa)
+ */
+export const financialTransactions = mysqlTable("financial_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Tipo da transação: aporte (entrada de capital), venda (receita), despesa (saída) */
+  type: mysqlEnum("transactionType", ["aporte", "venda", "despesa"]).notNull(),
+  /** Categoria da transação */
+  category: varchar("category", { length: 128 }).notNull(),
+  /** Descrição detalhada */
+  description: text("description"),
+  /** Valor em centavos (sempre positivo; tipo define se é entrada ou saída) */
+  valueCents: int("valueCents").notNull(),
+  /** Data da transação */
+  transactionDate: timestamp("transactionDate").notNull(),
+  /** Forma de pagamento (opcional) */
+  paymentMethod: varchar("paymentMethod", { length: 64 }),
+  /** Referência externa (ex: ID da venda no módulo Clientes, número NF, etc.) */
+  reference: varchar("reference", { length: 255 }),
+  /** Observações adicionais */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FinancialTransaction = typeof financialTransactions.$inferSelect;
+export type InsertFinancialTransaction = typeof financialTransactions.$inferInsert;

@@ -39,6 +39,11 @@ import {
   getDocumentsByBird,
   createBirdDocument,
   deleteBirdDocument,
+  getAllFinancialTransactions,
+  getFinancialTransactionById,
+  createFinancialTransaction,
+  updateFinancialTransaction,
+  deleteFinancialTransaction,
 } from "./db";
 import {
   getFoodCalendarFoods,
@@ -808,6 +813,62 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return deleteBirdDocument(input.id);
+      }),
+  }),
+
+  // ===== CAIXA (FINANCEIRO) =====
+  caixa: router({
+    /** List all financial transactions */
+    list: publicProcedure.query(async () => {
+      return getAllFinancialTransactions();
+    }),
+
+    /** Get a single transaction by ID */
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getFinancialTransactionById(input.id);
+      }),
+
+    /** Create a new financial transaction */
+    create: publicProcedure
+      .input(z.object({
+        type: z.enum(["aporte", "venda", "despesa"]),
+        category: z.string(),
+        description: z.string().nullable().optional(),
+        valueCents: z.number().min(1),
+        transactionDate: z.date(),
+        paymentMethod: z.string().nullable().optional(),
+        reference: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createFinancialTransaction(input);
+      }),
+
+    /** Update an existing transaction */
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        type: z.enum(["aporte", "venda", "despesa"]).optional(),
+        category: z.string().optional(),
+        description: z.string().nullable().optional(),
+        valueCents: z.number().min(1).optional(),
+        transactionDate: z.date().optional(),
+        paymentMethod: z.string().nullable().optional(),
+        reference: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return updateFinancialTransaction(id, data);
+      }),
+
+    /** Delete a transaction */
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteFinancialTransaction(input.id);
       }),
   }),
 });

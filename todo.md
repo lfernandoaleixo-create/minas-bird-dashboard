@@ -337,3 +337,10 @@
 - [x] Plantel: alerta de consanguinidade quando pai e mãe compartilham ancestrais comuns
 - [x] Plantel: exibir lista de filhos no detalhe da ave (aves que têm este pássaro como pai/mãe)
 - [x] Plantel: relatório de linhagem em PDF para documentação oficial do criatório
+- [x] Nova aba Caixa: schema de banco (transações financeiras: tipo, categoria, valor, data, descrição, referência)
+- [x] Nova aba Caixa: rotas tRPC para CRUD (criar, listar, editar, excluir transações)
+- [x] Nova aba Caixa: componente com dashboard financeiro (saldo, entradas, saídas)
+- [x] Nova aba Caixa: formulário de lançamento (Aporte, Venda, Despesa)
+- [x] Nova aba Caixa: listagem de transações com filtros (tipo, período, categoria)
+- [x] Nova aba Caixa: integrar na navegação principal (5ª aba)
+- [x] Nova aba Caixa: testes automatizados

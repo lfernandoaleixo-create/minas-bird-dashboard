@@ -516,3 +516,42 @@ export async function deleteBirdDocument(id: number) {
   await db.delete(birdDocuments).where(eq(birdDocuments.id, id));
   return { success: true };
 }
+
+// ===== FINANCIAL TRANSACTIONS (CAIXA) CRUD =====
+
+import { financialTransactions } from "../drizzle/schema";
+import type { InsertFinancialTransaction } from "../drizzle/schema";
+
+export async function getAllFinancialTransactions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(financialTransactions).orderBy(desc(financialTransactions.transactionDate));
+}
+
+export async function getFinancialTransactionById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(financialTransactions).where(eq(financialTransactions.id, id)).limit(1);
+  return rows[0] || null;
+}
+
+export async function createFinancialTransaction(data: Omit<InsertFinancialTransaction, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(financialTransactions).values(data);
+  return getFinancialTransactionById(result[0].insertId);
+}
+
+export async function updateFinancialTransaction(id: number, data: Partial<Omit<InsertFinancialTransaction, "id" | "createdAt" | "updatedAt">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(financialTransactions).set(data).where(eq(financialTransactions.id, id));
+  return getFinancialTransactionById(id);
+}
+
+export async function deleteFinancialTransaction(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(financialTransactions).where(eq(financialTransactions.id, id));
+  return { success: true };
+}
