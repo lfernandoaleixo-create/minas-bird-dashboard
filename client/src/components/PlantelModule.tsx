@@ -62,7 +62,7 @@ const SEX_LABELS: Record<BirdSex, string> = {
 };
 
 const ORIGIN_LABELS: Record<BirdOrigin, string> = {
-  nascido_criadouro: "Nascido no Criatório",
+  nascido_criadouro: "Nascido no Criatório Minas Bird",
   comprado: "Comprado",
   doado: "Doado",
   troca: "Troca",
@@ -516,14 +516,16 @@ export default function PlantelModule() {
                 ))}
               </select>
             </div>
-            {(form.origin === "comprado" || form.origin === "troca") && (
+            {form.origin === "comprado" && (
               <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1.5">Criatório de Origem</label>
+                <label className="block text-xs font-semibold text-stone-600 mb-1.5">
+                  Nome do Criatório / Dono <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={form.originBreeder}
                   onChange={e => setForm(prev => ({ ...prev, originBreeder: e.target.value }))}
-                  placeholder="Nome do criatório"
+                  placeholder="Ex: Criatório Aves do Sul, João Silva..."
                   className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
                 />
               </div>
