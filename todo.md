@@ -311,3 +311,9 @@
 - [x] Todos os dados visíveis em tempo real para qualquer usuário
 - [x] Corrigir corte superior em todos os PDFs da aba Alimentação Teste (aumentar margem/espaço superior)
 - [x] BUGFIX CRÍTICO: "Gerar Todas" PDFs de anotação está usando a mesma ração para todas as espécies — deve usar a ração configurada individualmente em cada card de espécie
+- [x] Nova aba Plantel: schema de banco (id, espécie, anilha, sexo, data nascimento, origem, status, observações)
+- [x] Nova aba Plantel: rotas tRPC para CRUD (criar, listar, editar, excluir aves)
+- [x] Nova aba Plantel: componente com listagem de aves cadastradas
+- [x] Nova aba Plantel: formulário de cadastro com seletor de espécie
+- [x] Nova aba Plantel: card de detalhe da ave com informações completas
+- [x] Nova aba Plantel: integrar na navegação principal (4ª aba)

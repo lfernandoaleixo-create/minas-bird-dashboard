@@ -351,3 +351,44 @@ export const topicOrder = mysqlTable("topic_order", {
 
 export type TopicOrder = typeof topicOrder.$inferSelect;
 export type InsertTopicOrder = typeof topicOrder.$inferInsert;
+
+/**
+ * Cadastro do plantel — aves do criatório
+ * Cada registro é uma ave individual com anilha, espécie, sexo, etc.
+ */
+export const plantel = mysqlTable("plantel", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da espécie (referencia feeding.ts species.id) */
+  speciesId: varchar("speciesId", { length: 128 }).notNull(),
+  /** Nome comum da espécie (desnormalizado para facilitar listagem) */
+  speciesName: varchar("speciesName", { length: 255 }).notNull(),
+  /** Número da anilha (identificação única da ave) */
+  ringNumber: varchar("ringNumber", { length: 64 }),
+  /** Sexo da ave */
+  sex: mysqlEnum("sex", ["macho", "femea", "indefinido"]).default("indefinido").notNull(),
+  /** Data de nascimento / eclosão */
+  birthDate: timestamp("birthDate"),
+  /** Mutação / cor da ave */
+  mutation: varchar("mutation", { length: 255 }),
+  /** Origem da ave: nascido no criatório, comprado, doado, troca */
+  origin: mysqlEnum("origin", ["nascido_criadouro", "comprado", "doado", "troca"]).default("nascido_criadouro").notNull(),
+  /** Criatório de origem (se comprado/troca) */
+  originBreeder: varchar("originBreeder", { length: 255 }),
+  /** Status da ave no plantel */
+  status: mysqlEnum("birdStatus", ["ativo", "vendido", "obito", "doado", "emprestado"]).default("ativo").notNull(),
+  /** Recinto / viveiro onde está alojada */
+  enclosure: varchar("enclosure", { length: 128 }),
+  /** Peso atual em gramas */
+  weightGrams: int("weightGrams"),
+  /** ID do pai (referencia outra ave do plantel) */
+  fatherId: int("fatherId"),
+  /** ID da mãe (referencia outra ave do plantel) */
+  motherId: int("motherId"),
+  /** Observações gerais */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Plantel = typeof plantel.$inferSelect;
+export type InsertPlantel = typeof plantel.$inferInsert;

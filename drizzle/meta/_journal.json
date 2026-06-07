@@ -71,6 +71,13 @@
       "when": 1779661422961,
       "tag": "0009_cool_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1780864993652,
+      "tag": "0010_omniscient_madame_web",
+      "breakpoints": true
     }
   ]
 }

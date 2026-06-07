@@ -1,0 +1,20 @@
+CREATE TABLE `plantel` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`speciesId` varchar(128) NOT NULL,
+	`speciesName` varchar(255) NOT NULL,
+	`ringNumber` varchar(64),
+	`sex` enum('macho','femea','indefinido') NOT NULL DEFAULT 'indefinido',
+	`birthDate` timestamp,
+	`mutation` varchar(255),
+	`origin` enum('nascido_criadouro','comprado','doado','troca') NOT NULL DEFAULT 'nascido_criadouro',
+	`originBreeder` varchar(255),
+	`birdStatus` enum('ativo','vendido','obito','doado','emprestado') NOT NULL DEFAULT 'ativo',
+	`enclosure` varchar(128),
+	`weightGrams` int,
+	`fatherId` int,
+	`motherId` int,
+	`notes` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `plantel_id` PRIMARY KEY(`id`)
+);

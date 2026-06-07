@@ -29,6 +29,11 @@ import {
   getInstallmentsByPurchase,
   createInstallments,
   updateInstallmentStatus,
+  getAllPlantel,
+  getPlantelById,
+  createPlantelBird,
+  updatePlantelBird,
+  deletePlantelBird,
 } from "./db";
 import {
   getFoodCalendarFoods,
@@ -663,7 +668,74 @@ export const appRouter = router({
         await setTopicOrder(input.moduleId, input.orderJson);
         return { success: true };
       }),
+    }),
+
+  // ===== PLANTEL =====
+  plantel: router({
+    /** List all birds in the plantel */
+    list: publicProcedure.query(async () => {
+      return getAllPlantel();
+    }),
+
+    /** Get a single bird by ID */
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getPlantelById(input.id);
+      }),
+
+    /** Create a new bird */
+    create: publicProcedure
+      .input(z.object({
+        speciesId: z.string(),
+        speciesName: z.string(),
+        ringNumber: z.string().nullable().optional(),
+        sex: z.enum(["macho", "femea", "indefinido"]).default("indefinido"),
+        birthDate: z.date().nullable().optional(),
+        mutation: z.string().nullable().optional(),
+        origin: z.enum(["nascido_criadouro", "comprado", "doado", "troca"]).default("nascido_criadouro"),
+        originBreeder: z.string().nullable().optional(),
+        status: z.enum(["ativo", "vendido", "obito", "doado", "emprestado"]).default("ativo"),
+        enclosure: z.string().nullable().optional(),
+        weightGrams: z.number().nullable().optional(),
+        fatherId: z.number().nullable().optional(),
+        motherId: z.number().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createPlantelBird(input);
+      }),
+
+    /** Update an existing bird */
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        speciesId: z.string().optional(),
+        speciesName: z.string().optional(),
+        ringNumber: z.string().nullable().optional(),
+        sex: z.enum(["macho", "femea", "indefinido"]).optional(),
+        birthDate: z.date().nullable().optional(),
+        mutation: z.string().nullable().optional(),
+        origin: z.enum(["nascido_criadouro", "comprado", "doado", "troca"]).optional(),
+        originBreeder: z.string().nullable().optional(),
+        status: z.enum(["ativo", "vendido", "obito", "doado", "emprestado"]).optional(),
+        enclosure: z.string().nullable().optional(),
+        weightGrams: z.number().nullable().optional(),
+        fatherId: z.number().nullable().optional(),
+        motherId: z.number().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return updatePlantelBird(id, data);
+      }),
+
+    /** Delete a bird */
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deletePlantelBird(input.id);
+      }),
   }),
 });
-
 export type AppRouter = typeof appRouter;

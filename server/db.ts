@@ -331,6 +331,8 @@ export async function upsertTopicComment(topicKey: string, comment: string) {
 // ===== CLIENTS CRUD =====
 
 import type { InsertClient, InsertClientPurchase, InsertSaleInstallment } from "../drizzle/schema";
+import { plantel } from "../drizzle/schema";
+import type { InsertPlantel } from "../drizzle/schema";
 
 export async function getAllClients() {
   const db = await getDb();
@@ -430,4 +432,41 @@ export async function updateInstallmentStatus(id: number, status: "pendente" | "
   await db.update(saleInstallments).set(updateData).where(eq(saleInstallments.id, id));
   const rows = await db.select().from(saleInstallments).where(eq(saleInstallments.id, id)).limit(1);
   return rows[0];
+}
+
+// ===== PLANTEL CRUD =====
+
+export async function getAllPlantel() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(plantel).orderBy(plantel.speciesName, plantel.ringNumber);
+}
+
+export async function getPlantelById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(plantel).where(eq(plantel.id, id)).limit(1);
+  return rows[0] || null;
+}
+
+export async function createPlantelBird(data: Omit<InsertPlantel, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(plantel).values(data);
+  const id = result[0].insertId;
+  return getPlantelById(id);
+}
+
+export async function updatePlantelBird(id: number, data: Partial<Omit<InsertPlantel, "id" | "createdAt" | "updatedAt">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(plantel).set(data).where(eq(plantel.id, id));
+  return getPlantelById(id);
+}
+
+export async function deletePlantelBird(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(plantel).where(eq(plantel.id, id));
+  return { success: true };
 }
