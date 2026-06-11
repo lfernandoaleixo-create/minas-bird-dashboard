@@ -456,3 +456,34 @@ export const financialTransactions = mysqlTable("financial_transactions", {
 
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;
 export type InsertFinancialTransaction = typeof financialTransactions.$inferInsert;
+
+/**
+ * Documentos do criatório — repositório central de licenças, alvarás, processos, etc.
+ */
+export const criatorioDocuments = mysqlTable("criatorio_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Título do documento */
+  title: varchar("title", { length: 255 }).notNull(),
+  /** Categoria do documento */
+  category: varchar("category", { length: 128 }).notNull(),
+  /** URL do arquivo no S3 */
+  fileUrl: text("fileUrl").notNull(),
+  /** Nome original do arquivo */
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  /** Tipo MIME do arquivo */
+  mimeType: varchar("mimeType", { length: 128 }),
+  /** Tamanho em bytes */
+  fileSize: int("fileSize"),
+  /** Descrição / observações sobre o documento */
+  description: text("description"),
+  /** Data do documento (ex: data de emissão) */
+  documentDate: timestamp("documentDate"),
+  /** Data de validade (se aplicável) */
+  expirationDate: timestamp("expirationDate"),
+  /** Status do documento */
+  status: mysqlEnum("status", ["vigente", "vencido", "em_andamento", "arquivado"]).default("vigente").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CriatorioDocument = typeof criatorioDocuments.$inferSelect;
+export type InsertCriatorioDocument = typeof criatorioDocuments.$inferInsert;

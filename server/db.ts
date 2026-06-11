@@ -555,3 +555,37 @@ export async function deleteFinancialTransaction(id: number) {
   await db.delete(financialTransactions).where(eq(financialTransactions.id, id));
   return { success: true };
 }
+
+// ─── Criatório Documents ───────────────────────────────────────────────────────
+import { criatorioDocuments } from "../drizzle/schema";
+import type { InsertCriatorioDocument } from "../drizzle/schema";
+
+export async function getAllCriatorioDocuments() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(criatorioDocuments).orderBy(desc(criatorioDocuments.createdAt));
+}
+export async function getCriatorioDocumentById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(criatorioDocuments).where(eq(criatorioDocuments.id, id)).limit(1);
+  return rows[0] || null;
+}
+export async function createCriatorioDocument(data: Omit<InsertCriatorioDocument, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(criatorioDocuments).values(data);
+  return getCriatorioDocumentById(result[0].insertId);
+}
+export async function updateCriatorioDocument(id: number, data: Partial<Omit<InsertCriatorioDocument, "id" | "createdAt" | "updatedAt">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(criatorioDocuments).set(data).where(eq(criatorioDocuments.id, id));
+  return getCriatorioDocumentById(id);
+}
+export async function deleteCriatorioDocument(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(criatorioDocuments).where(eq(criatorioDocuments.id, id));
+  return { success: true };
+}

@@ -1,0 +1,20 @@
+Documento analisado: /home/ubuntu/upload/SEI_2100010016650_2025_45_260128_130716.pdf
+
+Resumo do conteúdo visualizado (páginas 1-5):
+- Processo de legalização / requerimento junto ao SISFAUNA (IEF / Governo de Minas Gerais / URFBio Sul - Núcleo de Biodiversidade).
+- Nome do empreendimento: Criatório Minas Bird.
+- Responsável legal identificado: Luiz Fernando Aleixo.
+- Documento inclui dados do empreendimento, categoria e espécies autorizadas/listadas.
+- Nas páginas visualizadas há também alvará de licença para localização e funcionamento da Prefeitura Municipal de Ribeirão Vermelho (2023).
+- O PDF parece reunir vários documentos do processo de legalização em um único arquivo.
+- Total de páginas do PDF: 204.
+
+Uso pretendido no sistema:
+- Este será o primeiro documento da nova aba "Documentação".
+- Categoria sugerida inicial: "Legalização / Licenças".
+- Título sugerido: "Processo de Legalização do Criatório - SISFAUNA".
+- Observação importante: o arquivo contém documento pessoal com foto/identificação. Ao exibir no sistema, evitar destaque desnecessário de dados sensíveis.
+
+Fonte: visualização direta do PDF enviado pelo usuário em 2026-06-11.
+# Rule: guardar esta informação como referência permanente do projeto.
+'}

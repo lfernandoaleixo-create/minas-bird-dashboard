@@ -44,6 +44,11 @@ import {
   createFinancialTransaction,
   updateFinancialTransaction,
   deleteFinancialTransaction,
+  getAllCriatorioDocuments,
+  getCriatorioDocumentById,
+  createCriatorioDocument,
+  updateCriatorioDocument,
+  deleteCriatorioDocument,
 } from "./db";
 import {
   getFoodCalendarFoods,
@@ -912,6 +917,71 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return deleteFinancialTransaction(input.id);
+      }),
+  }),
+
+  // ─── Documentação do Criatório ─────────────────────────────────────────────
+  documentacao: router({
+    /** List all documents */
+    list: publicProcedure.query(async () => {
+      return getAllCriatorioDocuments();
+    }),
+    /** Get a single document by ID */
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getCriatorioDocumentById(input.id);
+      }),
+    /** Create a new document */
+    create: publicProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        category: z.string().min(1),
+        fileUrl: z.string().min(1),
+        fileName: z.string().min(1),
+        mimeType: z.string().nullable().optional(),
+        fileSize: z.number().nullable().optional(),
+        description: z.string().nullable().optional(),
+        documentDate: z.date().nullable().optional(),
+        expirationDate: z.date().nullable().optional(),
+        status: z.enum(["vigente", "vencido", "em_andamento", "arquivado"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createCriatorioDocument(input);
+      }),
+    /** Update a document */
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().optional(),
+        category: z.string().optional(),
+        description: z.string().nullable().optional(),
+        documentDate: z.date().nullable().optional(),
+        expirationDate: z.date().nullable().optional(),
+        status: z.enum(["vigente", "vencido", "em_andamento", "arquivado"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return updateCriatorioDocument(id, data);
+      }),
+    /** Delete a document */
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteCriatorioDocument(input.id);
+      }),
+    /** Upload a document file */
+    upload: publicProcedure
+      .input(z.object({
+        fileName: z.string(),
+        fileBase64: z.string(),
+        contentType: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const buffer = Buffer.from(input.fileBase64, "base64");
+        const key = `documentacao/${Date.now()}-${input.fileName}`;
+        const { url } = await storagePut(key, buffer, input.contentType);
+        return { url, key };
       }),
   }),
 });
