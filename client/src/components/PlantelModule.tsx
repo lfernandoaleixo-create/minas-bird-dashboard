@@ -73,6 +73,8 @@ const ORIGIN_LABELS: Record<BirdOrigin, string> = {
 
 type ParentSource = "plantel" | "externo";
 
+type DatePrecision = "full" | "month_year" | "year_only";
+
 interface BirdForm {
   speciesId: string;
   speciesName: string;
@@ -84,6 +86,9 @@ interface BirdForm {
   otherDocuments: string; // Campo livre para outros documentos
   sex: BirdSex;
   birthDate: string;
+  birthDatePrecision: DatePrecision;
+  birthMonth: string; // MM format
+  birthYear: string; // YYYY format
   mutation: string;
   origin: BirdOrigin;
   originBreeder: string;
@@ -93,9 +98,15 @@ interface BirdForm {
   fatherId: number | null;
   fatherSource: ParentSource;
   fatherNote: string; // Observação para pai externo
+  fatherMutation: string; // Mutação do pai externo
+  fatherBreeder: string; // Criatório do pai externo
   motherId: number | null;
   motherSource: ParentSource;
   motherNote: string; // Observação para mãe externa
+  motherMutation: string; // Mutação da mãe externa
+  motherBreeder: string; // Criatório da mãe externa
+  // Drag-drop pending files for upload after bird is created
+  pendingFiles: File[];
 }
 
 const DOCUMENT_OPTIONS = [
@@ -118,6 +129,9 @@ const EMPTY_FORM: BirdForm = {
   otherDocuments: "",
   sex: "indefinido",
   birthDate: "",
+  birthDatePrecision: "full",
+  birthMonth: "",
+  birthYear: "",
   mutation: "",
   origin: "nascido_criadouro",
   originBreeder: "",
@@ -127,9 +141,14 @@ const EMPTY_FORM: BirdForm = {
   fatherId: null,
   fatherSource: "plantel",
   fatherNote: "",
+  fatherMutation: "",
+  fatherBreeder: "",
   motherId: null,
   motherSource: "plantel",
   motherNote: "",
+  motherMutation: "",
+  motherBreeder: "",
+  pendingFiles: [],
 };
 
 type View = "list" | "form" | "detail";
@@ -293,16 +312,24 @@ export default function PlantelModule() {
       fatherId: (bird as any).fatherId || null,
       fatherSource: (bird as any).fatherId ? "plantel" : ((() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.fatherNote ? "externo" : "plantel"; } catch { return "plantel"; } })()),
       fatherNote: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.fatherNote || ""; } catch { return ""; } })(),
+      fatherMutation: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.fatherMutation || ""; } catch { return ""; } })(),
+      fatherBreeder: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.fatherBreeder || ""; } catch { return ""; } })(),
       motherId: (bird as any).motherId || null,
       motherSource: (bird as any).motherId ? "plantel" : ((() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherNote ? "externo" : "plantel"; } catch { return "plantel"; } })()),
       motherNote: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherNote || ""; } catch { return ""; } })(),
+      motherMutation: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherMutation || ""; } catch { return ""; } })(),
+      motherBreeder: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherBreeder || ""; } catch { return ""; } })(),
+      birthDatePrecision: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.birthDatePrecision || "full"; } catch { return "full" as DatePrecision; } })(),
+      birthMonth: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getMonth() + 1).padStart(2, "0"); })(),
+      birthYear: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getFullYear()); })(),
+      pendingFiles: [],
     });
     setEditingId(bird.id);
     setView("form");
   };
 
   const handleSelectSpecies = async (sp: typeof SPECIES_LIST[0]) => {
-    setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName, fatherId: null, fatherNote: "", fatherSource: "plantel", motherId: null, motherNote: "", motherSource: "plantel" }));
+    setForm(prev => ({ ...prev, speciesId: sp.id, speciesName: sp.commonName, fatherId: null, fatherNote: "", fatherMutation: "", fatherBreeder: "", fatherSource: "plantel", motherId: null, motherNote: "", motherMutation: "", motherBreeder: "", motherSource: "plantel" }));
     setShowSpeciesDropdown(false);
     setSpeciesSearch("");
     // Auto-fill next available number for this species
@@ -324,7 +351,7 @@ export default function PlantelModule() {
     const fullCode = form.birdNumber ? `${prefix}${form.birdNumber}` : null;
 
     // Incluir metadados de documentos e genealogia no campo notes como JSON
-    const hasDocMeta = form.hasInvoice || form.documents.length > 0 || form.otherDocuments || form.fatherNote || form.motherNote;
+    const hasDocMeta = form.hasInvoice || form.documents.length > 0 || form.otherDocuments || form.fatherNote || form.motherNote || form.fatherMutation || form.fatherBreeder || form.motherMutation || form.motherBreeder || form.birthDatePrecision !== "full";
     let notesValue = form.notes || null;
     if (hasDocMeta) {
       const docMeta = {
@@ -333,7 +360,12 @@ export default function PlantelModule() {
           documents: form.documents,
           otherDocuments: form.otherDocuments,
           fatherNote: form.fatherSource === "externo" ? form.fatherNote : "",
+          fatherMutation: form.fatherSource === "externo" ? form.fatherMutation : "",
+          fatherBreeder: form.fatherSource === "externo" ? form.fatherBreeder : "",
           motherNote: form.motherSource === "externo" ? form.motherNote : "",
+          motherMutation: form.motherSource === "externo" ? form.motherMutation : "",
+          motherBreeder: form.motherSource === "externo" ? form.motherBreeder : "",
+          birthDatePrecision: form.birthDatePrecision,
         },
         text: form.notes || "",
       };
@@ -345,7 +377,12 @@ export default function PlantelModule() {
       speciesName: form.speciesName,
       ringNumber: fullCode,
       sex: form.sex,
-      birthDate: form.birthDate ? new Date(form.birthDate) : null,
+      birthDate: (() => {
+        if (form.birthDatePrecision === "full" && form.birthDate) return new Date(form.birthDate);
+        if (form.birthDatePrecision === "month_year" && form.birthMonth && form.birthYear) return new Date(`${form.birthYear}-${form.birthMonth}-01`);
+        if (form.birthDatePrecision === "year_only" && form.birthYear) return new Date(`${form.birthYear}-01-01`);
+        return null;
+      })(),
       mutation: form.mutation || null,
       origin: form.origin,
       originBreeder: form.originBreeder || null,
@@ -359,12 +396,42 @@ export default function PlantelModule() {
       invoiceNumber: form.hasInvoice && form.invoiceNumber ? form.invoiceNumber : null,
     };
 
+    let birdId = editingId;
     if (editingId) {
       await updateMut.mutateAsync({ id: editingId, ...payload });
     } else {
-      await createMut.mutateAsync(payload);
+      const result = await createMut.mutateAsync(payload);
+      birdId = (result as any)?.id || null;
     }
+
+    // Upload pending files if any
+    if (form.pendingFiles.length > 0 && birdId) {
+      for (const file of form.pendingFiles) {
+        try {
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result.split(",")[1]);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          await uploadDocMut.mutateAsync({
+            birdId: birdId,
+            docType: "documento",
+            fileName: file.name,
+            mimeType: file.type || "application/octet-stream",
+            fileBase64: base64,
+          });
+        } catch (err) {
+          console.error("Failed to upload file:", file.name, err);
+        }
+      }
+    }
+
     utils.plantel.list.invalidate();
+    utils.plantel.getDocuments.invalidate();
     setView("list");
   };
 
@@ -817,18 +884,152 @@ export default function PlantelModule() {
                 className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
               />
             </div>
+            {/* Drag-and-drop file area */}
+            <div className="mt-3">
+              <label className="block text-xs font-semibold text-stone-600 mb-1.5">Anexar Arquivos</label>
+              <div
+                onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-emerald-400", "bg-emerald-50"); }}
+                onDragLeave={e => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-emerald-400", "bg-emerald-50"); }}
+                onDrop={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove("border-emerald-400", "bg-emerald-50");
+                  const files = Array.from(e.dataTransfer.files).filter(f =>
+                    f.type === "application/pdf" || f.type.startsWith("image/") || f.name.endsWith(".doc") || f.name.endsWith(".docx")
+                  );
+                  if (files.length > 0) {
+                    setForm(prev => ({ ...prev, pendingFiles: [...prev.pendingFiles, ...files] }));
+                  }
+                }}
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.multiple = true;
+                  input.accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx";
+                  input.onchange = (ev) => {
+                    const files = Array.from((ev.target as HTMLInputElement).files || []);
+                    if (files.length > 0) {
+                      setForm(prev => ({ ...prev, pendingFiles: [...prev.pendingFiles, ...files] }));
+                    }
+                  };
+                  input.click();
+                }}
+                className="w-full border-2 border-dashed border-stone-300 rounded-lg p-4 text-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/50 transition-all"
+              >
+                <Upload size={20} className="mx-auto text-stone-400 mb-1" />
+                <p className="text-xs text-stone-500">Arraste PDFs ou imagens aqui, ou clique para selecionar</p>
+                <p className="text-[10px] text-stone-400 mt-0.5">PDF, JPG, PNG, DOC</p>
+              </div>
+              {form.pendingFiles.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {form.pendingFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
+                      <div className="flex items-center gap-2">
+                        <FileText size={12} className="text-emerald-600" />
+                        <span className="text-xs text-stone-700 truncate max-w-[200px]">{file.name}</span>
+                        <span className="text-[10px] text-stone-400">({(file.size / 1024).toFixed(0)} KB)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, pendingFiles: prev.pendingFiles.filter((_, i) => i !== idx) })); }}
+                        className="p-1 rounded hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Row: Birth date + Mutation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-stone-600 mb-1.5">Data de Nascimento</label>
-              <input
-                type="date"
-                value={form.birthDate}
-                onChange={e => setForm(prev => ({ ...prev, birthDate: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              />
+              <div className="flex items-center gap-2 mb-2">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="datePrecision"
+                    checked={form.birthDatePrecision === "full"}
+                    onChange={() => setForm(prev => ({ ...prev, birthDatePrecision: "full" as DatePrecision }))}
+                    className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-200"
+                  />
+                  <span className="text-[11px] text-stone-600">Dia/Mês/Ano</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="datePrecision"
+                    checked={form.birthDatePrecision === "month_year"}
+                    onChange={() => setForm(prev => ({ ...prev, birthDatePrecision: "month_year" as DatePrecision }))}
+                    className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-200"
+                  />
+                  <span className="text-[11px] text-stone-600">Mês/Ano</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="datePrecision"
+                    checked={form.birthDatePrecision === "year_only"}
+                    onChange={() => setForm(prev => ({ ...prev, birthDatePrecision: "year_only" as DatePrecision }))}
+                    className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-200"
+                  />
+                  <span className="text-[11px] text-stone-600">Apenas Ano</span>
+                </label>
+              </div>
+              {form.birthDatePrecision === "full" && (
+                <input
+                  type="date"
+                  value={form.birthDate}
+                  onChange={e => setForm(prev => ({ ...prev, birthDate: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                />
+              )}
+              {form.birthDatePrecision === "month_year" && (
+                <div className="flex gap-2">
+                  <select
+                    value={form.birthMonth}
+                    onChange={e => setForm(prev => ({ ...prev, birthMonth: e.target.value }))}
+                    className="flex-1 px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  >
+                    <option value="">Mês...</option>
+                    <option value="01">Janeiro</option>
+                    <option value="02">Fevereiro</option>
+                    <option value="03">Março</option>
+                    <option value="04">Abril</option>
+                    <option value="05">Maio</option>
+                    <option value="06">Junho</option>
+                    <option value="07">Julho</option>
+                    <option value="08">Agosto</option>
+                    <option value="09">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={form.birthYear}
+                    onChange={e => setForm(prev => ({ ...prev, birthYear: e.target.value }))}
+                    placeholder="Ano"
+                    min="2000"
+                    max="2030"
+                    className="w-24 px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+              )}
+              {form.birthDatePrecision === "year_only" && (
+                <input
+                  type="number"
+                  value={form.birthYear}
+                  onChange={e => setForm(prev => ({ ...prev, birthYear: e.target.value }))}
+                  placeholder="Ex: 2024"
+                  min="2000"
+                  max="2030"
+                  className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-600 mb-1.5">Mutação / Cor</label>
@@ -886,13 +1087,29 @@ export default function PlantelModule() {
                       ))}
                     </select>
                   ) : (
-                    <input
-                      type="text"
-                      value={form.fatherNote}
-                      onChange={e => setForm(prev => ({ ...prev, fatherNote: e.target.value }))}
-                      placeholder="Ex: Macho do Criatório XYZ, anilha 123..."
-                      className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
-                    />
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={form.fatherMutation}
+                        onChange={e => setForm(prev => ({ ...prev, fatherMutation: e.target.value }))}
+                        placeholder="Mutação do pai"
+                        className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={form.fatherBreeder}
+                        onChange={e => setForm(prev => ({ ...prev, fatherBreeder: e.target.value }))}
+                        placeholder="Criatório de origem"
+                        className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={form.fatherNote}
+                        onChange={e => setForm(prev => ({ ...prev, fatherNote: e.target.value }))}
+                        placeholder="Observação (anilha, etc.)"
+                        className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                      />
+                    </div>
                   )}
                 </div>
                 {/* MÃE */}
@@ -934,13 +1151,29 @@ export default function PlantelModule() {
                       ))}
                     </select>
                   ) : (
-                    <input
-                      type="text"
-                      value={form.motherNote}
-                      onChange={e => setForm(prev => ({ ...prev, motherNote: e.target.value }))}
-                      placeholder="Ex: Fêmea do Criatório ABC, anilha 456..."
-                      className="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
-                    />
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={form.motherMutation}
+                        onChange={e => setForm(prev => ({ ...prev, motherMutation: e.target.value }))}
+                        placeholder="Mutação da mãe"
+                        className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={form.motherBreeder}
+                        onChange={e => setForm(prev => ({ ...prev, motherBreeder: e.target.value }))}
+                        placeholder="Criatório de origem"
+                        className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={form.motherNote}
+                        onChange={e => setForm(prev => ({ ...prev, motherNote: e.target.value }))}
+                        placeholder="Observação (anilha, etc.)"
+                        className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white"
+                      />
+                    </div>
                   )}
                 </div>
               </div>

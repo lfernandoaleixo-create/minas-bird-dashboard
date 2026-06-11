@@ -1,0 +1,12 @@
+GENEALOGY SECTION VISIBILITY
+=============================
+Line 846: {form.speciesId && (
+  - The genealogy section only shows when form.speciesId is set
+  - form.speciesId is set when user selects a species from the dropdown
+  - Since no species was selected in the test, the section was hidden
+
+This is CORRECT behavior - genealogy needs a species to filter potential parents.
+The user likely expects it to always be visible. 
+
+But wait - the user said "nao tem arvore genealogica" which means they DID select a species
+and still didn't see it. Let me check if the species selector is working properly.

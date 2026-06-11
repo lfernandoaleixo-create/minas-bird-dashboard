@@ -350,3 +350,6 @@
 - [x] Caixa: remover aporte fantasma de R$12.500 do banco de dados (eram vendas auto-vinculadas, limpamos tudo)
 - [x] Caixa: gráfico mostrar apenas mês atual com evolução por dias (não 12 meses)
 - [x] Nova aba Planta: exibir planta baixa do criatório com zoom/pan interativo
+- [x] Plantel: genealogia externo — 3 campos distintos (mutação, criatório de origem, observação) ao selecionar "Externo"
+- [x] Plantel: data de nascimento flexível — seletor de precisão (Dia/Mês/Ano, Mês/Ano, Apenas Ano)
+- [x] Plantel: documentação com drag & drop — área para arrastar PDFs/imagens no card de documentação
