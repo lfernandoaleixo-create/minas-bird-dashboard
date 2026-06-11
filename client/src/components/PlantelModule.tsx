@@ -673,23 +673,23 @@ export default function PlantelModule() {
                     </div>
                   </div>
 
-                  {/* Center columns: Espécie | Sexo | Mutação | Recinto */}
-                  <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1">
-                    <div>
+                  {/* Center columns: Espécie | Sexo | Mutação (destaque) | Recinto */}
+                  <div className="flex-1 flex items-start gap-4">
+                    <div className="w-[90px] flex-shrink-0 hidden sm:block">
                       <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Espécie</p>
-                      <p className="text-sm font-semibold text-stone-800 truncate">{bird.speciesName}</p>
+                      <p className="text-xs font-semibold text-stone-700 leading-tight">{bird.speciesName}</p>
                     </div>
-                    <div>
+                    <div className="w-[65px] flex-shrink-0 hidden sm:block">
                       <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Sexo</p>
-                      <p className="text-sm font-semibold text-stone-800">{SEX_LABELS[bird.sex as BirdSex]}</p>
+                      <p className="text-xs font-semibold text-stone-700">{SEX_LABELS[bird.sex as BirdSex]}</p>
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Mutação</p>
-                      <p className="text-sm font-semibold text-stone-800 truncate">{bird.mutation || <span className="text-stone-300 italic">—</span>}</p>
+                      <p className="text-sm font-bold text-stone-900 leading-snug break-words">{bird.mutation || <span className="text-stone-300 italic font-normal">—</span>}</p>
                     </div>
-                    <div>
+                    <div className="w-[70px] flex-shrink-0 hidden lg:block">
                       <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Recinto</p>
-                      <p className="text-sm font-semibold text-stone-800 truncate">{bird.enclosure || <span className="text-stone-300 italic">—</span>}</p>
+                      <p className="text-xs font-semibold text-stone-700">{bird.enclosure || <span className="text-stone-300 italic">—</span>}</p>
                     </div>
                   </div>
 
