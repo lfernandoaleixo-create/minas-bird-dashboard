@@ -1,0 +1,16 @@
+VISIBILITY ISSUE ANALYSIS
+=========================
+
+When accessing https://minasbird-gbypqtq4.manus.space, the browser is redirected to:
+https://manus.im/app-auth?appId=GbyPqTQ4WPAeZLRC6VPuta&redirectUri=https://minasbird-gbypqtq4.manus.space/manus-oauth/callback&state=aHR0cHM6Ly9taW5hc2JpcmQtZ2J5cHF0cTQubWFudXMuc3BhY2Uv&responseType=code
+
+This means the HOSTING PLATFORM itself (manus.space) is intercepting the request
+and forcing OAuth login BEFORE the request even reaches our Express server.
+
+This is NOT a code issue - it's a platform-level gateway/proxy that requires
+Manus authentication before serving any content from .manus.space domains.
+
+The redirect path is: /manus-oauth/callback (platform-level, not our /api/oauth/callback)
+
+Solution: The platform needs to be configured to allow public access (no auth gateway).
+This is controlled by the Manus deployment settings, not by project code.
