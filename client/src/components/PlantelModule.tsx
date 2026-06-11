@@ -71,6 +71,16 @@ const ORIGIN_LABELS: Record<BirdOrigin, string> = {
   troca: "Troca",
 };
 
+const KNOWN_BREEDERS = [
+  "Criatório SilkRock",
+  "Criatório Fercal Birds",
+  "Criatório E-Curtolo Aviário",
+  "Criatório Bico de Ouro",
+  "Criatório Psittatiba",
+  "Criatório Aves de Gala",
+  "Criatório Parrot Farm",
+];
+
 type ParentSource = "plantel" | "externo";
 
 type DatePrecision = "full" | "month_year" | "year_only";
@@ -1205,16 +1215,59 @@ export default function PlantelModule() {
             {(form.origin === "comprado" || form.origin === "doado" || form.origin === "troca") && (
               <div>
                 <label className="block text-xs font-semibold text-stone-600 mb-1.5">
-                  {form.origin === "comprado" ? "Nome do Criatório / Dono" : form.origin === "doado" ? "Quem doou" : "Trocado com"}
+                  {form.origin === "comprado" ? "Criatório de Origem" : form.origin === "doado" ? "Quem doou" : "Trocado com"}
                   {" "}<span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={form.originBreeder}
-                  onChange={e => setForm(prev => ({ ...prev, originBreeder: e.target.value }))}
-                  placeholder={form.origin === "comprado" ? "Ex: Criatório Aves do Sul, João Silva..." : form.origin === "doado" ? "Ex: Criatório XYZ, Maria..." : "Ex: Criatório ABC..."}
-                  className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                />
+                {form.origin === "comprado" ? (
+                  <>
+                    <select
+                      value={KNOWN_BREEDERS.includes(form.originBreeder) ? form.originBreeder : (form.originBreeder ? "__outro__" : "")}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === "__outro__") {
+                          setForm(prev => ({ ...prev, originBreeder: "" }));
+                        } else {
+                          setForm(prev => ({ ...prev, originBreeder: val }));
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                    >
+                      <option value="">Selecione o criatório...</option>
+                      {KNOWN_BREEDERS.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                      <option value="__outro__">✏️ Outro (digitar)</option>
+                    </select>
+                    {!KNOWN_BREEDERS.includes(form.originBreeder) && form.originBreeder !== "" && (
+                      <input
+                        type="text"
+                        value={form.originBreeder}
+                        onChange={e => setForm(prev => ({ ...prev, originBreeder: e.target.value }))}
+                        placeholder="Digite o nome do criatório..."
+                        className="w-full mt-2 px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                        autoFocus
+                      />
+                    )}
+                    {(!KNOWN_BREEDERS.includes(form.originBreeder) && form.originBreeder === "") && (
+                      <input
+                        type="text"
+                        value={form.originBreeder}
+                        onChange={e => setForm(prev => ({ ...prev, originBreeder: e.target.value }))}
+                        placeholder="Digite o nome do novo criatório..."
+                        className="w-full mt-2 px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                        autoFocus
+                      />
+                    )}
+                  </>
+                ) : (
+                  <input
+                    type="text"
+                    value={form.originBreeder}
+                    onChange={e => setForm(prev => ({ ...prev, originBreeder: e.target.value }))}
+                    placeholder={form.origin === "doado" ? "Ex: Criatório XYZ, Maria..." : "Ex: Criatório ABC..."}
+                    className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  />
+                )}
               </div>
             )}
           </div>

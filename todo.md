@@ -360,3 +360,7 @@
 - [x] Clientes: visão detalhada do cliente com todas as compras e parcelas
 - [x] Clientes: controle de documentação entregue por compra (NF, Certificado, GTA, etc.)
 - [x] Clientes: parcelamento informal sem documentação (controle interno)
+- [ ] Clientes: notificação/alerta de parcelas vencidas (destaque visual no painel)
+- [ ] Clientes: relatório de vendas em PDF por período (resumo de clientes, aves vendidas, valores)
+- [ ] Clientes: busca rápida de cliente pelo WhatsApp direto do detalhe (botão "Enviar mensagem")
+- [x] Plantel: seletor de criatório de origem ao marcar "Comprado" — lista pré-cadastrada + opção "Outro" para digitar novo
