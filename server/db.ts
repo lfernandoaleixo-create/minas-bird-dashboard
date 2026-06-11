@@ -589,3 +589,54 @@ export async function deleteCriatorioDocument(id: number) {
   await db.delete(criatorioDocuments).where(eq(criatorioDocuments.id, id));
   return { success: true };
 }
+
+// ===== SALES REPORT HELPERS =====
+
+export async function getAllPurchasesWithClients() {
+  const db = await getDb();
+  if (!db) return [];
+  // Join purchases with clients to get client name
+  const rows = await db.select({
+    id: clientPurchases.id,
+    clientId: clientPurchases.clientId,
+    clientName: clients.name,
+    clientPhone: clients.phone,
+    species: clientPurchases.species,
+    mutation: clientPurchases.mutation,
+    quantity: clientPurchases.quantity,
+    valueCents: clientPurchases.valueCents,
+    paymentMethod: clientPurchases.paymentMethod,
+    installments: clientPurchases.installments,
+    invoiceNumber: clientPurchases.invoiceNumber,
+    saleStatus: clientPurchases.saleStatus,
+    saleDate: clientPurchases.saleDate,
+    notes: clientPurchases.notes,
+    createdAt: clientPurchases.createdAt,
+  })
+    .from(clientPurchases)
+    .innerJoin(clients, eq(clientPurchases.clientId, clients.id))
+    .orderBy(desc(clientPurchases.saleDate));
+  return rows;
+}
+
+export async function getOverdueInstallments() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  // Get all pending installments where dueDate < now
+  const { lt } = await import("drizzle-orm");
+  const rows = await db.select({
+    id: saleInstallments.id,
+    purchaseId: saleInstallments.purchaseId,
+    installmentNumber: saleInstallments.installmentNumber,
+    valueCents: saleInstallments.valueCents,
+    dueDate: saleInstallments.dueDate,
+    status: saleInstallments.status,
+  })
+    .from(saleInstallments)
+    .where(and(
+      eq(saleInstallments.status, "pendente"),
+      lt(saleInstallments.dueDate, now),
+    ));
+  return rows;
+}

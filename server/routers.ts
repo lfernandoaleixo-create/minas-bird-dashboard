@@ -49,6 +49,8 @@ import {
   createCriatorioDocument,
   updateCriatorioDocument,
   deleteCriatorioDocument,
+  getAllPurchasesWithClients,
+  getOverdueInstallments,
 } from "./db";
 import {
   getFoodCalendarFoods,
@@ -406,6 +408,24 @@ export const appRouter = router({
 
   // ===== COMPRAS DE CLIENTES =====
   purchase: router({
+    /** Listar todas as compras com nome do cliente (para relatório) */
+    listAll: publicProcedure.query(async () => {
+      const purchases = await getAllPurchasesWithClients();
+      // Attach installments to each purchase
+      const result = await Promise.all(
+        purchases.map(async (p) => {
+          const installments = await getInstallmentsByPurchase(p.id);
+          return { ...p, installments };
+        })
+      );
+      return result;
+    }),
+
+    /** Listar parcelas vencidas (pendentes com dueDate no passado) */
+    overdueInstallments: publicProcedure.query(async () => {
+      return getOverdueInstallments();
+    }),
+
     /** Listar compras de um cliente (com parcelas) */
     listByClient: publicProcedure
       .input(z.object({ clientId: z.number() }))

@@ -175,3 +175,60 @@ describe("purchase router", () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe("purchase.listAll and purchase.overdueInstallments", () => {
+  const ctx = createPublicContext();
+  const caller = appRouter.createCaller(ctx);
+
+  let clientId: number;
+  let purchaseId: number;
+
+  it("creates a client and purchase for report tests", async () => {
+    const clientResult = await caller.cliente.create({
+      name: "Cliente Relatório",
+      phone: "(31) 95555-6666",
+    });
+    clientId = clientResult.client!.id;
+
+    const purchaseResult = await caller.purchase.create({
+      clientId,
+      species: "Alexandrino",
+      quantity: 1,
+      valueCents: 300000,
+      saleDate: "2026-06-01",
+      installmentsCount: 3,
+      installments: [
+        { valueCents: 100000, dueDate: "2026-05-01" }, // overdue (past)
+        { valueCents: 100000, dueDate: "2026-07-01" }, // future
+        { valueCents: 100000, dueDate: "2026-08-01" }, // future
+      ],
+    });
+    expect(purchaseResult.success).toBe(true);
+    purchaseId = purchaseResult.purchase!.id;
+  });
+
+  it("listAll returns all purchases with client name", async () => {
+    const result = await caller.purchase.listAll();
+    expect(Array.isArray(result)).toBe(true);
+    const found = result.find((p: any) => p.id === purchaseId);
+    expect(found).toBeDefined();
+    expect(found!.clientName).toBe("Cliente Relatório");
+    expect(found!.species).toBe("Alexandrino");
+    expect(found!.installments).toBeDefined();
+    expect(found!.installments.length).toBe(3);
+  });
+
+  it("overdueInstallments returns past-due pending installments", async () => {
+    const result = await caller.purchase.overdueInstallments();
+    expect(Array.isArray(result)).toBe(true);
+    // Should find at least the one with dueDate 2026-05-01
+    const found = result.find((i: any) => i.purchaseId === purchaseId);
+    expect(found).toBeDefined();
+    expect(found!.valueCents).toBe(100000);
+  });
+
+  it("cleans up: deletes purchase and client", async () => {
+    await caller.purchase.delete({ id: purchaseId });
+    await caller.cliente.delete({ id: clientId });
+  });
+});

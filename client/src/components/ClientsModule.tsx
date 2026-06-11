@@ -33,7 +33,10 @@ import {
   DollarSign,
   Eye,
   Banknote,
+  Download,
+  MessageCircle,
 } from "lucide-react";
+import { generateSalesPdf } from "@/lib/salesPdf";
 
 // Species list for interest selection
 const SPECIES_LIST = [
@@ -264,6 +267,10 @@ export default function ClientsModule() {
     { id: selectedClientId! },
     { enabled: selectedClientId !== null && (view === "detail" || view === "purchase_detail") }
   );
+  // All purchases for sales report
+  const allPurchasesQuery = trpc.purchase.listAll.useQuery();
+  // Overdue installments
+  const overdueQuery = trpc.purchase.overdueInstallments.useQuery();
   // Plantel query for bird selection in purchase form
   const plantelQuery = trpc.plantel.list.useQuery();
   const activeBirds = useMemo(() => {
@@ -373,6 +380,52 @@ export default function ClientsModule() {
     }
     return list;
   }, [clientsQuery.data, statusFilter, searchQuery]);
+
+  // Overdue installments count for alert banner
+  const overdueCount = overdueQuery.data?.length ?? 0;
+  const overdueTotal = useMemo(() => {
+    return (overdueQuery.data || []).reduce((sum, i: any) => sum + i.valueCents, 0);
+  }, [overdueQuery.data]);
+
+  // WhatsApp helper
+  const openWhatsApp = (phone: string, name?: string) => {
+    const digits = phone.replace(/\D/g, "");
+    // Add Brazil country code if not present
+    const intlPhone = digits.startsWith("55") ? digits : `55${digits}`;
+    const message = name ? `Olá ${name}! Aqui é do Criatório Minas Bird.` : "";
+    const url = `https://wa.me/${intlPhone}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
+    window.open(url, "_blank");
+  };
+
+  // Sales report PDF handler
+  const handleSalesReport = async () => {
+    const purchases = allPurchasesQuery.data;
+    if (!purchases || purchases.length === 0) return;
+    const salesData = purchases.map((p: any) => {
+      const installments = p.installments || [];
+      const pagas = installments.filter((i: any) => i.status === "pago");
+      const pendentes = installments.filter((i: any) => i.status === "pendente");
+      const atrasadas = installments.filter((i: any) => i.status === "atrasado" || (i.status === "pendente" && new Date(i.dueDate) < new Date()));
+      return {
+        id: p.id,
+        clientName: p.clientName,
+        species: p.species,
+        mutation: p.mutation,
+        quantity: p.quantity,
+        valueCents: p.valueCents,
+        paymentMethod: p.paymentMethod,
+        saleDate: p.saleDate,
+        saleStatus: p.saleStatus,
+        installmentsCount: p.installments?.length || 1,
+        parcelasPagas: pagas.length,
+        parcelasPendentes: pendentes.length,
+        parcelasAtrasadas: atrasadas.length,
+        totalPago: pagas.reduce((s: number, i: any) => s + i.valueCents, 0),
+        totalPendente: [...pendentes, ...atrasadas.filter((a: any) => a.status !== "pendente")].reduce((s: number, i: any) => s + i.valueCents, 0),
+      };
+    });
+    await generateSalesPdf(salesData, "Todas as Vendas");
+  };
 
   // Handlers
   const handleSubmit = () => {
@@ -705,13 +758,23 @@ export default function ClientsModule() {
               </span>
             </div>
           </div>
-          <button
-            onClick={() => handleEdit(client)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-          >
-            <Edit2 size={14} />
-            Editar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openWhatsApp(client.phone, client.name)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+              title="Abrir conversa no WhatsApp"
+            >
+              <MessageCircle size={14} />
+              WhatsApp
+            </button>
+            <button
+              onClick={() => handleEdit(client)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+            >
+              <Edit2 size={14} />
+              Editar
+            </button>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -1468,14 +1531,42 @@ export default function ClientsModule() {
             {clientsQuery.data?.length ?? 0} cliente(s) cadastrado(s)
           </p>
         </div>
-        <button
-          onClick={() => { setFormData(emptyForm); setEditingId(null); setView("form"); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
-        >
-          <Plus size={15} />
-          Novo Cliente
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSalesReport}
+            disabled={!allPurchasesQuery.data || allPurchasesQuery.data.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-xs font-medium hover:bg-stone-50 disabled:opacity-40 transition-all"
+            title="Exportar relatório de vendas em PDF"
+          >
+            <Download size={13} />
+            Relatório PDF
+          </button>
+          <button
+            onClick={() => { setFormData(emptyForm); setEditingId(null); setView("form"); }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+          >
+            <Plus size={15} />
+            Novo Cliente
+          </button>
+        </div>
       </div>
+
+      {/* Overdue Installments Alert */}
+      {overdueCount > 0 && (
+        <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <AlertTriangle size={16} className="text-red-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-800">
+              {overdueCount} parcela{overdueCount > 1 ? "s" : ""} vencida{overdueCount > 1 ? "s" : ""}
+            </p>
+            <p className="text-xs text-red-600">
+              Total pendente: {formatCurrency(overdueTotal)}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
