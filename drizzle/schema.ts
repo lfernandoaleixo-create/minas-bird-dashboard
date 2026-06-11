@@ -182,18 +182,26 @@ export const clientPurchases = mysqlTable("client_purchases", {
   id: int("id").autoincrement().primaryKey(),
   /** ID do cliente */
   clientId: int("clientId").notNull(),
+  /** ID da ave vendida (referencia plantel.id) — null se ave não cadastrada */
+  birdId: int("birdId"),
   /** Espécie vendida */
   species: varchar("species", { length: 255 }).notNull(),
+  /** Mutação/cor da ave vendida */
+  mutation: varchar("purchaseMutation", { length: 255 }),
   /** Quantidade de aves */
   quantity: int("quantity").notNull().default(1),
   /** Valor total da venda em centavos (R$) */
   valueCents: int("valueCents"),
   /** Forma de pagamento */
-  paymentMethod: mysqlEnum("paymentMethod", ["pix", "dinheiro", "cartao_debito", "cartao_credito", "boleto", "transferencia"]),
+  paymentMethod: mysqlEnum("paymentMethod", ["pix", "dinheiro", "cartao_debito", "cartao_credito", "boleto", "transferencia", "parcelado_informal"]),
   /** Número de parcelas (1 = à vista) */
   installments: int("installments").default(1),
   /** Número da nota fiscal / recibo */
   invoiceNumber: varchar("invoiceNumber", { length: 64 }),
+  /** Documentação entregue ao cliente (JSON array: nf, certificado_origem, gta, atestado_saude, recibo, etc.) */
+  docsDelivered: json("docsDelivered").$type<string[]>(),
+  /** Status da venda */
+  saleStatus: mysqlEnum("saleStatus", ["concluida", "em_andamento", "cancelada"]).default("em_andamento").notNull(),
   /** Data da venda */
   saleDate: timestamp("saleDate").notNull(),
   /** Observações da venda */

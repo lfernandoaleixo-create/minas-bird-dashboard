@@ -420,12 +420,15 @@ export const appRouter = router({
     create: publicProcedure
       .input(z.object({
         clientId: z.number(),
+        birdId: z.number().nullable().optional(),
         species: z.string().min(1),
+        mutation: z.string().nullable().optional(),
         quantity: z.number().int().min(1),
         valueCents: z.number().int().nullable().optional(),
-        paymentMethod: z.enum(["pix", "dinheiro", "cartao_debito", "cartao_credito", "boleto", "transferencia"]).nullable().optional(),
-        installmentsCount: z.number().int().min(1).max(12).optional().default(1),
+        paymentMethod: z.enum(["pix", "dinheiro", "cartao_debito", "cartao_credito", "boleto", "transferencia", "parcelado_informal"]).nullable().optional(),
+        installmentsCount: z.number().int().min(1).max(48).optional().default(1),
         invoiceNumber: z.string().nullable().optional(),
+        docsDelivered: z.array(z.string()).optional(),
         saleDate: z.string(), // ISO date string
         notes: z.string().nullable().optional(),
         /** Array de parcelas com valor e vencimento */
@@ -437,12 +440,16 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const purchase = await createPurchase({
           clientId: input.clientId,
+          birdId: input.birdId ?? null,
           species: input.species,
+          mutation: input.mutation ?? null,
           quantity: input.quantity,
           valueCents: input.valueCents ?? null,
           paymentMethod: input.paymentMethod ?? null,
           installments: input.installmentsCount,
           invoiceNumber: input.invoiceNumber ?? null,
+          docsDelivered: input.docsDelivered ?? null,
+          saleStatus: input.installmentsCount > 1 || input.paymentMethod === "parcelado_informal" ? "em_andamento" : "concluida",
           saleDate: new Date(input.saleDate),
           notes: input.notes ?? null,
         });
@@ -458,18 +465,23 @@ export const appRouter = router({
           }));
           createdInstallments = await createInstallments(installmentData);
         }
-        // Auto-link: create a Caixa entry for this sale
-        if (purchase && input.valueCents && input.valueCents > 0) {
+        // Auto-link Caixa: only for à vista (no installments) — installment payments go to Caixa when confirmed
+        const isAVista = input.installmentsCount === 1 && input.paymentMethod !== "parcelado_informal";
+        if (purchase && input.valueCents && input.valueCents > 0 && isAVista) {
           await createFinancialTransaction({
             type: "venda",
             category: "Venda de Ave",
-            description: `Venda: ${input.species} (${input.quantity}x) — Cliente #${input.clientId}`,
+            description: `Venda: ${input.species}${input.mutation ? ` (${input.mutation})` : ""} — Cliente #${input.clientId}`,
             valueCents: input.valueCents,
             transactionDate: new Date(input.saleDate),
             paymentMethod: input.paymentMethod ?? null,
             reference: input.invoiceNumber ? `NF ${input.invoiceNumber}` : `Venda #${purchase.id}`,
             notes: input.notes ?? null,
           });
+        }
+        // If bird is from plantel, update its status to "vendido"
+        if (input.birdId) {
+          await updatePlantelBird(input.birdId, { status: "vendido" });
         }
         return { success: true, purchase: purchase ? { ...purchase, installments: createdInstallments } : null };
       }),
@@ -482,16 +494,34 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    /** Atualizar status de uma parcela */
+    /** Atualizar status de uma parcela — ao marcar como pago, lança no Caixa */
     updateInstallment: publicProcedure
       .input(z.object({
         id: z.number(),
         status: z.enum(["pendente", "pago", "atrasado"]),
         paidAt: z.string().nullable().optional(), // ISO date string
+        // Context for Caixa entry
+        purchaseId: z.number().optional(),
+        clientName: z.string().optional(),
+        species: z.string().optional(),
+        paymentMethod: z.string().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
         const paidAt = input.paidAt ? new Date(input.paidAt) : undefined;
         const installment = await updateInstallmentStatus(input.id, input.status, paidAt);
+        // When marking as paid, create a Caixa entry
+        if (input.status === "pago" && installment && installment.valueCents > 0) {
+          await createFinancialTransaction({
+            type: "venda",
+            category: "Parcela Recebida",
+            description: `Parcela ${installment.installmentNumber}x — ${input.species || "Ave"} — ${input.clientName || "Cliente"}`,
+            valueCents: installment.valueCents,
+            transactionDate: paidAt || new Date(),
+            paymentMethod: input.paymentMethod ?? null,
+            reference: `Venda #${input.purchaseId || installment.purchaseId}`,
+            notes: null,
+          });
+        }
         return { success: true, installment };
       }),
 

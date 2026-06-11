@@ -1,7 +1,7 @@
 /**
  * ClientsModule — Módulo de Cadastro de Clientes
  * CRUD completo: listagem, cadastro, edição, exclusão
- * Inclui histórico de compras por cliente
+ * Sistema completo de vendas: múltiplas compras, parcelas, documentação, integração Caixa
  */
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
@@ -29,6 +29,10 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
+  FileText,
+  DollarSign,
+  Eye,
+  Banknote,
 } from "lucide-react";
 
 // Species list for interest selection
@@ -90,7 +94,7 @@ const emptyForm: ClientFormData = {
   status: "ativo",
 };
 
-type PaymentMethod = "pix" | "dinheiro" | "cartao_debito" | "cartao_credito" | "boleto" | "transferencia";
+type PaymentMethod = "pix" | "dinheiro" | "cartao_debito" | "cartao_credito" | "boleto" | "transferencia" | "parcelado_informal";
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "pix", label: "PIX" },
@@ -99,6 +103,17 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "cartao_credito", label: "Cartão Crédito" },
   { value: "boleto", label: "Boleto" },
   { value: "transferencia", label: "Transferência" },
+  { value: "parcelado_informal", label: "Parcelado Informal (sem doc.)" },
+];
+
+const DOCS_OPTIONS = [
+  "Nota Fiscal",
+  "Certificado de Origem",
+  "GTA",
+  "Sexagem",
+  "Microchip",
+  "Contrato de Venda",
+  "Recibo",
 ];
 
 interface InstallmentInput {
@@ -108,13 +123,15 @@ interface InstallmentInput {
 
 interface PurchaseFormData {
   species: string;
-  birdId: number | null; // ID da ave no plantel (para vincular)
-  birdCode: string; // Código da ave (ex: RN001)
+  mutation: string;
+  birdId: number | null;
+  birdCode: string;
   quantity: number;
   valueCents: number | null;
   paymentMethod: PaymentMethod | "";
   installmentsCount: number;
   invoiceNumber: string;
+  docsDelivered: string[];
   saleDate: string;
   notes: string;
   installments: InstallmentInput[];
@@ -122,6 +139,7 @@ interface PurchaseFormData {
 
 const emptyPurchaseForm: PurchaseFormData = {
   species: "",
+  mutation: "",
   birdId: null,
   birdCode: "",
   quantity: 1,
@@ -129,6 +147,7 @@ const emptyPurchaseForm: PurchaseFormData = {
   paymentMethod: "",
   installmentsCount: 1,
   invoiceNumber: "",
+  docsDelivered: [],
   saleDate: new Date().toISOString().split("T")[0],
   notes: "",
   installments: [],
@@ -173,24 +192,33 @@ function InstallmentStatusBadge({ status }: { status: string }) {
   );
 }
 
+// Sale status badge
+function SaleStatusBadge({ status }: { status: string | null }) {
+  const config: Record<string, { label: string; color: string }> = {
+    concluida: { label: "Concluída", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    em_andamento: { label: "Em Andamento", color: "bg-blue-50 text-blue-700 border-blue-200" },
+    cancelada: { label: "Cancelada", color: "bg-red-50 text-red-700 border-red-200" },
+  };
+  const { label, color } = config[status || "concluida"] || config.concluida;
+  return (
+    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", color)}>
+      {label}
+    </span>
+  );
+}
+
 // Format phone for display
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  if (digits.length === 11) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  }
-  if (digits.length === 10) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  }
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return phone;
 }
 
 // Format CPF
 function formatCpf(cpf: string): string {
   const digits = cpf.replace(/\D/g, "");
-  if (digits.length === 11) {
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-  }
+  if (digits.length === 11) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
   return cpf;
 }
 
@@ -216,9 +244,10 @@ function StatusBadge({ status }: { status: ClientStatus }) {
 }
 
 export default function ClientsModule() {
-  const [view, setView] = useState<"list" | "form" | "detail">("list");
+  const [view, setView] = useState<"list" | "form" | "detail" | "purchase_detail">("list");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
   const [formData, setFormData] = useState<ClientFormData>(emptyForm);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ClientStatus | "todos">("todos");
@@ -233,7 +262,7 @@ export default function ClientsModule() {
   const clientsQuery = trpc.cliente.list.useQuery();
   const clientDetailQuery = trpc.cliente.getById.useQuery(
     { id: selectedClientId! },
-    { enabled: selectedClientId !== null && view === "detail" }
+    { enabled: selectedClientId !== null && (view === "detail" || view === "purchase_detail") }
   );
   // Plantel query for bird selection in purchase form
   const plantelQuery = trpc.plantel.list.useQuery();
@@ -304,7 +333,7 @@ export default function ClientsModule() {
   const createPurchaseMutation = trpc.purchase.create.useMutation({
     onSuccess: () => {
       utils.cliente.getById.invalidate();
-      // Se uma ave do plantel foi vinculada, atualizar status para "vendido"
+      utils.caixa.list.invalidate();
       if (purchaseForm.birdId) {
         updateBirdStatusMut.mutate({ id: purchaseForm.birdId, status: "vendido" });
       }
@@ -315,6 +344,12 @@ export default function ClientsModule() {
   const deletePurchaseMutation = trpc.purchase.delete.useMutation({
     onSuccess: () => {
       utils.cliente.getById.invalidate();
+    },
+  });
+  const updateInstallmentMutation = trpc.purchase.updateInstallment.useMutation({
+    onSuccess: () => {
+      utils.cliente.getById.invalidate();
+      utils.caixa.list.invalidate();
     },
   });
 
@@ -384,26 +419,23 @@ export default function ClientsModule() {
     setView("form");
   };
 
-  const updateInstallmentMutation = trpc.purchase.updateInstallment.useMutation({
-    onSuccess: () => {
-      utils.cliente.getById.invalidate();
-    },
-  });
-
   const handlePurchaseSubmit = () => {
     if ((!purchaseForm.species.trim() && !purchaseForm.birdId) || !selectedClientId) return;
-    const hasInstallments = (purchaseForm.paymentMethod === "cartao_credito" || purchaseForm.paymentMethod === "boleto") && purchaseForm.installmentsCount > 1;
+    const needsInstallments = purchaseForm.installmentsCount > 1;
     createPurchaseMutation.mutate({
       clientId: selectedClientId,
       species: purchaseForm.species,
+      mutation: purchaseForm.mutation || null,
+      birdId: purchaseForm.birdId,
       quantity: purchaseForm.quantity,
       valueCents: purchaseForm.valueCents,
-      paymentMethod: purchaseForm.paymentMethod || null,
+      paymentMethod: (purchaseForm.paymentMethod || null) as any,
       installmentsCount: purchaseForm.installmentsCount,
       invoiceNumber: purchaseForm.invoiceNumber.trim() || null,
+      docsDelivered: purchaseForm.docsDelivered.length > 0 ? purchaseForm.docsDelivered : undefined,
       saleDate: purchaseForm.saleDate,
       notes: purchaseForm.notes.trim() || null,
-      installments: hasInstallments ? purchaseForm.installments : undefined,
+      installments: needsInstallments ? purchaseForm.installments : undefined,
     });
   };
 
@@ -427,7 +459,199 @@ export default function ClientsModule() {
     }));
   };
 
+  const toggleDocDelivered = (doc: string) => {
+    setPurchaseForm((prev) => ({
+      ...prev,
+      docsDelivered: prev.docsDelivered.includes(doc)
+        ? prev.docsDelivered.filter((d) => d !== doc)
+        : [...prev.docsDelivered, doc],
+    }));
+  };
+
   // ===== RENDER =====
+
+  // PURCHASE DETAIL VIEW
+  if (view === "purchase_detail" && selectedPurchaseId && selectedClientId) {
+    const client = clientDetailQuery.data;
+    const purchase = client?.purchases?.find((p: any) => p.id === selectedPurchaseId);
+    if (clientDetailQuery.isLoading) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
+        </div>
+      );
+    }
+    if (!purchase || !client) {
+      return (
+        <div className="text-center py-20 text-stone-500">
+          Venda não encontrada.
+          <button onClick={() => setView("detail")} className="ml-2 text-emerald-600 underline">Voltar</button>
+        </div>
+      );
+    }
+
+    const parcelas = purchase.parcelas || [];
+    const totalPago = parcelas.filter((p: any) => p.status === "pago").reduce((sum: number, p: any) => sum + p.valueCents, 0);
+    const totalPendente = parcelas.filter((p: any) => p.status !== "pago").reduce((sum: number, p: any) => sum + p.valueCents, 0);
+    const docsDelivered: string[] = purchase.docsDelivered || [];
+
+    return (
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => setView("detail")}
+            className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
+          >
+            <ChevronRight size={18} className="rotate-180 text-stone-500" />
+          </button>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-stone-800">Detalhes da Venda</h2>
+            <p className="text-sm text-stone-500 mt-0.5">
+              {client.name} · {purchase.species}{purchase.mutation ? ` (${purchase.mutation})` : ""}
+            </p>
+          </div>
+          <SaleStatusBadge status={purchase.saleStatus} />
+        </div>
+
+        {/* Sale Info Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-stone-200 p-4">
+            <p className="text-xs text-stone-400 mb-1">Ave</p>
+            <p className="text-sm font-semibold text-stone-800">
+              {purchase.quantity}x {purchase.species}
+            </p>
+            {purchase.mutation && (
+              <p className="text-xs text-stone-500 mt-0.5">Mutação: {purchase.mutation}</p>
+            )}
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 p-4">
+            <p className="text-xs text-stone-400 mb-1">Valor Total</p>
+            <p className="text-lg font-bold text-emerald-700">
+              {purchase.valueCents ? formatCurrency(purchase.valueCents) : "Não informado"}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 p-4">
+            <p className="text-xs text-stone-400 mb-1">Pagamento</p>
+            <p className="text-sm font-semibold text-stone-800">
+              {getPaymentLabel(purchase.paymentMethod)}
+            </p>
+            <p className="text-xs text-stone-500 mt-0.5">
+              {new Date(purchase.saleDate).toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+        </div>
+
+        {/* Documentação Entregue */}
+        <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
+          <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
+            <FileText size={14} className="text-emerald-600" />
+            Documentação Entregue
+          </h3>
+          {docsDelivered.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {docsDelivered.map((doc) => (
+                <span key={doc} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium border border-emerald-100">
+                  {doc}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-stone-400 italic text-sm">Nenhuma documentação registrada</p>
+          )}
+          {purchase.invoiceNumber && (
+            <p className="text-xs text-stone-500 mt-3 pt-3 border-t border-stone-100">
+              NF: <span className="font-medium text-stone-700">{purchase.invoiceNumber}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Parcelas */}
+        {parcelas.length > 0 && (
+          <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
+            <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
+              <Banknote size={14} className="text-emerald-600" />
+              Parcelas ({parcelas.length}x)
+              <span className="ml-auto text-xs font-normal text-stone-400">
+                Pago: {formatCurrency(totalPago)} · Pendente: {formatCurrency(totalPendente)}
+              </span>
+            </h3>
+            {/* Progress bar */}
+            {purchase.valueCents && purchase.valueCents > 0 && (
+              <div className="w-full h-2 bg-stone-100 rounded-full mb-4 overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, (totalPago / purchase.valueCents) * 100)}%` }}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              {parcelas.map((inst: any) => (
+                <div key={inst.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-100">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-stone-500 font-medium w-20">
+                      {inst.installmentNumber}ª parcela
+                    </span>
+                    <span className="text-xs text-stone-400">
+                      Venc: {new Date(inst.dueDate).toLocaleDateString("pt-BR")}
+                    </span>
+                    {inst.paidAt && (
+                      <span className="text-[10px] text-emerald-600">
+                        Pago em {new Date(inst.paidAt).toLocaleDateString("pt-BR")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-sm text-stone-700">
+                      {formatCurrency(inst.valueCents)}
+                    </span>
+                    <InstallmentStatusBadge status={inst.status} />
+                    {inst.status !== "pago" && (
+                      <button
+                        onClick={() => updateInstallmentMutation.mutate({
+                          id: inst.id,
+                          status: "pago",
+                          paidAt: new Date().toISOString(),
+                          purchaseId: purchase.id,
+                          clientName: client.name,
+                          species: purchase.species,
+                          paymentMethod: purchase.paymentMethod,
+                        })}
+                        disabled={updateInstallmentMutation.isPending}
+                        className="px-3 py-1 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                      >
+                        Confirmar Pagamento
+                      </button>
+                    )}
+                    {inst.status === "pago" && (
+                      <button
+                        onClick={() => updateInstallmentMutation.mutate({
+                          id: inst.id,
+                          status: "pendente",
+                          paidAt: null,
+                        })}
+                        className="px-2 py-0.5 text-[10px] font-medium bg-stone-50 text-stone-500 rounded border border-stone-200 hover:bg-stone-100 transition-colors"
+                      >
+                        Desfazer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {purchase.notes && (
+          <div className="bg-white rounded-xl border border-stone-200 p-5">
+            <h3 className="text-sm font-semibold text-stone-700 mb-2">Observações</h3>
+            <p className="text-sm text-stone-600 whitespace-pre-wrap">{purchase.notes}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // CLIENT DETAIL VIEW
   if (view === "detail" && selectedClientId) {
@@ -449,6 +673,18 @@ export default function ClientsModule() {
         </div>
       );
     }
+
+    // Calculate totals
+    const purchases = client.purchases || [];
+    const totalVendas = purchases.reduce((sum: number, p: any) => sum + (p.valueCents || 0), 0);
+    const totalParcelas = purchases.reduce((sum: number, p: any) => {
+      const parcelas = p.parcelas || [];
+      return sum + parcelas.filter((i: any) => i.status === "pendente" || i.status === "atrasado").reduce((s: number, i: any) => s + i.valueCents, 0);
+    }, 0);
+    const parcelasAtrasadas = purchases.reduce((sum: number, p: any) => {
+      const parcelas = p.parcelas || [];
+      return sum + parcelas.filter((i: any) => i.status === "atrasado").length;
+    }, 0);
 
     return (
       <div className="max-w-4xl mx-auto">
@@ -476,6 +712,29 @@ export default function ClientsModule() {
             <Edit2 size={14} />
             Editar
           </button>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-stone-200 p-4">
+            <p className="text-xs text-stone-400 mb-1">Total em Vendas</p>
+            <p className="text-lg font-bold text-emerald-700">{formatCurrency(totalVendas)}</p>
+            <p className="text-xs text-stone-500">{purchases.length} venda(s)</p>
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 p-4">
+            <p className="text-xs text-stone-400 mb-1">Pendente a Receber</p>
+            <p className={cn("text-lg font-bold", totalParcelas > 0 ? "text-amber-600" : "text-stone-400")}>
+              {formatCurrency(totalParcelas)}
+            </p>
+            {parcelasAtrasadas > 0 && (
+              <p className="text-xs text-red-500 font-medium">{parcelasAtrasadas} parcela(s) atrasada(s)</p>
+            )}
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 p-4">
+            <p className="text-xs text-stone-400 mb-1">Contato</p>
+            <p className="text-sm font-medium text-stone-700">{formatPhone(client.phone)}</p>
+            {client.city && <p className="text-xs text-stone-500">{client.city}{client.state ? ` — ${client.state}` : ""}</p>}
+          </div>
         </div>
 
         {/* Info cards */}
@@ -536,40 +795,6 @@ export default function ClientsModule() {
               )}
             </div>
           </div>
-
-          {/* Species Interest */}
-          <div className="bg-white rounded-xl border border-stone-200 p-5">
-            <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
-              <Bird size={14} className="text-emerald-600" />
-              Espécies de Interesse
-            </h3>
-            {client.speciesInterest && client.speciesInterest.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {client.speciesInterest.map((sp: string) => (
-                  <span key={sp} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium border border-emerald-100">
-                    {sp}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-stone-400 italic text-sm">Nenhuma espécie selecionada</p>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div className="bg-white rounded-xl border border-stone-200 p-5">
-            <h3 className="text-sm font-semibold text-stone-700 mb-3">Observações</h3>
-            {client.notes ? (
-              <p className="text-sm text-stone-600 whitespace-pre-wrap">{client.notes}</p>
-            ) : (
-              <p className="text-stone-400 italic text-sm">Sem observações</p>
-            )}
-            {client.referralSource && (
-              <p className="text-xs text-stone-400 mt-3 pt-3 border-t border-stone-100">
-                Conheceu por: <span className="text-stone-600">{client.referralSource}</span>
-              </p>
-            )}
-          </div>
         </div>
 
         {/* Purchase History */}
@@ -578,14 +803,14 @@ export default function ClientsModule() {
             <h3 className="text-sm font-semibold text-stone-700 flex items-center gap-2">
               <ShoppingBag size={14} className="text-emerald-600" />
               Histórico de Compras
-              {client.purchases && client.purchases.length > 0 && (
+              {purchases.length > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-stone-100 rounded-full text-xs text-stone-500">
-                  {client.purchases.length}
+                  {purchases.length}
                 </span>
               )}
             </h3>
             <button
-              onClick={() => setShowPurchaseForm(true)}
+              onClick={() => { setShowPurchaseForm(true); setPurchaseForm(emptyPurchaseForm); }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
             >
               <Plus size={12} />
@@ -595,217 +820,270 @@ export default function ClientsModule() {
 
           {/* Purchase form */}
           {showPurchaseForm && (
-            <div className="mb-4 p-4 bg-stone-50 rounded-lg border border-stone-200">
-              <h4 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
+            <div className="mb-4 p-5 bg-stone-50 rounded-xl border border-stone-200">
+              <h4 className="text-sm font-semibold text-stone-700 mb-4 flex items-center gap-2">
                 <CreditCard size={14} className="text-emerald-600" />
-                Nova Venda
+                Registrar Nova Venda
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Ave do Plantel *</label>
-                  {/* Filtros de espécie e mutação */}
-                  <div className="flex items-center gap-2 mb-2">
+
+              {/* Section 1: Ave */}
+              <div className="mb-5 pb-5 border-b border-stone-200">
+                <h5 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Ave</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Selecionar do Plantel</label>
+                    <div className="flex items-center gap-2 mb-2">
+                      <select
+                        value={birdFilterSpecies}
+                        onChange={e => { setBirdFilterSpecies(e.target.value); setBirdFilterMutation("todos"); }}
+                        className="px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs bg-white text-stone-600"
+                      >
+                        <option value="todos">Todas Espécies</option>
+                        {birdSpeciesOptions.map(([id, name]) => (
+                          <option key={id} value={id}>{name}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={birdFilterMutation}
+                        onChange={e => setBirdFilterMutation(e.target.value)}
+                        className="px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs bg-white text-stone-600"
+                      >
+                        <option value="todos">Todas Mutações</option>
+                        {birdMutationOptions.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-stone-400">
+                        {filteredActiveBirds.length} disponíve{filteredActiveBirds.length !== 1 ? "is" : "l"}
+                      </span>
+                    </div>
                     <select
-                      value={birdFilterSpecies}
-                      onChange={e => { setBirdFilterSpecies(e.target.value); setBirdFilterMutation("todos"); }}
-                      className="px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs bg-white text-stone-600"
-                    >
-                      <option value="todos">Todas Espécies</option>
-                      {birdSpeciesOptions.map(([id, name]) => (
-                        <option key={id} value={id}>{name}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={birdFilterMutation}
-                      onChange={e => setBirdFilterMutation(e.target.value)}
-                      className="px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs bg-white text-stone-600"
-                    >
-                      <option value="todos">Todas Mutações</option>
-                      {birdMutationOptions.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                    <span className="text-[10px] text-stone-400">
-                      {filteredActiveBirds.length} disponíve{filteredActiveBirds.length !== 1 ? "is" : "l"}
-                    </span>
-                  </div>
-                  <select
-                    value={purchaseForm.birdId ? String(purchaseForm.birdId) : ""}
-                    onChange={(e) => {
-                      const birdId = e.target.value ? parseInt(e.target.value) : null;
-                      const bird = activeBirds.find(b => b.id === birdId);
-                      setPurchaseForm((p) => ({
-                        ...p,
-                        birdId,
-                        birdCode: bird?.ringNumber || "",
-                        species: bird?.speciesName || "",
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
-                  >
-                    <option value="">Selecione a ave...</option>
-                    {filteredActiveBirds.map((bird) => (
-                      <option key={bird.id} value={String(bird.id)}>
-                        {bird.ringNumber ? `${bird.ringNumber} — ` : ""}{bird.speciesName}{bird.mutation ? ` (${bird.mutation})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  {purchaseForm.birdCode && (
-                    <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
-                      Código: {purchaseForm.birdCode} · Status será atualizado para "Vendido"
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Quantidade</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={purchaseForm.quantity}
-                    onChange={(e) => setPurchaseForm((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Valor Total (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    placeholder="0,00"
-                    value={purchaseForm.valueCents !== null ? (purchaseForm.valueCents / 100).toFixed(2) : ""}
-                    onChange={(e) => {
-                      const val = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null;
-                      const newForm = { ...purchaseForm, valueCents: val };
-                      // Regenerate installments if needed
-                      if (val && newForm.installmentsCount > 1) {
-                        newForm.installments = generateInstallments(val, newForm.installmentsCount, newForm.saleDate);
-                      }
-                      setPurchaseForm(newForm);
-                    }}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Data da Venda</label>
-                  <input
-                    type="date"
-                    value={purchaseForm.saleDate}
-                    onChange={(e) => {
-                      const newForm = { ...purchaseForm, saleDate: e.target.value };
-                      if (newForm.valueCents && newForm.installmentsCount > 1) {
-                        newForm.installments = generateInstallments(newForm.valueCents, newForm.installmentsCount, e.target.value);
-                      }
-                      setPurchaseForm(newForm);
-                    }}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Forma de Pagamento</label>
-                  <select
-                    value={purchaseForm.paymentMethod}
-                    onChange={(e) => {
-                      const method = e.target.value as PaymentMethod | "";
-                      const newForm = { ...purchaseForm, paymentMethod: method };
-                      // Reset installments if not credit/boleto
-                      if (method !== "cartao_credito" && method !== "boleto") {
-                        newForm.installmentsCount = 1;
-                        newForm.installments = [];
-                      }
-                      setPurchaseForm(newForm);
-                    }}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
-                  >
-                    <option value="">Selecione...</option>
-                    {PAYMENT_METHODS.map((m) => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-                {/* Installments count - only for credit card or boleto */}
-                {(purchaseForm.paymentMethod === "cartao_credito" || purchaseForm.paymentMethod === "boleto") && (
-                  <div>
-                    <label className="text-xs font-medium text-stone-600 mb-1 block">Parcelas</label>
-                    <select
-                      value={purchaseForm.installmentsCount}
-                      onChange={(e) => handleInstallmentsChange(parseInt(e.target.value))}
+                      value={purchaseForm.birdId ? String(purchaseForm.birdId) : ""}
+                      onChange={(e) => {
+                        const birdId = e.target.value ? parseInt(e.target.value) : null;
+                        const bird = activeBirds.find(b => b.id === birdId);
+                        setPurchaseForm((p) => ({
+                          ...p,
+                          birdId,
+                          birdCode: bird?.ringNumber || "",
+                          species: bird?.speciesName || p.species,
+                          mutation: bird?.mutation || p.mutation,
+                        }));
+                      }}
                       className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
                     >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                        <option key={n} value={n}>{n}x{purchaseForm.valueCents ? ` de ${formatCurrency(Math.floor(purchaseForm.valueCents / n))}` : ""}</option>
+                      <option value="">Selecione a ave (ou preencha manualmente abaixo)...</option>
+                      {filteredActiveBirds.map((bird) => (
+                        <option key={bird.id} value={String(bird.id)}>
+                          {bird.ringNumber ? `${bird.ringNumber} — ` : ""}{bird.speciesName}{bird.mutation ? ` (${bird.mutation})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {purchaseForm.birdCode && (
+                      <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
+                        Anilha: {purchaseForm.birdCode} · Status será atualizado para "Vendido"
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Espécie *</label>
+                    <input
+                      type="text"
+                      value={purchaseForm.species}
+                      onChange={(e) => setPurchaseForm((p) => ({ ...p, species: e.target.value }))}
+                      placeholder="Nome da espécie"
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Mutação</label>
+                    <input
+                      type="text"
+                      value={purchaseForm.mutation}
+                      onChange={(e) => setPurchaseForm((p) => ({ ...p, mutation: e.target.value }))}
+                      placeholder="Mutação / Cor"
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Quantidade</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={purchaseForm.quantity}
+                      onChange={(e) => setPurchaseForm((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Pagamento */}
+              <div className="mb-5 pb-5 border-b border-stone-200">
+                <h5 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Pagamento</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Valor Total (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      placeholder="0,00"
+                      value={purchaseForm.valueCents !== null ? (purchaseForm.valueCents / 100).toFixed(2) : ""}
+                      onChange={(e) => {
+                        const val = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null;
+                        const newForm = { ...purchaseForm, valueCents: val };
+                        if (val && newForm.installmentsCount > 1) {
+                          newForm.installments = generateInstallments(val, newForm.installmentsCount, newForm.saleDate);
+                        }
+                        setPurchaseForm(newForm);
+                      }}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Data da Venda</label>
+                    <input
+                      type="date"
+                      value={purchaseForm.saleDate}
+                      onChange={(e) => {
+                        const newForm = { ...purchaseForm, saleDate: e.target.value };
+                        if (newForm.valueCents && newForm.installmentsCount > 1) {
+                          newForm.installments = generateInstallments(newForm.valueCents, newForm.installmentsCount, e.target.value);
+                        }
+                        setPurchaseForm(newForm);
+                      }}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-stone-600 mb-1 block">Forma de Pagamento</label>
+                    <select
+                      value={purchaseForm.paymentMethod}
+                      onChange={(e) => {
+                        const method = e.target.value as PaymentMethod | "";
+                        const newForm = { ...purchaseForm, paymentMethod: method };
+                        if (method !== "cartao_credito" && method !== "boleto" && method !== "parcelado_informal") {
+                          newForm.installmentsCount = 1;
+                          newForm.installments = [];
+                        }
+                        setPurchaseForm(newForm);
+                      }}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
+                    >
+                      <option value="">Selecione...</option>
+                      {PAYMENT_METHODS.map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
                       ))}
                     </select>
                   </div>
+                  {/* Installments count - for credit card, boleto, or parcelado informal */}
+                  {(purchaseForm.paymentMethod === "cartao_credito" || purchaseForm.paymentMethod === "boleto" || purchaseForm.paymentMethod === "parcelado_informal") && (
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 mb-1 block">Parcelas</label>
+                      <select
+                        value={purchaseForm.installmentsCount}
+                        onChange={(e) => handleInstallmentsChange(parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
+                      >
+                        {Array.from({ length: 48 }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>{n}x{purchaseForm.valueCents ? ` de ${formatCurrency(Math.floor(purchaseForm.valueCents / n))}` : ""}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Installments preview */}
+                {purchaseForm.installments.length > 1 && (
+                  <div className="mt-3 p-3 bg-white rounded-lg border border-stone-200">
+                    <h5 className="text-xs font-semibold text-stone-600 mb-2 flex items-center gap-1.5">
+                      <Calendar size={12} />
+                      Parcelas ({purchaseForm.installments.length}x)
+                    </h5>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      {purchaseForm.installments.map((inst, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs">
+                          <span className="text-stone-600">{idx + 1}ª parcela</span>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="date"
+                              value={inst.dueDate}
+                              onChange={(e) => {
+                                const newInstallments = [...purchaseForm.installments];
+                                newInstallments[idx] = { ...newInstallments[idx], dueDate: e.target.value };
+                                setPurchaseForm((p) => ({ ...p, installments: newInstallments }));
+                              }}
+                              className="px-2 py-1 border border-stone-200 rounded text-xs"
+                            />
+                            <span className="font-semibold text-stone-700 min-w-[80px] text-right">
+                              {formatCurrency(inst.valueCents)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
+              </div>
+
+              {/* Section 3: Documentação */}
+              <div className="mb-5 pb-5 border-b border-stone-200">
+                <h5 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Documentação Entregue</h5>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {DOCS_OPTIONS.map((doc) => (
+                    <button
+                      key={doc}
+                      type="button"
+                      onClick={() => toggleDocDelivered(doc)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                        purchaseForm.docsDelivered.includes(doc)
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                          : "bg-white text-stone-500 border-stone-200 hover:border-stone-300"
+                      )}
+                    >
+                      {purchaseForm.docsDelivered.includes(doc) && <span className="mr-1">✓</span>}
+                      {doc}
+                    </button>
+                  ))}
+                </div>
                 <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Nota Fiscal</label>
+                  <label className="text-xs font-medium text-stone-600 mb-1 block">Número da NF</label>
                   <input
                     type="text"
-                    placeholder="Número da NF"
+                    placeholder="Ex: 001234"
                     value={purchaseForm.invoiceNumber}
                     onChange={(e) => setPurchaseForm((p) => ({ ...p, invoiceNumber: e.target.value }))}
                     className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-stone-600 mb-1 block">Observações</label>
-                  <input
-                    type="text"
-                    placeholder="Observações da venda"
-                    value={purchaseForm.notes}
-                    onChange={(e) => setPurchaseForm((p) => ({ ...p, notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
-                  />
-                </div>
               </div>
 
-              {/* Installments preview */}
-              {purchaseForm.installments.length > 1 && (
-                <div className="mt-4 p-3 bg-white rounded-lg border border-stone-200">
-                  <h5 className="text-xs font-semibold text-stone-600 mb-2 flex items-center gap-1.5">
-                    <Calendar size={12} />
-                    Parcelas ({purchaseForm.installments.length}x)
-                  </h5>
-                  <div className="space-y-1.5">
-                    {purchaseForm.installments.map((inst, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <span className="text-stone-600">
-                          {idx + 1}ª parcela
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="date"
-                            value={inst.dueDate}
-                            onChange={(e) => {
-                              const newInstallments = [...purchaseForm.installments];
-                              newInstallments[idx] = { ...newInstallments[idx], dueDate: e.target.value };
-                              setPurchaseForm((p) => ({ ...p, installments: newInstallments }));
-                            }}
-                            className="px-2 py-1 border border-stone-200 rounded text-xs"
-                          />
-                          <span className="font-semibold text-stone-700 min-w-[80px] text-right">
-                            {formatCurrency(inst.valueCents)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Section 4: Observações */}
+              <div className="mb-4">
+                <label className="text-xs font-medium text-stone-600 mb-1 block">Observações da Venda</label>
+                <textarea
+                  value={purchaseForm.notes}
+                  onChange={(e) => setPurchaseForm((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Anotações sobre a venda, condições especiais, etc."
+                  rows={2}
+                  className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm resize-none"
+                />
+              </div>
 
-              <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handlePurchaseSubmit}
                   disabled={!purchaseForm.species || createPurchaseMutation.isPending}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                 >
                   <Save size={14} />
                   Registrar Venda
                 </button>
                 <button
                   onClick={() => { setShowPurchaseForm(false); setPurchaseForm(emptyPurchaseForm); }}
-                  className="px-4 py-2 text-stone-500 hover:text-stone-700 text-sm"
+                  className="px-4 py-2.5 text-stone-500 hover:text-stone-700 text-sm"
                 >
                   Cancelar
                 </button>
@@ -814,114 +1092,88 @@ export default function ClientsModule() {
           )}
 
           {/* Purchase list */}
-          {client.purchases && client.purchases.length > 0 ? (
+          {purchases.length > 0 ? (
             <div className="space-y-3">
-              {client.purchases.map((p: any) => (
-                <div key={p.id} className="p-4 bg-stone-50 rounded-lg border border-stone-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                        <Bird size={14} className="text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-stone-700">
-                          {p.quantity}x {p.species}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-stone-400">
-                            {new Date(p.saleDate).toLocaleDateString("pt-BR")}
-                          </span>
-                          {p.paymentMethod && (
-                            <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 font-medium">
-                              {getPaymentLabel(p.paymentMethod)}
-                            </span>
-                          )}
-                          {p.installments && p.installments > 1 && (
-                            <span className="text-xs text-stone-500">
-                              {p.installments}x
-                            </span>
-                          )}
-                          {p.invoiceNumber && (
+              {purchases.map((p: any) => {
+                const parcelas = p.parcelas || [];
+                const parcelasPagas = parcelas.filter((i: any) => i.status === "pago").length;
+                const totalParcelas = parcelas.length;
+                const docsCount = (p.docsDelivered || []).length;
+
+                return (
+                  <div
+                    key={p.id}
+                    className="p-4 bg-stone-50 rounded-lg border border-stone-100 hover:border-emerald-200 transition-all cursor-pointer group"
+                    onClick={() => { setSelectedPurchaseId(p.id); setView("purchase_detail"); }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                          <Bird size={14} className="text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-stone-700 group-hover:text-emerald-700 transition-colors">
+                            {p.quantity}x {p.species}{p.mutation ? ` (${p.mutation})` : ""}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <span className="text-xs text-stone-400">
-                              NF {p.invoiceNumber}
+                              {new Date(p.saleDate).toLocaleDateString("pt-BR")}
                             </span>
-                          )}
+                            {p.paymentMethod && (
+                              <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 font-medium">
+                                {getPaymentLabel(p.paymentMethod)}
+                              </span>
+                            )}
+                            <SaleStatusBadge status={p.saleStatus} />
+                            {totalParcelas > 0 && (
+                              <span className="text-xs text-stone-500">
+                                {parcelasPagas}/{totalParcelas} parcelas pagas
+                              </span>
+                            )}
+                            {docsCount > 0 && (
+                              <span className="text-xs text-stone-400 flex items-center gap-0.5">
+                                <FileText size={10} /> {docsCount} doc(s)
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {p.valueCents && (
-                        <span className="text-sm font-semibold text-emerald-700">
-                          {formatCurrency(p.valueCents)}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => deletePurchaseMutation.mutate({ id: p.id })}
-                        className="p-1.5 text-stone-400 hover:text-red-500 transition-colors"
-                        title="Excluir venda"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Installments table */}
-                  {p.parcelas && p.parcelas.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-stone-200">
-                      <h5 className="text-xs font-semibold text-stone-600 mb-2 flex items-center gap-1.5">
-                        <Calendar size={11} />
-                        Parcelas
-                      </h5>
-                      <div className="space-y-1.5">
-                        {(p.parcelas as any[]).map((inst: any) => (
-                          <div key={inst.id} className="flex items-center justify-between text-xs bg-white p-2 rounded border border-stone-100">
-                            <div className="flex items-center gap-2">
-                              <span className="text-stone-500 font-medium w-16">
-                                {inst.installmentNumber}ª parcela
-                              </span>
-                              <span className="text-stone-400">
-                                Venc: {new Date(inst.dueDate).toLocaleDateString("pt-BR")}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-stone-700">
-                                {formatCurrency(inst.valueCents)}
-                              </span>
-                              <InstallmentStatusBadge status={inst.status} />
-                              {inst.status !== "pago" && (
-                                <button
-                                  onClick={() => updateInstallmentMutation.mutate({
-                                    id: inst.id,
-                                    status: "pago",
-                                    paidAt: new Date().toISOString(),
-                                  })}
-                                  className="px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                                  title="Marcar como pago"
-                                >
-                                  Pagar
-                                </button>
-                              )}
-                              {inst.status === "pago" && (
-                                <button
-                                  onClick={() => updateInstallmentMutation.mutate({
-                                    id: inst.id,
-                                    status: "pendente",
-                                    paidAt: null,
-                                  })}
-                                  className="px-2 py-0.5 text-[10px] font-medium bg-stone-50 text-stone-500 rounded border border-stone-200 hover:bg-stone-100 transition-colors"
-                                  title="Desfazer pagamento"
-                                >
-                                  Desfazer
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                      <div className="flex items-center gap-3">
+                        {p.valueCents && (
+                          <span className="text-sm font-semibold text-emerald-700">
+                            {formatCurrency(p.valueCents)}
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deletePurchaseMutation.mutate({ id: p.id }); }}
+                          className="p-1.5 text-stone-400 hover:text-red-500 transition-colors"
+                          title="Excluir venda"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                        <ChevronRight size={14} className="text-stone-300" />
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* Quick installment summary for parcelado */}
+                    {totalParcelas > 0 && parcelasPagas < totalParcelas && (
+                      <div className="mt-2 pt-2 border-t border-stone-200">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-stone-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all"
+                              style={{ width: `${(parcelasPagas / totalParcelas) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-stone-400 font-medium">
+                            {Math.round((parcelasPagas / totalParcelas) * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-stone-400 italic text-sm text-center py-4">Nenhuma compra registrada</p>

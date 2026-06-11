@@ -353,3 +353,10 @@
 - [x] Plantel: genealogia externo — 3 campos distintos (mutação, criatório de origem, observação) ao selecionar "Externo"
 - [x] Plantel: data de nascimento flexível — seletor de precisão (Dia/Mês/Ano, Mês/Ano, Apenas Ano)
 - [x] Plantel: documentação com drag & drop — área para arrastar PDFs/imagens no card de documentação
+- [x] Clientes: múltiplas compras por cliente (histórico completo)
+- [x] Clientes: cada compra vincula ave vendida (do plantel), documentação entregue, forma de pagamento
+- [x] Clientes: sistema de parcelas (valor, vencimento, status pago/pendente)
+- [x] Clientes: ao confirmar pagamento de parcela, lançar automaticamente no Caixa
+- [x] Clientes: visão detalhada do cliente com todas as compras e parcelas
+- [x] Clientes: controle de documentação entregue por compra (NF, Certificado, GTA, etc.)
+- [x] Clientes: parcelamento informal sem documentação (controle interno)
