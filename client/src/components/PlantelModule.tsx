@@ -674,16 +674,16 @@ export default function PlantelModule() {
                   </div>
 
                   {/* Center columns: Espécie | Sexo | Gaiola | Mutação (destaque) */}
-                  <div className="flex-1 flex items-start gap-2 sm:gap-3">
-                    <div className="w-[80px] flex-shrink-0 hidden sm:block">
+                  <div className="flex-1 flex items-start gap-5 sm:gap-6">
+                    <div className="w-[100px] flex-shrink-0 hidden sm:block">
                       <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Espécie</p>
                       <p className="text-sm font-semibold text-stone-800 leading-tight">{bird.speciesName}</p>
                     </div>
-                    <div className="w-[60px] flex-shrink-0 hidden sm:block">
+                    <div className="w-[75px] flex-shrink-0 hidden sm:block">
                       <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Sexo</p>
                       <p className="text-sm font-semibold text-stone-800">{SEX_LABELS[bird.sex as BirdSex]}</p>
                     </div>
-                    <div className="w-[60px] flex-shrink-0 hidden sm:block">
+                    <div className="w-[75px] flex-shrink-0 hidden sm:block">
                       <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Gaiola</p>
                       <p className="text-sm font-semibold text-stone-800">{bird.enclosure || <span className="text-stone-300 italic">—</span>}</p>
                     </div>
