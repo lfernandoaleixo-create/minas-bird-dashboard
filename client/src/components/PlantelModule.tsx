@@ -655,33 +655,46 @@ export default function PlantelModule() {
                 onClick={() => handleViewBird(bird)}
                 className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                <div className="flex items-center gap-4">
+                  {/* Left: Icon + Code (destaque principal) */}
+                  <div className="flex items-center gap-3 min-w-[140px]">
+                    <div className="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center border-2 border-emerald-200">
                       <Bird size={18} className="text-emerald-600" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-stone-800">{bird.speciesName}</h4>
-                        <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border", STATUS_COLORS[bird.status as BirdStatus])}>
-                          {STATUS_LABELS[bird.status as BirdStatus]}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        {bird.ringNumber && (
-                          <span className="text-[11px] text-stone-500">Código: <span className="font-semibold text-emerald-700 font-mono">{bird.ringNumber}</span></span>
-                        )}
-                        <span className="text-[11px] text-stone-500">{SEX_LABELS[bird.sex as BirdSex]}</span>
-                        {bird.mutation && (
-                          <span className="text-[11px] text-stone-500">· {bird.mutation}</span>
-                        )}
-                        {bird.enclosure && (
-                          <span className="text-[11px] text-stone-400">· {bird.enclosure}</span>
-                        )}
-                      </div>
+                      {bird.ringNumber ? (
+                        <p className="text-lg font-extrabold text-emerald-700 font-mono leading-tight tracking-wide">{bird.ringNumber}</p>
+                      ) : (
+                        <p className="text-sm font-bold text-stone-400 italic">Sem código</p>
+                      )}
+                      <span className={cn("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border", STATUS_COLORS[bird.status as BirdStatus])}>
+                        {STATUS_LABELS[bird.status as BirdStatus]}
+                      </span>
                     </div>
                   </div>
-                  <ChevronDown size={16} className="text-stone-300 group-hover:text-emerald-400 -rotate-90 transition-colors" />
+
+                  {/* Center columns: Espécie | Sexo | Mutação | Recinto */}
+                  <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1">
+                    <div>
+                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Espécie</p>
+                      <p className="text-sm font-semibold text-stone-800 truncate">{bird.speciesName}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Sexo</p>
+                      <p className="text-sm font-semibold text-stone-800">{SEX_LABELS[bird.sex as BirdSex]}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Mutação</p>
+                      <p className="text-sm font-semibold text-stone-800 truncate">{bird.mutation || <span className="text-stone-300 italic">—</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Recinto</p>
+                      <p className="text-sm font-semibold text-stone-800 truncate">{bird.enclosure || <span className="text-stone-300 italic">—</span>}</p>
+                    </div>
+                  </div>
+
+                  {/* Right: Arrow */}
+                  <ChevronDown size={16} className="text-stone-300 group-hover:text-emerald-400 -rotate-90 transition-colors flex-shrink-0" />
                 </div>
               </div>
             ))}
