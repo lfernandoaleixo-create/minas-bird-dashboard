@@ -979,6 +979,9 @@ export const appRouter = router({
         documentDate: z.date().nullable().optional(),
         expirationDate: z.date().nullable().optional(),
         status: z.enum(["vigente", "vencido", "em_andamento", "arquivado"]).optional(),
+        fileUrl: z.string().optional(),
+        fileName: z.string().optional(),
+        fileSize: z.number().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;

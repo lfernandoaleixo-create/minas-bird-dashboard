@@ -178,7 +178,7 @@ export default function DocumentacaoModule() {
     setView("list");
   };
 
-  // Upload renewal document and update the record with new file URL + status
+  // Upload renewal document and update the SAME record with new file URL + status
   const handleRenewalUpload = async () => {
     if (!selectedDoc || renewalFiles.length === 0) return;
     setUploadingRenewal(true);
@@ -199,24 +199,13 @@ export default function DocumentacaoModule() {
         contentType: file.type,
       });
 
-      // Update the document with the new file URL and mark as vigente
+      // Update the same document with the new file URL, fileName, fileSize and mark as vigente
       await updateMut.mutateAsync({
         id: selectedDoc.id,
         status: "vigente",
-      });
-
-      // Create a new document entry for the renewal
-      await createMut.mutateAsync({
-        title: `${selectedDoc.title} (Renovação)`,
-        category: selectedDoc.category,
         fileUrl: url,
         fileName: file.name,
-        mimeType: file.type || null,
         fileSize: file.size || null,
-        description: `Renovação do documento: ${selectedDoc.title}`,
-        documentDate: new Date(),
-        expirationDate: null,
-        status: "vigente",
       });
 
       setRenewalFiles([]);
@@ -364,40 +353,64 @@ export default function DocumentacaoModule() {
             </div>
           )}
 
-          {/* File info */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Arquivo</p>
-              <p className="font-medium truncate">{selectedDoc.fileName}</p>
+          {/* File info & Download — only show if document has its own file */}
+          {selectedDoc.fileUrl && selectedDoc.fileUrl.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Arquivo</p>
+                  <p className="font-medium truncate">{selectedDoc.fileName}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Tamanho</p>
+                  <p className="font-medium">{selectedDoc.fileSize ? `${(selectedDoc.fileSize / 1024 / 1024).toFixed(1)} MB` : "—"}</p>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-border">
+                <a
+                  href={selectedDoc.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold text-sm"
+                >
+                  <ExternalLink size={16} /> Visualizar / Baixar Documento
+                </a>
+              </div>
+            </>
+          ) : (
+            <div className="pt-3 border-t border-border">
+              <div className={`rounded-xl p-5 border-2 border-dashed ${isVencido ? "border-red-300 bg-red-50/30" : "border-amber-300 bg-amber-50/30"}`}>
+                <div className="flex items-center gap-3">
+                  <Upload size={22} className={isVencido ? "text-red-500" : "text-amber-500"} />
+                  <div>
+                    <p className={`font-semibold text-sm ${isVencido ? "text-red-700" : "text-amber-700"}`}>
+                      Documento individual não anexado
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Envie o arquivo específico deste documento abaixo para que seus funcionários possam visualizá-lo.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Tamanho</p>
-              <p className="font-medium">{selectedDoc.fileSize ? `${(selectedDoc.fileSize / 1024 / 1024).toFixed(1)} MB` : "—"}</p>
-            </div>
-          </div>
-
-          {/* View/Download button */}
-          <div className="pt-3 border-t border-border">
-            <a
-              href={selectedDoc.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold text-sm"
-            >
-              <ExternalLink size={16} /> Visualizar / Baixar Documento
-            </a>
-          </div>
+          )}
 
           {/* ─── RENEWAL UPLOAD SECTION ─────────────────────────────────────── */}
           <div className={`mt-6 pt-5 border-t-2 ${isVencido ? "border-red-200" : "border-border"}`}>
             <div className="flex items-center gap-2 mb-3">
               <RefreshCw size={18} className={isVencido ? "text-red-600" : "text-primary"} />
               <h3 className={`text-base font-bold ${isVencido ? "text-red-700" : "text-foreground"}`}>
-                {isVencido ? "Enviar Renovação (Documento Vencido)" : "Enviar Renovação / Atualização"}
+                {!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0
+                  ? "Enviar Documento"
+                  : isVencido
+                  ? "Enviar Renovação (Documento Vencido)"
+                  : "Enviar Renovação / Atualização"}
               </h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Anexe aqui o documento renovado. Ele será cadastrado como uma nova versão e o status será atualizado para "Vigente".
+              {!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0
+                ? "Anexe aqui o arquivo deste documento. Após o envio ele ficará disponível para visualização."
+                : "Anexe aqui o documento renovado. O arquivo anterior será substituído e o status atualizado para \"Vigente\"."}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -423,7 +436,11 @@ export default function DocumentacaoModule() {
                   ) : (
                     <div className="flex items-center gap-2 justify-center">
                       <Upload size={18} className="text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Clique para selecionar o arquivo renovado</span>
+                      <span className="text-sm text-muted-foreground">
+                        {(!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0)
+                          ? "Clique para selecionar o arquivo deste documento"
+                          : "Clique para selecionar o arquivo renovado"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -440,7 +457,7 @@ export default function DocumentacaoModule() {
                 disabled={renewalFiles.length === 0 || uploadingRenewal}
                 className={`shrink-0 ${isVencido ? "bg-red-600 hover:bg-red-700" : ""}`}
               >
-                {uploadingRenewal ? "Enviando..." : "Enviar Renovação"}
+                {uploadingRenewal ? "Enviando..." : (!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0) ? "Enviar Documento" : "Enviar Renovação"}
               </Button>
             </div>
           </div>
