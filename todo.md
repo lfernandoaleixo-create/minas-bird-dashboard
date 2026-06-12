@@ -369,7 +369,11 @@
 - [x] Nova aba Documentação: componente frontend com upload, categorização e visualização
 - [x] Nova aba Documentação: integrar na navegação principal
 - [x] Nova aba Documentação: upload do PDF de legalização como primeiro documento
-- [ ] Documentação: analisar o PDF de legalização e identificar todos os documentos com vencimento, renovação ou exigência de apresentação em fiscalização
-- [ ] Documentação: criar um card individual para cada documento identificado no processo, com datas, status e observações de fiscalização
-- [ ] Documentação: marcar como vencidos os documentos com validade já expirada para viabilizar lembretes futuros
-- [ ] Documentação: registrar documentos que devem ser apresentados em fiscalização, mesmo quando não houver data de vencimento explícita
+- [x] Documentação: analisar o PDF de legalização e identificar todos os documentos com vencimento, renovação ou exigência de apresentação em fiscalização
+- [x] Documentação: criar um card individual para cada documento identificado no processo, com datas, status e observações de fiscalização
+- [x] Documentação: marcar como vencidos os documentos com validade já expirada para viabilizar lembretes futuros
+- [x] Documentação: registrar documentos que devem ser apresentados em fiscalização, mesmo quando não houver data de vencimento explícita
+- [x] Documentação: processo completo (SEI) deve aparecer como primeiro documento (fixo no topo)
+- [x] Documentação: datas de emissão e vencimento bem grandes e visíveis nos cards
+- [x] Documentação: corrigir erro ao abrir/visualizar documentos (PDF não abre)
+- [x] Documentação: adicionar campo para anexar documento de renovação dentro de cada card

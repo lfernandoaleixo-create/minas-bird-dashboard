@@ -1,6 +1,9 @@
 /**
  * DocumentacaoModule — Repositório central de documentos do criatório
  * Licenças, alvarás, processos de legalização, certificados, etc.
+ * - Processo completo fixo no topo
+ * - Datas de emissão e vencimento grandes e visíveis
+ * - Campo para anexar renovação dentro de cada documento
  */
 import { useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
@@ -21,7 +24,8 @@ import {
   Clock,
   Archive,
   Search,
-  Filter,
+  RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 
 // Categorias de documentos do criatório
@@ -34,14 +38,16 @@ const CATEGORIES = [
   "Contratos",
   "Notas Fiscais",
   "Laudos / Exames",
+  "Responsabilidade Técnica",
+  "Cadastros / Registros",
   "Outros",
 ] as const;
 
-const STATUS_LABELS: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  vigente: { label: "Vigente", color: "text-emerald-600 bg-emerald-50", icon: CheckCircle2 },
-  em_andamento: { label: "Em Andamento", color: "text-amber-600 bg-amber-50", icon: Clock },
-  vencido: { label: "Vencido", color: "text-red-600 bg-red-50", icon: AlertCircle },
-  arquivado: { label: "Arquivado", color: "text-gray-500 bg-gray-100", icon: Archive },
+const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: string; icon: typeof CheckCircle2 }> = {
+  vigente: { label: "Vigente", color: "text-emerald-700", bgColor: "bg-emerald-50 border-emerald-200", icon: CheckCircle2 },
+  em_andamento: { label: "Em Andamento", color: "text-amber-700", bgColor: "bg-amber-50 border-amber-200", icon: Clock },
+  vencido: { label: "Vencido", color: "text-red-700", bgColor: "bg-red-50 border-red-200", icon: AlertCircle },
+  arquivado: { label: "Arquivado", color: "text-gray-600", bgColor: "bg-gray-50 border-gray-200", icon: Archive },
 };
 
 type DocForm = {
@@ -67,12 +73,15 @@ export default function DocumentacaoModule() {
   const [form, setForm] = useState<DocForm>(EMPTY_FORM);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [renewalFiles, setRenewalFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadingRenewal, setUploadingRenewal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [editingId, setEditingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const renewalInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -100,6 +109,12 @@ export default function DocumentacaoModule() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+    }
+    e.target.value = "";
+  };
+  const handleRenewalSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setRenewalFiles(Array.from(e.target.files!));
     }
     e.target.value = "";
   };
@@ -163,6 +178,57 @@ export default function DocumentacaoModule() {
     setView("list");
   };
 
+  // Upload renewal document and update the record with new file URL + status
+  const handleRenewalUpload = async () => {
+    if (!selectedDoc || renewalFiles.length === 0) return;
+    setUploadingRenewal(true);
+    try {
+      const file = renewalFiles[0];
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      const { url } = await uploadMut.mutateAsync({
+        fileName: file.name,
+        fileBase64: base64,
+        contentType: file.type,
+      });
+
+      // Update the document with the new file URL and mark as vigente
+      await updateMut.mutateAsync({
+        id: selectedDoc.id,
+        status: "vigente",
+      });
+
+      // Create a new document entry for the renewal
+      await createMut.mutateAsync({
+        title: `${selectedDoc.title} (Renovação)`,
+        category: selectedDoc.category,
+        fileUrl: url,
+        fileName: file.name,
+        mimeType: file.type || null,
+        fileSize: file.size || null,
+        description: `Renovação do documento: ${selectedDoc.title}`,
+        documentDate: new Date(),
+        expirationDate: null,
+        status: "vigente",
+      });
+
+      setRenewalFiles([]);
+      setSelectedDoc(null);
+      setView("list");
+    } catch (err) {
+      console.error("Erro ao enviar renovação:", err);
+    } finally {
+      setUploadingRenewal(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm("Excluir este documento permanentemente?")) {
       await deleteMut.mutateAsync({ id });
@@ -175,6 +241,7 @@ export default function DocumentacaoModule() {
 
   const handleViewDetail = (doc: any) => {
     setSelectedDoc(doc);
+    setRenewalFiles([]);
     setView("detail");
   };
 
@@ -191,8 +258,36 @@ export default function DocumentacaoModule() {
     setView("form");
   };
 
+  // Format date in large readable format
+  const formatDateLarge = (date: string | Date | null) => {
+    if (!date) return null;
+    return new Date(date).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  // Sort documents: "Processo de Legalização" first (id=1 or title contains "Processo"), then by status (vencido first), then by date
+  const sortedDocs = [...documents].sort((a: any, b: any) => {
+    // Process document always first
+    const aIsProcess = a.title.toLowerCase().includes("processo de legalização");
+    const bIsProcess = b.title.toLowerCase().includes("processo de legalização");
+    if (aIsProcess && !bIsProcess) return -1;
+    if (!aIsProcess && bIsProcess) return 1;
+    // Vencido documents next
+    if (a.status === "vencido" && b.status !== "vencido") return -1;
+    if (a.status !== "vencido" && b.status === "vencido") return 1;
+    // Then by expiration date (soonest first)
+    if (a.expirationDate && b.expirationDate) {
+      return new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime();
+    }
+    if (a.expirationDate && !b.expirationDate) return -1;
+    return 0;
+  });
+
   // Filtered documents
-  const filteredDocs = documents.filter((doc: any) => {
+  const filteredDocs = sortedDocs.filter((doc: any) => {
     const matchSearch =
       !searchTerm ||
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -203,10 +298,14 @@ export default function DocumentacaoModule() {
     return matchSearch && matchCategory && matchStatus;
   });
 
+  // Count vencidos
+  const vencidoCount = documents.filter((d: any) => d.status === "vencido").length;
+
   // ─── DETAIL VIEW ─────────────────────────────────────────────────────────────
   if (view === "detail" && selectedDoc) {
     const statusInfo = STATUS_LABELS[selectedDoc.status] || STATUS_LABELS.vigente;
     const StatusIcon = statusInfo.icon;
+    const isVencido = selectedDoc.status === "vencido";
     return (
       <div className="space-y-6">
         <button
@@ -216,7 +315,8 @@ export default function DocumentacaoModule() {
           <ArrowLeft size={16} /> Voltar à lista
         </button>
 
-        <div className="bg-card border border-border rounded-xl p-6 space-y-5">
+        <div className={`bg-card border-2 rounded-xl p-6 space-y-5 ${isVencido ? "border-red-300" : "border-border"}`}>
+          {/* Header */}
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-foreground">{selectedDoc.title}</h2>
@@ -224,8 +324,8 @@ export default function DocumentacaoModule() {
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
                   {selectedDoc.category}
                 </span>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1 ${statusInfo.color}`}>
-                  <StatusIcon size={12} /> {statusInfo.label}
+                <span className={`text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 border ${statusInfo.bgColor} ${statusInfo.color}`}>
+                  <StatusIcon size={14} /> {statusInfo.label}
                 </span>
               </div>
             </div>
@@ -239,13 +339,33 @@ export default function DocumentacaoModule() {
             </div>
           </div>
 
+          {/* DATES — Large and prominent */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className={`rounded-xl p-4 border ${isVencido ? "bg-red-50/50 border-red-200" : "bg-muted/20 border-border"}`}>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Data de Emissão</p>
+              <p className="text-2xl font-bold text-foreground">
+                {formatDateLarge(selectedDoc.documentDate) || "—"}
+              </p>
+            </div>
+            <div className={`rounded-xl p-4 border ${isVencido ? "bg-red-100 border-red-300" : selectedDoc.expirationDate ? "bg-amber-50/50 border-amber-200" : "bg-muted/20 border-border"}`}>
+              <p className={`text-xs font-medium uppercase tracking-wide mb-1 ${isVencido ? "text-red-600" : "text-muted-foreground"}`}>
+                {isVencido ? "⚠ VENCIDO EM" : "Validade / Vencimento"}
+              </p>
+              <p className={`text-2xl font-bold ${isVencido ? "text-red-700" : "text-foreground"}`}>
+                {formatDateLarge(selectedDoc.expirationDate) || "Sem validade"}
+              </p>
+            </div>
+          </div>
+
+          {/* Description */}
           {selectedDoc.description && (
             <div className="bg-muted/30 rounded-lg p-4">
-              <p className="text-sm text-muted-foreground">{selectedDoc.description}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{selectedDoc.description}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+          {/* File info */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground text-xs mb-1">Arquivo</p>
               <p className="font-medium truncate">{selectedDoc.fileName}</p>
@@ -254,25 +374,75 @@ export default function DocumentacaoModule() {
               <p className="text-muted-foreground text-xs mb-1">Tamanho</p>
               <p className="font-medium">{selectedDoc.fileSize ? `${(selectedDoc.fileSize / 1024 / 1024).toFixed(1)} MB` : "—"}</p>
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Data do Documento</p>
-              <p className="font-medium">{selectedDoc.documentDate ? new Date(selectedDoc.documentDate).toLocaleDateString("pt-BR") : "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Validade</p>
-              <p className="font-medium">{selectedDoc.expirationDate ? new Date(selectedDoc.expirationDate).toLocaleDateString("pt-BR") : "Sem validade"}</p>
-            </div>
           </div>
 
-          <div className="pt-4 border-t border-border">
+          {/* View/Download button */}
+          <div className="pt-3 border-t border-border">
             <a
               href={selectedDoc.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold text-sm"
             >
-              <Eye size={16} /> Visualizar / Baixar Documento
+              <ExternalLink size={16} /> Visualizar / Baixar Documento
             </a>
+          </div>
+
+          {/* ─── RENEWAL UPLOAD SECTION ─────────────────────────────────────── */}
+          <div className={`mt-6 pt-5 border-t-2 ${isVencido ? "border-red-200" : "border-border"}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <RefreshCw size={18} className={isVencido ? "text-red-600" : "text-primary"} />
+              <h3 className={`text-base font-bold ${isVencido ? "text-red-700" : "text-foreground"}`}>
+                {isVencido ? "Enviar Renovação (Documento Vencido)" : "Enviar Renovação / Atualização"}
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Anexe aqui o documento renovado. Ele será cadastrado como uma nova versão e o status será atualizado para "Vigente".
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <div
+                  onClick={() => renewalInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                    renewalFiles.length > 0
+                      ? "border-emerald-400 bg-emerald-50/50"
+                      : isVencido
+                      ? "border-red-300 hover:border-red-400 hover:bg-red-50/30"
+                      : "border-border hover:border-primary/50 hover:bg-muted/20"
+                  }`}
+                >
+                  {renewalFiles.length > 0 ? (
+                    <div className="flex items-center gap-2 justify-center">
+                      <FileText size={18} className="text-emerald-600" />
+                      <span className="text-sm font-medium text-emerald-700">{renewalFiles[0].name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({(renewalFiles[0].size / 1024 / 1024).toFixed(1)} MB)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 justify-center">
+                      <Upload size={18} className="text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Clique para selecionar o arquivo renovado</span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={renewalInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  onChange={handleRenewalSelect}
+                  className="hidden"
+                />
+              </div>
+              <Button
+                onClick={handleRenewalUpload}
+                disabled={renewalFiles.length === 0 || uploadingRenewal}
+                className={`shrink-0 ${isVencido ? "bg-red-600 hover:bg-red-700" : ""}`}
+              >
+                {uploadingRenewal ? "Enviando..." : "Enviar Renovação"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -451,12 +621,40 @@ export default function DocumentacaoModule() {
           <h2 className="text-xl font-bold text-foreground">Documentação do Criatório</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             {documents.length} documento{documents.length !== 1 ? "s" : ""} cadastrado{documents.length !== 1 ? "s" : ""}
+            {vencidoCount > 0 && (
+              <span className="ml-2 text-red-600 font-semibold">
+                · {vencidoCount} vencido{vencidoCount !== 1 ? "s" : ""}
+              </span>
+            )}
           </p>
         </div>
         <Button onClick={() => { setForm(EMPTY_FORM); setPendingFiles([]); setEditingId(null); setView("form"); }}>
           <Plus size={16} className="mr-1.5" /> Novo Documento
         </Button>
       </div>
+
+      {/* Vencido alert banner */}
+      {vencidoCount > 0 && filterStatus === "all" && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <AlertCircle size={20} className="text-red-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">
+              {vencidoCount} documento{vencidoCount !== 1 ? "s" : ""} vencido{vencidoCount !== 1 ? "s" : ""} — necessitam renovação
+            </p>
+            <p className="text-xs text-red-600/70 mt-0.5">
+              Clique no documento para enviar a renovação
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-300 hover:bg-red-100"
+            onClick={() => setFilterStatus("vencido")}
+          >
+            Ver vencidos
+          </Button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -508,40 +706,60 @@ export default function DocumentacaoModule() {
           {filteredDocs.map((doc: any) => {
             const statusInfo = STATUS_LABELS[doc.status] || STATUS_LABELS.vigente;
             const StatusIcon = statusInfo.icon;
+            const isProcess = doc.title.toLowerCase().includes("processo de legalização");
+            const isVencido = doc.status === "vencido";
             return (
               <div
                 key={doc.id}
                 onClick={() => handleViewDetail(doc)}
-                className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
+                className={`bg-card border-2 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer ${
+                  isProcess
+                    ? "border-primary/40 bg-primary/5"
+                    : isVencido
+                    ? "border-red-300 bg-red-50/30"
+                    : "border-border hover:border-primary/30"
+                }`}
               >
                 <div className="flex items-center gap-4">
                   {/* Icon */}
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <FileText size={20} className="text-primary" />
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    isProcess ? "bg-primary/20" : isVencido ? "bg-red-100" : "bg-primary/10"
+                  }`}>
+                    <FileText size={20} className={isProcess ? "text-primary" : isVencido ? "text-red-600" : "text-primary"} />
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="font-semibold text-foreground truncate">{doc.title}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className={`font-bold truncate ${isProcess ? "text-primary" : "text-foreground"}`}>
+                        {isProcess && <span className="text-xs font-semibold bg-primary/20 text-primary px-1.5 py-0.5 rounded mr-2">PRINCIPAL</span>}
+                        {doc.title}
+                      </h3>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Tag size={11} /> {doc.category}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <FileText size={11} /> {doc.fileName}
-                      </span>
-                      {doc.documentDate && (
-                        <span className="flex items-center gap-1">
-                          <Calendar size={11} /> {new Date(doc.documentDate).toLocaleDateString("pt-BR")}
-                        </span>
-                      )}
                     </div>
                   </div>
 
+                  {/* Dates — visible in list */}
+                  <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 mr-2">
+                    {doc.documentDate && (
+                      <span className="text-xs text-muted-foreground">
+                        <Calendar size={10} className="inline mr-1" />
+                        {formatDateLarge(doc.documentDate)}
+                      </span>
+                    )}
+                    {doc.expirationDate && (
+                      <span className={`text-sm font-bold ${isVencido ? "text-red-700" : "text-amber-700"}`}>
+                        Venc: {formatDateLarge(doc.expirationDate)}
+                      </span>
+                    )}
+                  </div>
+
                   {/* Status badge */}
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 ${statusInfo.color}`}>
+                  <span className={`text-xs font-semibold px-2.5 py-1.5 rounded-full flex items-center gap-1 shrink-0 border ${statusInfo.bgColor} ${statusInfo.color}`}>
                     <StatusIcon size={12} /> {statusInfo.label}
                   </span>
 
@@ -554,6 +772,20 @@ export default function DocumentacaoModule() {
                       <Trash2 size={14} />
                     </button>
                   </div>
+                </div>
+
+                {/* Mobile dates row */}
+                <div className="sm:hidden flex items-center gap-4 mt-2 ml-14 text-xs">
+                  {doc.documentDate && (
+                    <span className="text-muted-foreground">
+                      Emissão: {formatDateLarge(doc.documentDate)}
+                    </span>
+                  )}
+                  {doc.expirationDate && (
+                    <span className={`font-bold ${isVencido ? "text-red-700" : "text-amber-700"}`}>
+                      Venc: {formatDateLarge(doc.expirationDate)}
+                    </span>
+                  )}
                 </div>
               </div>
             );
