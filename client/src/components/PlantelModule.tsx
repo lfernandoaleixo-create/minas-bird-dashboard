@@ -9,7 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { species } from "@/data/feeding";
 import {
   Bird, Plus, Search, Edit2, Trash2, ArrowLeft, Save,
-  Filter, ChevronDown, X, Upload, FileText, ExternalLink,
+  Filter, ChevronDown, ChevronRight, X, Upload, FileText, ExternalLink,
   AlertTriangle, Download, Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -182,6 +182,7 @@ export default function PlantelModule() {
   const [speciesSearch, setSpeciesSearch] = useState("");
   const [showSpeciesDropdown, setShowSpeciesDropdown] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [expandedSpecies, setExpandedSpecies] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadDocType, setUploadDocType] = useState("outro");
@@ -296,6 +297,36 @@ export default function PlantelModule() {
       return matchesSearch && matchesStatus && matchesSpecies && matchesDoc;
     });
   }, [birds, searchTerm, filterStatus, filterSpecies, filterDoc]);
+
+  // Group filtered birds by species, sorted by species name, birds sorted by ringNumber
+  const groupedBySpecies = useMemo(() => {
+    const groups: Record<string, { speciesId: string; speciesName: string; birds: typeof filteredBirds }> = {};
+    for (const bird of filteredBirds) {
+      if (!groups[bird.speciesId]) {
+        groups[bird.speciesId] = { speciesId: bird.speciesId, speciesName: bird.speciesName, birds: [] };
+      }
+      groups[bird.speciesId].birds.push(bird);
+    }
+    // Sort birds within each group by ringNumber (numeric extraction)
+    for (const g of Object.values(groups)) {
+      g.birds.sort((a, b) => {
+        const numA = parseInt((a.ringNumber || "").replace(/^[A-Z]+/, ""), 10) || 0;
+        const numB = parseInt((b.ringNumber || "").replace(/^[A-Z]+/, ""), 10) || 0;
+        return numA - numB;
+      });
+    }
+    // Sort groups by species name
+    return Object.values(groups).sort((a, b) => a.speciesName.localeCompare(b.speciesName));
+  }, [filteredBirds]);
+
+  const toggleSpecies = (speciesId: string) => {
+    setExpandedSpecies(prev => {
+      const next = new Set(prev);
+      if (next.has(speciesId)) next.delete(speciesId);
+      else next.add(speciesId);
+      return next;
+    });
+  };
 
   // Species in the dropdown filtered by search
   const filteredSpeciesList = useMemo(() => {
@@ -709,7 +740,7 @@ export default function PlantelModule() {
           </div>
         </div>
 
-        {/* Bird list */}
+        {/* Bird list grouped by species */}
         {isLoading ? (
           <div className="text-center py-12 text-stone-400 text-sm">Carregando plantel...</div>
         ) : filteredBirds.length === 0 ? (
@@ -725,58 +756,100 @@ export default function PlantelModule() {
             )}
           </div>
         ) : (
-          <div className="space-y-2">
-            {filteredBirds.map(bird => (
-              <div
-                key={bird.id}
-                onClick={() => handleViewBird(bird)}
-                className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-4">
-                  {/* Left: Icon + Code (destaque principal) */}
-                  <div className="flex items-center gap-3 min-w-[140px]">
-                    <div className="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center border-2 border-emerald-200">
-                      <Bird size={18} className="text-emerald-600" />
-                    </div>
-                    <div>
-                      {bird.ringNumber ? (
-                        <p className="text-lg font-extrabold text-emerald-700 font-mono leading-tight tracking-wide">{bird.ringNumber}</p>
-                      ) : (
-                        <p className="text-sm font-bold text-stone-400 italic">Sem código</p>
-                      )}
-                      <span className={cn("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border", STATUS_COLORS[bird.status as BirdStatus])}>
-                        {STATUS_LABELS[bird.status as BirdStatus]}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Center columns: Espécie | Sexo | Gaiola | Mutação (destaque) */}
-                  <div className="flex-1 flex items-start gap-5 sm:gap-6">
-                    <div className="w-[100px] flex-shrink-0 hidden sm:block">
-                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Espécie</p>
-                      <p className="text-sm font-semibold text-stone-800 leading-tight">{bird.speciesName}</p>
-                    </div>
-                    <div className="w-[75px] flex-shrink-0 hidden sm:block">
-                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Sexo</p>
-                      <p className="text-sm font-semibold text-stone-800">{SEX_LABELS[bird.sex as BirdSex]}</p>
-                    </div>
-                    <div className="w-[75px] flex-shrink-0 hidden sm:block">
-                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Gaiola</p>
-                      <p className="text-sm font-semibold text-stone-800">{bird.enclosure || <span className="text-stone-300 italic">—</span>}</p>
+          <div className="space-y-3">
+            {groupedBySpecies.map(group => {
+              const isExpanded = expandedSpecies.has(group.speciesId);
+              const activeCount = group.birds.filter(b => b.status === "ativo").length;
+              const obitoCount = group.birds.filter(b => b.status === "obito").length;
+              return (
+                <div key={group.speciesId} className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden">
+                  {/* Species card header */}
+                  <button
+                    onClick={() => toggleSpecies(group.speciesId)}
+                    className="w-full flex items-center gap-4 p-4 hover:bg-stone-50/50 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border-2 border-emerald-200 flex-shrink-0">
+                      <Bird size={16} className="text-emerald-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Mutação</p>
-                      <p className="text-sm font-bold text-stone-900 leading-snug break-words">{bird.mutation || <span className="text-stone-300 italic font-normal">—</span>}</p>
+                      <p className="text-sm font-bold text-stone-800">{group.speciesName}</p>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-[11px] text-emerald-600 font-semibold">{activeCount} ativa{activeCount !== 1 ? "s" : ""}</span>
+                        {obitoCount > 0 && (
+                          <span className="text-[11px] text-stone-400 font-medium">{obitoCount} óbito{obitoCount !== 1 ? "s" : ""}</span>
+                        )}
+                        <span className="text-[11px] text-stone-300">•</span>
+                        <span className="text-[11px] text-stone-400">{group.birds.length} total</span>
+                      </div>
                     </div>
-                  </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        {getSpeciesPrefix(group.speciesId)}
+                      </span>
+                      <ChevronDown
+                        size={18}
+                        className={cn("text-stone-400 transition-transform duration-200", isExpanded && "rotate-180")}
+                      />
+                    </div>
+                  </button>
 
-                  {/* Right: Arrow */}
-                  <ChevronDown size={16} className="text-stone-300 group-hover:text-emerald-400 -rotate-90 transition-colors flex-shrink-0" />
+                  {/* Expanded bird list */}
+                  {isExpanded && (
+                    <div className="border-t border-stone-100">
+                      {group.birds.map((bird, idx) => (
+                        <div
+                          key={bird.id}
+                          onClick={() => handleViewBird(bird)}
+                          className={cn(
+                            "flex items-center gap-4 px-5 py-3 hover:bg-emerald-50/40 transition-colors cursor-pointer group",
+                            idx < group.birds.length - 1 && "border-b border-stone-100/60"
+                          )}
+                        >
+                          {/* Code */}
+                          <div className="min-w-[70px]">
+                            {bird.ringNumber ? (
+                              <p className="text-base font-extrabold text-emerald-700 font-mono tracking-wide">{bird.ringNumber}</p>
+                            ) : (
+                              <p className="text-sm font-medium text-stone-400 italic">Sem código</p>
+                            )}
+                          </div>
+
+                          {/* Status badge */}
+                          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border flex-shrink-0", STATUS_COLORS[bird.status as BirdStatus])}>
+                            {STATUS_LABELS[bird.status as BirdStatus]}
+                          </span>
+
+                          {/* Info columns */}
+                          <div className="flex-1 flex items-center gap-4 sm:gap-6 min-w-0">
+                            <div className="w-[60px] flex-shrink-0 hidden sm:block">
+                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Sexo</p>
+                              <p className="text-xs font-semibold text-stone-700">{SEX_LABELS[bird.sex as BirdSex]}</p>
+                            </div>
+                            <div className="w-[60px] flex-shrink-0 hidden sm:block">
+                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Gaiola</p>
+                              <p className="text-xs font-semibold text-stone-700">{bird.enclosure || <span className="text-stone-300 italic">—</span>}</p>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Mutação</p>
+                              <p className="text-xs font-bold text-stone-800 truncate">{bird.mutation || <span className="text-stone-300 italic font-normal">—</span>}</p>
+                            </div>
+                            <div className="w-[80px] flex-shrink-0 hidden md:block">
+                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Anilha</p>
+                              <p className="text-xs font-medium text-stone-600">{(bird as any).anilha || <span className="text-stone-300 italic">—</span>}</p>
+                            </div>
+                          </div>
+
+                          {/* Arrow */}
+                          <ChevronRight size={14} className="text-stone-300 group-hover:text-emerald-400 transition-colors flex-shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <p className="text-center text-[11px] text-stone-400 pt-2">
-              {filteredBirds.length} ave{filteredBirds.length !== 1 ? "s" : ""} encontrada{filteredBirds.length !== 1 ? "s" : ""}
+              {filteredBirds.length} ave{filteredBirds.length !== 1 ? "s" : ""} em {groupedBySpecies.length} espécie{groupedBySpecies.length !== 1 ? "s" : ""}
             </p>
           </div>
         )}
