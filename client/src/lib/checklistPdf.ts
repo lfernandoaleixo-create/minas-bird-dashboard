@@ -251,51 +251,6 @@ export async function generateChecklistPdf(documents: any[]) {
     y += rowH;
   });
 
-  // Separator
-  y += 6;
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, margin + contentW, y);
-  y += 6;
-
-  // Signature area
-  if (y + 40 > pageH - 20) {
-    drawBrandFooter(doc, pageW, pageH);
-    doc.addPage();
-    y = drawBrandHeader(doc, pageW, logo, "Checklist de Fiscalização", "Criatório Minas Bird — Documentos Obrigatórios");
-    y += 4;
-  }
-
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND.text);
-  doc.text("OBSERVAÇÕES:", margin, y);
-  y += 5;
-
-  // Lines for handwritten notes
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.2);
-  for (let i = 0; i < 4; i++) {
-    doc.line(margin, y, margin + contentW, y);
-    y += 7;
-  }
-
-  y += 6;
-
-  // Signature lines
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BRAND.muted);
-
-  const sigW = (contentW - 20) / 2;
-  // Left signature
-  doc.line(margin, y + 10, margin + sigW, y + 10);
-  doc.text("Responsável pelo Criatório", margin + sigW / 2, y + 14, { align: "center" });
-
-  // Right signature
-  doc.line(margin + sigW + 20, y + 10, margin + contentW, y + 10);
-  doc.text("Fiscal / Agente", margin + sigW + 20 + sigW / 2, y + 14, { align: "center" });
-
   // Footer
   drawBrandFooter(doc, pageW, pageH, 1, 1);
 
