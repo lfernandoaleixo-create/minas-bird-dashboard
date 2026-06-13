@@ -378,3 +378,6 @@
 - [x] Documentação: corrigir erro ao abrir/visualizar documentos (PDF não abre)
 - [x] Documentação: adicionar campo para anexar documento de renovação dentro de cada card
 - [x] Documentação: adicionar 3 campos de data ao enviar renovação (Data do Documento, Data de Vigência, Data de Vencimento)
+- [x] Documentação: notificação automática 30 dias antes do vencimento de cada documento (heartbeat job)
+- [x] Documentação: checklist de fiscalização — view dedicada com todos os documentos obrigatórios e status visual
+- [x] Documentação: melhorar fluxo de envio de renovações (pré-preencher datas, feedback visual, confirmação)

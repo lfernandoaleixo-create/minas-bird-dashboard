@@ -640,3 +640,33 @@ export async function getOverdueInstallments() {
     ));
   return rows;
 }
+
+// ===== DOCUMENT EXPIRATION HELPERS =====
+
+import { lte, gte, isNotNull } from "drizzle-orm";
+
+export async function getDocumentsExpiringWithinDays(days: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  const futureDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+  return db.select().from(criatorioDocuments).where(
+    and(
+      isNotNull(criatorioDocuments.expirationDate),
+      lte(criatorioDocuments.expirationDate, futureDate),
+      gte(criatorioDocuments.expirationDate, now)
+    )
+  );
+}
+
+export async function getExpiredDocuments() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db.select().from(criatorioDocuments).where(
+    and(
+      isNotNull(criatorioDocuments.expirationDate),
+      lte(criatorioDocuments.expirationDate, now)
+    )
+  );
+}

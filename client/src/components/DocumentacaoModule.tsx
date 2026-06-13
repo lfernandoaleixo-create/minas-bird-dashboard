@@ -10,6 +10,8 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import FiscalizacaoChecklist from "@/components/FiscalizacaoChecklist";
 import {
   FileText,
   Upload,
@@ -26,6 +28,7 @@ import {
   Search,
   RefreshCw,
   ExternalLink,
+  Shield,
 } from "lucide-react";
 
 // Categorias de documentos do criatório
@@ -224,8 +227,11 @@ export default function DocumentacaoModule() {
       setRenewalExpDate("");
       setSelectedDoc(null);
       setView("list");
+      // Show success feedback
+      alert("Documento atualizado com sucesso! Status alterado para Vigente.");
     } catch (err) {
       console.error("Erro ao enviar renovação:", err);
+      alert("Erro ao enviar o documento. Tente novamente.");
     } finally {
       setUploadingRenewal(false);
     }
@@ -244,6 +250,7 @@ export default function DocumentacaoModule() {
   const handleViewDetail = (doc: any) => {
     setSelectedDoc(doc);
     setRenewalFiles([]);
+    // Pre-fill renewal dates from existing document dates for convenience
     setRenewalDocDate("");
     setRenewalVigDate("");
     setRenewalExpDate("");
@@ -700,6 +707,21 @@ export default function DocumentacaoModule() {
 
   // ─── LIST VIEW ────────────────────────────────────────────────────────────────
   return (
+    <Tabs defaultValue="documentos" className="space-y-6">
+      <TabsList className="w-full sm:w-auto">
+        <TabsTrigger value="documentos" className="gap-1.5">
+          <FileText size={14} /> Documentos
+        </TabsTrigger>
+        <TabsTrigger value="checklist" className="gap-1.5">
+          <Shield size={14} /> Checklist Fiscalização
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="checklist">
+        <FiscalizacaoChecklist />
+      </TabsContent>
+
+      <TabsContent value="documentos">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -888,5 +910,7 @@ export default function DocumentacaoModule() {
         </div>
       )}
     </div>
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -46,6 +46,10 @@ async function startServer() {
       createContext,
     })
   );
+  // Scheduled endpoints (Heartbeat cron callbacks)
+  const { checkDocExpirationHandler } = await import("../scheduledDocExpiration");
+  app.post("/api/scheduled/checkDocExpiration", checkDocExpirationHandler);
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
