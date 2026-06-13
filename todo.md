@@ -381,3 +381,5 @@
 - [x] Documentação: notificação automática 30 dias antes do vencimento de cada documento (heartbeat job)
 - [x] Documentação: checklist de fiscalização — view dedicada com todos os documentos obrigatórios e status visual
 - [x] Documentação: melhorar fluxo de envio de renovações (pré-preencher datas, feedback visual, confirmação)
+- [x] Documentação: corrigir TODOS os status de vencimento — qualquer documento com data de vencimento anterior a hoje DEVE estar como "vencido"
+- [x] Documentação: redesenhar completamente a estética (cores profissionais, elegantes, apresentável para fiscalização)

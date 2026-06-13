@@ -1,9 +1,6 @@
 /**
  * DocumentacaoModule — Repositório central de documentos do criatório
- * Licenças, alvarás, processos de legalização, certificados, etc.
- * - Processo completo fixo no topo
- * - Datas de emissão e vencimento grandes e visíveis
- * - Campo para anexar renovação dentro de cada documento
+ * Design profissional e formal para apresentação em fiscalização
  */
 import { useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
@@ -17,7 +14,6 @@ import {
   Upload,
   Plus,
   Trash2,
-  Eye,
   ArrowLeft,
   Calendar,
   Tag,
@@ -29,6 +25,8 @@ import {
   RefreshCw,
   ExternalLink,
   Shield,
+  Download,
+  XCircle,
 } from "lucide-react";
 
 // Categorias de documentos do criatório
@@ -47,10 +45,10 @@ const CATEGORIES = [
 ] as const;
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bgColor: string; icon: typeof CheckCircle2 }> = {
-  vigente: { label: "Vigente", color: "text-emerald-700", bgColor: "bg-emerald-50 border-emerald-200", icon: CheckCircle2 },
-  em_andamento: { label: "Em Andamento", color: "text-amber-700", bgColor: "bg-amber-50 border-amber-200", icon: Clock },
-  vencido: { label: "Vencido", color: "text-red-700", bgColor: "bg-red-50 border-red-200", icon: AlertCircle },
-  arquivado: { label: "Arquivado", color: "text-gray-600", bgColor: "bg-gray-50 border-gray-200", icon: Archive },
+  vigente: { label: "REGULAR", color: "text-emerald-700", bgColor: "bg-emerald-600 text-white", icon: CheckCircle2 },
+  em_andamento: { label: "EM ANDAMENTO", color: "text-blue-700", bgColor: "bg-blue-600 text-white", icon: Clock },
+  vencido: { label: "VENCIDO", color: "text-red-700", bgColor: "bg-red-600 text-white", icon: XCircle },
+  arquivado: { label: "ARQUIVADO", color: "text-slate-600", bgColor: "bg-slate-500 text-white", icon: Archive },
 };
 
 type DocForm = {
@@ -88,6 +86,7 @@ export default function DocumentacaoModule() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [successMsg, setSuccessMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const renewalInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -209,7 +208,6 @@ export default function DocumentacaoModule() {
         contentType: file.type,
       });
 
-      // Update the same document with the new file URL, fileName, fileSize, dates and mark as vigente
       await updateMut.mutateAsync({
         id: selectedDoc.id,
         status: "vigente",
@@ -225,10 +223,12 @@ export default function DocumentacaoModule() {
       setRenewalDocDate("");
       setRenewalVigDate("");
       setRenewalExpDate("");
-      setSelectedDoc(null);
-      setView("list");
-      // Show success feedback
-      alert("Documento atualizado com sucesso! Status alterado para Vigente.");
+      setSuccessMsg("Documento atualizado com sucesso! Status alterado para REGULAR.");
+      setTimeout(() => {
+        setSuccessMsg("");
+        setSelectedDoc(null);
+        setView("list");
+      }, 2000);
     } catch (err) {
       console.error("Erro ao enviar renovação:", err);
       alert("Erro ao enviar o documento. Tente novamente.");
@@ -250,7 +250,7 @@ export default function DocumentacaoModule() {
   const handleViewDetail = (doc: any) => {
     setSelectedDoc(doc);
     setRenewalFiles([]);
-    // Pre-fill renewal dates from existing document dates for convenience
+    setSuccessMsg("");
     setRenewalDocDate("");
     setRenewalVigDate("");
     setRenewalExpDate("");
@@ -281,17 +281,14 @@ export default function DocumentacaoModule() {
     });
   };
 
-  // Sort documents: "Processo de Legalização" first (id=1 or title contains "Processo"), then by status (vencido first), then by date
+  // Sort documents: "Processo de Legalização" first, then vencido, then by date
   const sortedDocs = [...documents].sort((a: any, b: any) => {
-    // Process document always first
     const aIsProcess = a.title.toLowerCase().includes("processo de legalização");
     const bIsProcess = b.title.toLowerCase().includes("processo de legalização");
     if (aIsProcess && !bIsProcess) return -1;
     if (!aIsProcess && bIsProcess) return 1;
-    // Vencido documents next
     if (a.status === "vencido" && b.status !== "vencido") return -1;
     if (a.status !== "vencido" && b.status === "vencido") return 1;
-    // Then by expiration date (soonest first)
     if (a.expirationDate && b.expirationDate) {
       return new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime();
     }
@@ -317,205 +314,185 @@ export default function DocumentacaoModule() {
   // ─── DETAIL VIEW ─────────────────────────────────────────────────────────────
   if (view === "detail" && selectedDoc) {
     const statusInfo = STATUS_LABELS[selectedDoc.status] || STATUS_LABELS.vigente;
-    const StatusIcon = statusInfo.icon;
     const isVencido = selectedDoc.status === "vencido";
+    const hasFile = selectedDoc.fileUrl && selectedDoc.fileUrl.trim() !== "";
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-4xl mx-auto">
         <button
           onClick={() => { setSelectedDoc(null); setView("list"); }}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
         >
           <ArrowLeft size={16} /> Voltar à lista
         </button>
 
-        <div className={`bg-card border-2 rounded-xl p-6 space-y-5 ${isVencido ? "border-red-300" : "border-border"}`}>
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold text-foreground">{selectedDoc.title}</h2>
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
-                  {selectedDoc.category}
-                </span>
-                <span className={`text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 border ${statusInfo.bgColor} ${statusInfo.color}`}>
-                  <StatusIcon size={14} /> {statusInfo.label}
-                </span>
-              </div>
+        {/* Success message */}
+        {successMsg && (
+          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4 flex items-center gap-3 animate-in fade-in">
+            <CheckCircle2 size={20} className="text-emerald-600" />
+            <p className="text-sm font-semibold text-emerald-800">{successMsg}</p>
+          </div>
+        )}
+
+        <div className={`bg-white border-2 rounded-2xl shadow-sm overflow-hidden ${isVencido ? "border-red-300" : "border-slate-200"}`}>
+          {/* Header bar */}
+          <div className={`px-6 py-4 flex items-center justify-between ${isVencido ? "bg-red-50 border-b-2 border-red-200" : "bg-slate-50 border-b border-slate-200"}`}>
+            <div className="flex items-center gap-3">
+              <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${statusInfo.bgColor}`}>
+                {statusInfo.label}
+              </span>
+              <span className="text-xs font-medium text-slate-500 px-2 py-0.5 rounded bg-slate-100">
+                {selectedDoc.category}
+              </span>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleEdit(selectedDoc)}>
+              <Button variant="outline" size="sm" onClick={() => handleEdit(selectedDoc)} className="text-xs">
                 Editar
               </Button>
-              <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600" onClick={() => handleDelete(selectedDoc.id)}>
-                <Trash2 size={14} />
+              <Button variant="outline" size="sm" className="text-xs text-red-500 hover:text-red-600 hover:border-red-300" onClick={() => handleDelete(selectedDoc.id)}>
+                <Trash2 size={13} />
               </Button>
             </div>
+          </div>
+
+          {/* Title */}
+          <div className="px-6 pt-5 pb-4">
+            <h2 className="text-xl font-bold text-slate-900">{selectedDoc.title}</h2>
+            {selectedDoc.description && (
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">{selectedDoc.description}</p>
+            )}
           </div>
 
           {/* DATES — Large and prominent: 3 columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className={`rounded-xl p-4 border ${isVencido ? "bg-red-50/50 border-red-200" : "bg-muted/20 border-border"}`}>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Data do Documento</p>
-              <p className="text-xl sm:text-2xl font-bold text-foreground">
-                {formatDateLarge(selectedDoc.documentDate) || "—"}
-              </p>
-            </div>
-            <div className={`rounded-xl p-4 border ${selectedDoc.vigenciaDate ? "bg-emerald-50/50 border-emerald-200" : "bg-muted/20 border-border"}`}>
-              <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Data de Vigência</p>
-              <p className="text-xl sm:text-2xl font-bold text-foreground">
-                {formatDateLarge(selectedDoc.vigenciaDate) || "—"}
-              </p>
-            </div>
-            <div className={`rounded-xl p-4 border ${isVencido ? "bg-red-100 border-red-300" : selectedDoc.expirationDate ? "bg-amber-50/50 border-amber-200" : "bg-muted/20 border-border"}`}>
-              <p className={`text-xs font-medium uppercase tracking-wide mb-1 ${isVencido ? "text-red-600" : "text-muted-foreground"}`}>
-                {isVencido ? "⚠ VENCIDO EM" : "Data de Vencimento"}
-              </p>
-              <p className={`text-xl sm:text-2xl font-bold ${isVencido ? "text-red-700" : "text-foreground"}`}>
-                {formatDateLarge(selectedDoc.expirationDate) || "Sem validade"}
-              </p>
+          <div className="px-6 pb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl p-4 bg-slate-50 border border-slate-200">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Data do Documento</p>
+                <p className="text-2xl font-bold text-slate-800 tabular-nums">
+                  {formatDateLarge(selectedDoc.documentDate) || "—"}
+                </p>
+              </div>
+              <div className="rounded-xl p-4 bg-emerald-50 border border-emerald-200">
+                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-2">Início da Vigência</p>
+                <p className="text-2xl font-bold text-emerald-800 tabular-nums">
+                  {formatDateLarge(selectedDoc.vigenciaDate) || "—"}
+                </p>
+              </div>
+              <div className={`rounded-xl p-4 border ${isVencido ? "bg-red-50 border-red-300" : "bg-amber-50 border-amber-200"}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${isVencido ? "text-red-700" : "text-amber-700"}`}>
+                  {isVencido ? "VENCIDO EM" : "Vencimento"}
+                </p>
+                <p className={`text-2xl font-bold tabular-nums ${isVencido ? "text-red-700" : "text-amber-800"}`}>
+                  {formatDateLarge(selectedDoc.expirationDate) || "—"}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Description */}
-          {selectedDoc.description && (
-            <div className="bg-muted/30 rounded-lg p-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">{selectedDoc.description}</p>
-            </div>
-          )}
-
-          {/* File info & Download — only show if document has its own file */}
-          {selectedDoc.fileUrl && selectedDoc.fileUrl.length > 0 ? (
-            <>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs mb-1">Arquivo</p>
-                  <p className="font-medium truncate">{selectedDoc.fileName}</p>
+          {/* File section */}
+          <div className="px-6 pb-5">
+            {hasFile ? (
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <FileText size={20} className="text-slate-600 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">{selectedDoc.fileName}</p>
+                  {selectedDoc.fileSize && (
+                    <p className="text-xs text-slate-500">{(selectedDoc.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                  )}
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs mb-1">Tamanho</p>
-                  <p className="font-medium">{selectedDoc.fileSize ? `${(selectedDoc.fileSize / 1024 / 1024).toFixed(1)} MB` : "—"}</p>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-border">
                 <a
                   href={selectedDoc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold text-sm"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 text-white text-xs font-semibold rounded-lg hover:bg-slate-700 transition-colors"
                 >
-                  <ExternalLink size={16} /> Visualizar / Baixar Documento
+                  <ExternalLink size={13} /> Abrir Documento
                 </a>
               </div>
-            </>
-          ) : (
-            <div className="pt-3 border-t border-border">
-              <div className={`rounded-xl p-5 border-2 border-dashed ${isVencido ? "border-red-300 bg-red-50/30" : "border-amber-300 bg-amber-50/30"}`}>
-                <div className="flex items-center gap-3">
-                  <Upload size={22} className={isVencido ? "text-red-500" : "text-amber-500"} />
-                  <div>
-                    <p className={`font-semibold text-sm ${isVencido ? "text-red-700" : "text-amber-700"}`}>
-                      Documento individual não anexado
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Envie o arquivo específico deste documento abaixo para que seus funcionários possam visualizá-lo.
-                    </p>
-                  </div>
-                </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <AlertCircle size={18} className="text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-800 font-medium">
+                  Documento individual não anexado — envie o arquivo abaixo
+                </p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* ─── RENEWAL UPLOAD SECTION ─────────────────────────────────────── */}
-          <div className={`mt-6 pt-5 border-t-2 ${isVencido ? "border-red-200" : "border-border"}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <RefreshCw size={18} className={isVencido ? "text-red-600" : "text-primary"} />
-              <h3 className={`text-base font-bold ${isVencido ? "text-red-700" : "text-foreground"}`}>
-                {!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0
-                  ? "Enviar Documento"
+          {/* Renewal / Upload section */}
+          <div className={`px-6 pb-6 pt-2 border-t ${isVencido ? "border-red-200 bg-red-50/30" : "border-slate-100"}`}>
+            <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <RefreshCw size={14} className={isVencido ? "text-red-600" : "text-slate-600"} />
+              {hasFile ? "Enviar Renovação" : "Enviar Documento"}
+            </h3>
+
+            {/* File upload */}
+            <div
+              onClick={() => renewalInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all mb-4 ${
+                renewalFiles.length > 0
+                  ? "border-emerald-400 bg-emerald-50/50"
                   : isVencido
-                  ? "Enviar Renovação (Documento Vencido)"
-                  : "Enviar Renovação / Atualização"}
-              </h3>
+                  ? "border-red-300 hover:border-red-400 hover:bg-red-50/50"
+                  : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+              }`}
+            >
+              {renewalFiles.length > 0 ? (
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle2 size={18} className="text-emerald-600" />
+                  <span className="text-sm font-medium text-emerald-800">{renewalFiles[0].name}</span>
+                </div>
+              ) : (
+                <>
+                  <Upload size={24} className="mx-auto mb-2 text-slate-400" />
+                  <p className="text-sm font-medium text-slate-600">
+                    Clique para selecionar o arquivo
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">PDF, imagem ou documento</p>
+                </>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0
-                ? "Anexe aqui o arquivo deste documento. Após o envio ele ficará disponível para visualização."
-                : "Anexe aqui o documento renovado. O arquivo anterior será substituído e o status atualizado para \"Vigente\"."}
-            </p>
+            <input
+              ref={renewalInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              onChange={handleRenewalSelect}
+              className="hidden"
+            />
 
-            {/* File selector */}
-            <div className="mb-4">
-              <div
-                onClick={() => renewalInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                  renewalFiles.length > 0
-                    ? "border-emerald-400 bg-emerald-50/50"
-                    : isVencido
-                    ? "border-red-300 hover:border-red-400 hover:bg-red-50/30"
-                    : "border-border hover:border-primary/50 hover:bg-muted/20"
-                }`}
-              >
-                {renewalFiles.length > 0 ? (
-                  <div className="flex items-center gap-2 justify-center">
-                    <FileText size={18} className="text-emerald-600" />
-                    <span className="text-sm font-medium text-emerald-700">{renewalFiles[0].name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({(renewalFiles[0].size / 1024 / 1024).toFixed(1)} MB)
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 justify-center">
-                    <Upload size={18} className="text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {(!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0)
-                        ? "Clique para selecionar o arquivo deste documento"
-                        : "Clique para selecionar o arquivo renovado"}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <input
-                ref={renewalInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                onChange={handleRenewalSelect}
-                className="hidden"
-              />
-            </div>
-
-            {/* 3 Date fields for renewal */}
+            {/* Date fields for renewal */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                  <Calendar size={12} className="inline mr-1" />Data do Documento
+                <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Data do Documento
                 </label>
                 <input
                   type="date"
                   value={renewalDocDate}
                   onChange={(e) => setRenewalDocDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-400/30 focus:border-slate-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">
-                  <Calendar size={12} className="inline mr-1" />Data de Vigência
+                <label className="block text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5">
+                  Início da Vigência
                 </label>
                 <input
                   type="date"
                   value={renewalVigDate}
                   onChange={(e) => setRenewalVigDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50/30 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400/30"
+                  className="w-full px-3 py-2.5 rounded-lg border border-emerald-300 bg-emerald-50/30 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
-                  <Calendar size={12} className="inline mr-1" />Data de Vencimento
+                <label className="block text-[10px] font-bold text-red-700 uppercase tracking-wider mb-1.5">
+                  Data de Vencimento
                 </label>
                 <input
                   type="date"
                   value={renewalExpDate}
                   onChange={(e) => setRenewalExpDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-red-300 bg-red-50/30 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-400/30"
+                  className="w-full px-3 py-2.5 rounded-lg border border-red-300 bg-red-50/30 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-400/30 focus:border-red-400"
                 />
               </div>
             </div>
@@ -524,9 +501,13 @@ export default function DocumentacaoModule() {
             <Button
               onClick={handleRenewalUpload}
               disabled={renewalFiles.length === 0 || uploadingRenewal}
-              className={`w-full ${isVencido ? "bg-red-600 hover:bg-red-700" : ""}`}
+              className={`w-full py-3 text-sm font-bold ${
+                isVencido
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-slate-800 hover:bg-slate-700 text-white"
+              }`}
             >
-              {uploadingRenewal ? "Enviando..." : (!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0) ? "Enviar Documento" : "Enviar Renovação"}
+              {uploadingRenewal ? "Enviando..." : hasFile ? "Enviar Renovação" : "Enviar Documento"}
             </Button>
           </div>
         </div>
@@ -537,37 +518,38 @@ export default function DocumentacaoModule() {
   // ─── FORM VIEW ────────────────────────────────────────────────────────────────
   if (view === "form") {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-3xl mx-auto">
         <button
           onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setPendingFiles([]); }}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
         >
           <ArrowLeft size={16} /> Voltar à lista
         </button>
 
-        <div className="bg-card border border-border rounded-xl p-6 space-y-5">
-          <h2 className="text-lg font-bold text-foreground">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-900">
             {editingId ? "Editar Documento" : "Novo Documento"}
           </h2>
 
           {/* Title */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Título *</label>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Título *</label>
             <Input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Ex: Processo de Legalização SISFAUNA"
+              placeholder="Ex: Alvará de Funcionamento 2025"
+              className="border-slate-300"
             />
           </div>
 
           {/* Category + Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Categoria *</label>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Categoria *</label>
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -575,13 +557,13 @@ export default function DocumentacaoModule() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Status</label>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Status</label>
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm"
               >
-                <option value="vigente">Vigente</option>
+                <option value="vigente">Regular (Vigente)</option>
                 <option value="em_andamento">Em Andamento</option>
                 <option value="vencido">Vencido</option>
                 <option value="arquivado">Arquivado</option>
@@ -592,46 +574,50 @@ export default function DocumentacaoModule() {
           {/* Dates */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Data do Documento</label>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Data do Documento</label>
               <Input
                 type="date"
                 value={form.documentDate}
                 onChange={(e) => setForm({ ...form, documentDate: e.target.value })}
+                className="border-slate-300"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-emerald-700">Data de Vigência</label>
+              <label className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Início da Vigência</label>
               <Input
                 type="date"
                 value={form.vigenciaDate}
                 onChange={(e) => setForm({ ...form, vigenciaDate: e.target.value })}
+                className="border-emerald-300"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Data de Vencimento</label>
+              <label className="text-xs font-bold text-red-700 uppercase tracking-wider">Data de Vencimento</label>
               <Input
                 type="date"
                 value={form.expirationDate}
                 onChange={(e) => setForm({ ...form, expirationDate: e.target.value })}
+                className="border-red-300"
               />
             </div>
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Descrição / Observações</label>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Descrição / Observações</label>
             <Textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Detalhes sobre o documento..."
               rows={3}
+              className="border-slate-300"
             />
           </div>
 
           {/* File Upload (only for new documents) */}
           {!editingId && (
             <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground">Arquivo(s) *</label>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Arquivo(s) *</label>
               <div
                 ref={dropRef}
                 onDragOver={handleDragOver}
@@ -640,16 +626,16 @@ export default function DocumentacaoModule() {
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
                   dragOver
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50 hover:bg-muted/20"
+                    ? "border-slate-600 bg-slate-50"
+                    : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
                 }`}
               >
-                <Upload size={32} className="mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm font-medium text-foreground">
+                <Upload size={28} className="mx-auto mb-3 text-slate-400" />
+                <p className="text-sm font-medium text-slate-700">
                   Arraste arquivos aqui ou clique para selecionar
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  PDF, imagens, documentos — sem limite de tamanho
+                <p className="text-xs text-slate-400 mt-1">
+                  PDF, imagens, documentos
                 </p>
               </div>
               <input
@@ -665,10 +651,10 @@ export default function DocumentacaoModule() {
               {pendingFiles.length > 0 && (
                 <div className="space-y-2">
                   {pendingFiles.map((file, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-muted/30 rounded-lg px-3 py-2">
-                      <FileText size={16} className="text-primary shrink-0" />
-                      <span className="text-sm truncate flex-1">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">
+                    <div key={i} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
+                      <FileText size={16} className="text-slate-600 shrink-0" />
+                      <span className="text-sm truncate flex-1 text-slate-800">{file.name}</span>
+                      <span className="text-xs text-slate-500">
                         {(file.size / 1024 / 1024).toFixed(1)} MB
                       </span>
                       <button
@@ -689,13 +675,14 @@ export default function DocumentacaoModule() {
             <Button
               onClick={editingId ? handleUpdate : handleSubmit}
               disabled={uploading || (!editingId && (!form.title || pendingFiles.length === 0))}
-              className="flex-1"
+              className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold"
             >
               {uploading ? "Enviando..." : editingId ? "Salvar Alterações" : "Cadastrar Documento"}
             </Button>
             <Button
               variant="outline"
               onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setPendingFiles([]); }}
+              className="border-slate-300"
             >
               Cancelar
             </Button>
@@ -708,11 +695,11 @@ export default function DocumentacaoModule() {
   // ─── LIST VIEW ────────────────────────────────────────────────────────────────
   return (
     <Tabs defaultValue="documentos" className="space-y-6">
-      <TabsList className="w-full sm:w-auto">
-        <TabsTrigger value="documentos" className="gap-1.5">
+      <TabsList className="bg-slate-100 border border-slate-200 p-1 rounded-xl">
+        <TabsTrigger value="documentos" className="gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-semibold">
           <FileText size={14} /> Documentos
         </TabsTrigger>
-        <TabsTrigger value="checklist" className="gap-1.5">
+        <TabsTrigger value="checklist" className="gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-semibold">
           <Shield size={14} /> Checklist Fiscalização
         </TabsTrigger>
       </TabsList>
@@ -722,194 +709,198 @@ export default function DocumentacaoModule() {
       </TabsContent>
 
       <TabsContent value="documentos">
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Documentação do Criatório</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {documents.length} documento{documents.length !== 1 ? "s" : ""} cadastrado{documents.length !== 1 ? "s" : ""}
-            {vencidoCount > 0 && (
-              <span className="ml-2 text-red-600 font-semibold">
-                · {vencidoCount} vencido{vencidoCount !== 1 ? "s" : ""}
-              </span>
-            )}
-          </p>
-        </div>
-        <Button onClick={() => { setForm(EMPTY_FORM); setPendingFiles([]); setEditingId(null); setView("form"); }}>
-          <Plus size={16} className="mr-1.5" /> Novo Documento
-        </Button>
-      </div>
-
-      {/* Vencido alert banner */}
-      {vencidoCount > 0 && filterStatus === "all" && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-          <AlertCircle size={20} className="text-red-600 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">
-              {vencidoCount} documento{vencidoCount !== 1 ? "s" : ""} vencido{vencidoCount !== 1 ? "s" : ""} — necessitam renovação
-            </p>
-            <p className="text-xs text-red-600/70 mt-0.5">
-              Clique no documento para enviar a renovação
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-red-600 border-red-300 hover:bg-red-100"
-            onClick={() => setFilterStatus("vencido")}
-          >
-            Ver vencidos
-          </Button>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por título ou arquivo..."
-            className="pl-9"
-          />
-        </div>
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-[160px]"
-        >
-          <option value="all">Todas Categorias</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-[140px]"
-        >
-          <option value="all">Todos Status</option>
-          <option value="vigente">Vigente</option>
-          <option value="em_andamento">Em Andamento</option>
-          <option value="vencido">Vencido</option>
-          <option value="arquivado">Arquivado</option>
-        </select>
-      </div>
-
-      {/* Document list */}
-      {filteredDocs.length === 0 ? (
-        <div className="text-center py-16 bg-card border border-border rounded-xl">
-          <FileText size={48} className="mx-auto mb-4 text-muted-foreground/30" />
-          <p className="text-muted-foreground font-medium">
-            {documents.length === 0 ? "Nenhum documento cadastrado" : "Nenhum resultado encontrado"}
-          </p>
-          <p className="text-sm text-muted-foreground/60 mt-1">
-            {documents.length === 0 ? "Clique em \"Novo Documento\" para começar" : "Tente ajustar os filtros"}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredDocs.map((doc: any) => {
-            const statusInfo = STATUS_LABELS[doc.status] || STATUS_LABELS.vigente;
-            const StatusIcon = statusInfo.icon;
-            const isProcess = doc.title.toLowerCase().includes("processo de legalização");
-            const isVencido = doc.status === "vencido";
-            return (
-              <div
-                key={doc.id}
-                onClick={() => handleViewDetail(doc)}
-                className={`bg-card border-2 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer ${
-                  isProcess
-                    ? "border-primary/40 bg-primary/5"
-                    : isVencido
-                    ? "border-red-300 bg-red-50/30"
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  {/* Icon */}
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                    isProcess ? "bg-primary/20" : isVencido ? "bg-red-100" : "bg-primary/10"
-                  }`}>
-                    <FileText size={20} className={isProcess ? "text-primary" : isVencido ? "text-red-600" : "text-primary"} />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={`font-bold truncate ${isProcess ? "text-primary" : "text-foreground"}`}>
-                        {isProcess && <span className="text-xs font-semibold bg-primary/20 text-primary px-1.5 py-0.5 rounded mr-2">PRINCIPAL</span>}
-                        {doc.title}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Tag size={11} /> {doc.category}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Dates — visible in list */}
-                  <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 mr-2">
-                    {doc.documentDate && (
-                      <span className="text-xs text-muted-foreground">
-                        Doc: {formatDateLarge(doc.documentDate)}
-                      </span>
-                    )}
-                    {doc.vigenciaDate && (
-                      <span className="text-xs text-emerald-700 font-medium">
-                        Vig: {formatDateLarge(doc.vigenciaDate)}
-                      </span>
-                    )}
-                    {doc.expirationDate && (
-                      <span className={`text-sm font-bold ${isVencido ? "text-red-700" : "text-amber-700"}`}>
-                        Venc: {formatDateLarge(doc.expirationDate)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Status badge */}
-                  <span className={`text-xs font-semibold px-2.5 py-1.5 rounded-full flex items-center gap-1 shrink-0 border ${statusInfo.bgColor} ${statusInfo.color}`}>
-                    <StatusIcon size={12} /> {statusInfo.label}
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Documentação do Criatório</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                {documents.length} documento{documents.length !== 1 ? "s" : ""} cadastrado{documents.length !== 1 ? "s" : ""}
+                {vencidoCount > 0 && (
+                  <span className="ml-2 text-red-600 font-bold">
+                    — {vencidoCount} vencido{vencidoCount !== 1 ? "s" : ""}
                   </span>
+                )}
+              </p>
+            </div>
+            <Button
+              onClick={() => { setForm(EMPTY_FORM); setPendingFiles([]); setEditingId(null); setView("form"); }}
+              className="bg-slate-800 hover:bg-slate-700 text-white font-semibold"
+            >
+              <Plus size={16} className="mr-1.5" /> Novo Documento
+            </Button>
+          </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
+          {/* Vencido alert banner */}
+          {vencidoCount > 0 && filterStatus === "all" && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <XCircle size={22} className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-red-800">
+                  {vencidoCount} documento{vencidoCount !== 1 ? "s" : ""} vencido{vencidoCount !== 1 ? "s" : ""} — renovação urgente
+                </p>
+                <p className="text-xs text-red-600 mt-0.5">
+                  Clique no documento para enviar a renovação atualizada
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-700 border-red-300 hover:bg-red-100 font-semibold text-xs"
+                onClick={() => setFilterStatus("vencido")}
+              >
+                Filtrar vencidos
+              </Button>
+            </div>
+          )}
 
-                {/* Mobile dates row */}
-                <div className="sm:hidden flex flex-wrap items-center gap-3 mt-2 ml-14 text-xs">
-                  {doc.documentDate && (
-                    <span className="text-muted-foreground">
-                      Doc: {formatDateLarge(doc.documentDate)}
-                    </span>
-                  )}
-                  {doc.vigenciaDate && (
-                    <span className="text-emerald-700 font-medium">
-                      Vig: {formatDateLarge(doc.vigenciaDate)}
-                    </span>
-                  )}
-                  {doc.expirationDate && (
-                    <span className={`font-bold ${isVencido ? "text-red-700" : "text-amber-700"}`}>
-                      Venc: {formatDateLarge(doc.expirationDate)}
-                    </span>
-                  )}
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por título ou arquivo..."
+                className="pl-9 border-slate-300"
+              />
+            </div>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm min-w-[160px]"
+            >
+              <option value="all">Todas Categorias</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm min-w-[140px]"
+            >
+              <option value="all">Todos Status</option>
+              <option value="vigente">Regular</option>
+              <option value="em_andamento">Em Andamento</option>
+              <option value="vencido">Vencido</option>
+              <option value="arquivado">Arquivado</option>
+            </select>
+          </div>
+
+          {/* Document list */}
+          {filteredDocs.length === 0 ? (
+            <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm">
+              <FileText size={48} className="mx-auto mb-4 text-slate-300" />
+              <p className="text-slate-600 font-semibold">
+                {documents.length === 0 ? "Nenhum documento cadastrado" : "Nenhum resultado encontrado"}
+              </p>
+              <p className="text-sm text-slate-400 mt-1">
+                {documents.length === 0 ? "Clique em \"Novo Documento\" para começar" : "Tente ajustar os filtros"}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+              {/* Table header */}
+              <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 hidden sm:block">
+                <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <span className="w-8"></span>
+                  <span className="flex-1">Documento</span>
+                  <span className="w-28 text-center">Emissão</span>
+                  <span className="w-28 text-center">Vigência</span>
+                  <span className="w-28 text-center">Vencimento</span>
+                  <span className="w-24 text-center">Status</span>
+                  <span className="w-8"></span>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Document rows */}
+              <div className="divide-y divide-slate-100">
+                {filteredDocs.map((doc: any) => {
+                  const statusInfo = STATUS_LABELS[doc.status] || STATUS_LABELS.vigente;
+                  const isProcess = doc.title.toLowerCase().includes("processo de legalização");
+                  const isVencido = doc.status === "vencido";
+                  return (
+                    <div
+                      key={doc.id}
+                      onClick={() => handleViewDetail(doc)}
+                      className={`px-5 py-4 flex items-center gap-4 cursor-pointer transition-colors ${
+                        isProcess
+                          ? "bg-slate-50 hover:bg-slate-100"
+                          : isVencido
+                          ? "bg-red-50/50 hover:bg-red-50"
+                          : "hover:bg-slate-50"
+                      }`}
+                    >
+                      {/* Icon */}
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                        isProcess ? "bg-slate-800" : isVencido ? "bg-red-100" : "bg-slate-100"
+                      }`}>
+                        <FileText size={16} className={isProcess ? "text-white" : isVencido ? "text-red-600" : "text-slate-600"} />
+                      </div>
+
+                      {/* Title + category */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {isProcess && (
+                            <span className="text-[9px] font-bold bg-slate-800 text-white px-2 py-0.5 rounded uppercase tracking-wider shrink-0">
+                              Principal
+                            </span>
+                          )}
+                          <h3 className="font-semibold text-slate-800 text-sm truncate">
+                            {doc.title}
+                          </h3>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">{doc.category}</p>
+                      </div>
+
+                      {/* Dates — desktop */}
+                      <div className="w-28 text-center shrink-0 hidden sm:block">
+                        <span className="text-xs font-medium text-slate-600 tabular-nums">
+                          {formatDateLarge(doc.documentDate) || "—"}
+                        </span>
+                      </div>
+                      <div className="w-28 text-center shrink-0 hidden sm:block">
+                        <span className="text-xs font-semibold text-emerald-700 tabular-nums">
+                          {formatDateLarge(doc.vigenciaDate) || "—"}
+                        </span>
+                      </div>
+                      <div className="w-28 text-center shrink-0 hidden sm:block">
+                        <span className={`text-sm font-bold tabular-nums ${isVencido ? "text-red-700" : "text-slate-700"}`}>
+                          {formatDateLarge(doc.expirationDate) || "—"}
+                        </span>
+                      </div>
+
+                      {/* Status badge */}
+                      <div className="w-24 text-center shrink-0">
+                        <span className={`inline-block text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${statusInfo.bgColor}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Mobile dates (shown below each row on mobile) */}
+          <style>{`
+            @media (max-width: 639px) {
+              .doc-mobile-dates { display: flex !important; }
+            }
+          `}</style>
         </div>
-      )}
-    </div>
       </TabsContent>
     </Tabs>
   );

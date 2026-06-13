@@ -1,16 +1,16 @@
 /**
- * FiscalizacaoChecklist — Checklist visual para preparação de fiscalização
- * Lista todos os documentos obrigatórios com status visual (OK / Vencido / Pendente)
- * Numerado conforme regra do usuário
+ * FiscalizacaoChecklist — Checklist profissional para fiscalização
+ * Design limpo e formal para apresentar ao IBAMA / IMA / Vigilância Sanitária
  */
 import { trpc } from "@/lib/trpc";
 import {
   CheckCircle2,
-  AlertCircle,
+  XCircle,
   Clock,
   FileText,
   Shield,
   AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 
 // Documentos obrigatórios para fiscalização IBAMA/IMA
@@ -48,20 +48,19 @@ function getDocStatus(doc: any): DocStatus {
 function getStatusConfig(status: DocStatus) {
   switch (status) {
     case "ok":
-      return { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200", label: "OK", labelColor: "text-emerald-700" };
+      return { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-white border-emerald-300", badge: "bg-emerald-600 text-white", label: "REGULAR" };
     case "vencido":
-      return { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50 border-red-200", label: "VENCIDO", labelColor: "text-red-700" };
+      return { icon: XCircle, color: "text-red-600", bg: "bg-white border-red-300", badge: "bg-red-600 text-white", label: "VENCIDO" };
     case "a_vencer":
-      return { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50 border-amber-200", label: "A VENCER", labelColor: "text-amber-700" };
+      return { icon: AlertTriangle, color: "text-amber-600", bg: "bg-white border-amber-300", badge: "bg-amber-500 text-white", label: "A VENCER" };
     case "pendente":
-      return { icon: Clock, color: "text-gray-400", bg: "bg-gray-50 border-gray-200", label: "PENDENTE", labelColor: "text-gray-500" };
+      return { icon: Clock, color: "text-slate-400", bg: "bg-white border-slate-200", badge: "bg-slate-400 text-white", label: "PENDENTE" };
   }
 }
 
 export default function FiscalizacaoChecklist() {
   const { data: documents = [] } = trpc.documentacao.list.useQuery();
 
-  // Match required docs with actual documents in the system
   const checklistItems = REQUIRED_DOCS.map((req) => {
     const matchedDoc = documents.find((doc: any) =>
       doc.title.toLowerCase().includes(req.key.toLowerCase())
@@ -79,127 +78,152 @@ export default function FiscalizacaoChecklist() {
   const readyPercent = Math.round((okCount / total) * 100);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Shield size={22} className="text-primary" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Checklist de Fiscalização</h2>
-          <p className="text-sm text-muted-foreground">
-            Documentos obrigatórios para apresentar ao IBAMA / IMA / Vigilância Sanitária
-          </p>
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-6 text-white shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
+            <Shield size={28} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Checklist de Fiscalização</h2>
+            <p className="text-sm text-white/70 mt-1">
+              Documentos obrigatórios para apresentação ao IBAMA / IMA / Vigilância Sanitária
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Summary bar */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border-2 border-emerald-200 p-4 text-center shadow-sm">
+          <p className="text-3xl font-bold text-emerald-600">{okCount}</p>
+          <p className="text-xs font-semibold text-emerald-700 mt-1 uppercase tracking-wide">Regulares</p>
+        </div>
+        <div className="bg-white rounded-xl border-2 border-red-200 p-4 text-center shadow-sm">
+          <p className="text-3xl font-bold text-red-600">{vencidoCount}</p>
+          <p className="text-xs font-semibold text-red-700 mt-1 uppercase tracking-wide">Vencidos</p>
+        </div>
+        <div className="bg-white rounded-xl border-2 border-amber-200 p-4 text-center shadow-sm">
+          <p className="text-3xl font-bold text-amber-600">{aVencerCount}</p>
+          <p className="text-xs font-semibold text-amber-700 mt-1 uppercase tracking-wide">A Vencer</p>
+        </div>
+        <div className="bg-white rounded-xl border-2 border-slate-200 p-4 text-center shadow-sm">
+          <p className="text-3xl font-bold text-slate-500">{pendenteCount}</p>
+          <p className="text-xs font-semibold text-slate-600 mt-1 uppercase tracking-wide">Pendentes</p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-semibold text-foreground">
-            Preparação: {readyPercent}% concluída
+          <span className="text-sm font-bold text-slate-800">
+            Conformidade Geral
           </span>
-          <span className="text-xs text-muted-foreground">
-            {okCount}/{total} documentos OK
+          <span className="text-lg font-bold text-emerald-600">
+            {readyPercent}%
           </span>
         </div>
-        {/* Progress bar */}
-        <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+        <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+            className={`h-full rounded-full transition-all duration-700 ${
+              readyPercent >= 80 ? "bg-emerald-500" : readyPercent >= 50 ? "bg-amber-500" : "bg-red-500"
+            }`}
             style={{ width: `${readyPercent}%` }}
           />
-        </div>
-        {/* Status summary */}
-        <div className="flex flex-wrap gap-4 mt-4">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 size={14} className="text-emerald-600" />
-            <span className="text-xs font-medium text-emerald-700">{okCount} OK</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <AlertCircle size={14} className="text-red-600" />
-            <span className="text-xs font-medium text-red-700">{vencidoCount} Vencido{vencidoCount !== 1 ? "s" : ""}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <AlertTriangle size={14} className="text-amber-600" />
-            <span className="text-xs font-medium text-amber-700">{aVencerCount} A Vencer</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Clock size={14} className="text-gray-400" />
-            <span className="text-xs font-medium text-gray-500">{pendenteCount} Pendente{pendenteCount !== 1 ? "s" : ""}</span>
-          </div>
         </div>
       </div>
 
       {/* Checklist items — numbered */}
-      <div className="space-y-2">
-        {checklistItems.map((item, index) => {
-          const config = getStatusConfig(item.status);
-          const Icon = config.icon;
-          return (
-            <div
-              key={item.key}
-              className={`border rounded-xl p-4 flex items-center gap-4 transition-all ${config.bg}`}
-            >
-              {/* Number */}
-              <span className="text-lg font-bold text-muted-foreground/60 w-8 text-center shrink-0">
-                {index + 1}
-              </span>
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-slate-50 border-b border-slate-200 px-6 py-3">
+          <div className="flex items-center gap-6 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span className="w-8 text-center">#</span>
+            <span className="flex-1">Documento</span>
+            <span className="w-24 text-center hidden sm:block">Vencimento</span>
+            <span className="w-20 text-center hidden sm:block">Arquivo</span>
+            <span className="w-24 text-center">Status</span>
+          </div>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {checklistItems.map((item, index) => {
+            const config = getStatusConfig(item.status);
+            const Icon = config.icon;
+            return (
+              <div
+                key={item.key}
+                className={`px-6 py-4 flex items-center gap-6 transition-colors hover:bg-slate-50/50 ${
+                  item.status === "vencido" ? "bg-red-50/40" : ""
+                }`}
+              >
+                {/* Number */}
+                <span className="text-base font-bold text-slate-400 w-8 text-center shrink-0">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
 
-              {/* Status icon */}
-              <div className="shrink-0">
-                <Icon size={22} className={config.color} />
-              </div>
+                {/* Doc info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Icon size={16} className={config.color} />
+                    <p className="font-semibold text-slate-800 text-sm truncate">
+                      {item.label}
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 ml-6">
+                    {item.category}
+                  </p>
+                </div>
 
-              {/* Doc info */}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground text-sm truncate">
-                  {item.label}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {item.category}
-                  {item.doc?.expirationDate && (
-                    <span className="ml-2">
-                      · Vence: {new Date(item.doc.expirationDate).toLocaleDateString("pt-BR")}
+                {/* Expiration date */}
+                <div className="w-24 text-center shrink-0 hidden sm:block">
+                  {item.doc?.expirationDate ? (
+                    <span className={`text-xs font-semibold ${item.status === "vencido" ? "text-red-600" : item.status === "a_vencer" ? "text-amber-600" : "text-slate-600"}`}>
+                      {new Date(item.doc.expirationDate).toLocaleDateString("pt-BR")}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-300">—</span>
+                  )}
+                </div>
+
+                {/* File indicator */}
+                <div className="w-20 text-center shrink-0 hidden sm:block">
+                  {item.hasFile ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                      <FileText size={11} /> Sim
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                      <FileText size={11} /> Não
                     </span>
                   )}
-                </p>
-              </div>
+                </div>
 
-              {/* File indicator */}
-              <div className="shrink-0 flex items-center gap-2">
-                {item.hasFile ? (
-                  <span className="text-xs text-emerald-600 flex items-center gap-1">
-                    <FileText size={12} /> Arquivo OK
+                {/* Status badge */}
+                <div className="w-24 text-center shrink-0">
+                  <span className={`inline-block text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${config.badge}`}>
+                    {config.label}
                   </span>
-                ) : (
-                  <span className="text-xs text-gray-400 flex items-center gap-1">
-                    <FileText size={12} /> Sem arquivo
-                  </span>
-                )}
+                </div>
               </div>
-
-              {/* Status badge */}
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${config.labelColor} ${config.bg}`}>
-                {config.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Footer note */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-amber-800">Atenção</p>
-          <p className="text-xs text-amber-700 mt-0.5">
-            Mantenha todos os documentos vigentes e com arquivo anexado. Em caso de fiscalização, 
-            todos os itens acima devem estar disponíveis para apresentação imediata.
-            Documentos vencidos devem ser renovados com urgência.
-          </p>
+            );
+          })}
         </div>
       </div>
+
+      {/* Footer */}
+      {vencidoCount > 0 && (
+        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5 flex items-start gap-4">
+          <XCircle size={22} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Ação Urgente Necessária</p>
+            <p className="text-sm text-red-700 mt-1">
+              {vencidoCount} documento{vencidoCount !== 1 ? "s" : ""} vencido{vencidoCount !== 1 ? "s" : ""}. 
+              Providencie a renovação imediatamente para evitar autuação em caso de fiscalização.
+              Acesse a aba "Documentos" para enviar os documentos renovados.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
