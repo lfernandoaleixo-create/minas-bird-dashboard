@@ -404,3 +404,6 @@
 - [x] Dashboard: melhorar navegação (tabs) com visual mais premium e profissional
 - [x] Dashboard: refinar visual geral dos containers de conteúdo em todas as abas
 - [x] Dashboard: manter consistência de design (tipografia, espaçamento, cores) com a capa
+- [x] Header: clarear verde do fundo (está quase preto, precisa ser verde visível)
+- [x] Header: centralizar logo verticalmente (padding igual top/bottom) e aumentar tamanho
+- [x] Planta: voltar para imagem original sem marcações (apenas planta pura, sem recortes por setor)

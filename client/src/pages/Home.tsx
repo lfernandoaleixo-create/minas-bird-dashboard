@@ -75,18 +75,18 @@ export default function Home() {
   const activeTabData = tabs.find((t) => t.id === activeTab);
 
   return (
-    <div className="min-h-screen bg-[#0f1f15] flex flex-col">
+    <div className="min-h-screen bg-[#1a3d2a] flex flex-col">
       {/* Header — Sleek dark green with glass effect */}
       <header className="sticky top-0 z-30">
         {/* Top brand bar */}
-        <div className="relative bg-gradient-to-r from-[#0a1a10] via-[#122b1a] to-[#0a1a10] border-b border-emerald-900/30">
+        <div className="relative bg-gradient-to-r from-[#1a4030] via-[#245a42] to-[#1a4030] border-b border-emerald-700/30">
           <div className="px-5 lg:px-10 py-4 flex items-center justify-between">
             {/* Logo + Brand */}
             <div className="flex items-center gap-4">
               <img
                 src={MB_SYMBOL}
                 alt="Minas Bird"
-                className="h-12 lg:h-14 w-auto object-contain"
+                className="h-16 lg:h-20 w-auto object-contain"
               />
               <div>
                 <h1 className="text-white font-bold text-xl lg:text-2xl tracking-[0.14em] leading-none">
@@ -116,7 +116,7 @@ export default function Home() {
         </div>
 
         {/* Navigation tabs — refined glass style */}
-        <div className="bg-[#0d1a12]/95 backdrop-blur-xl border-b border-emerald-900/20">
+        <div className="bg-[#163828]/95 backdrop-blur-xl border-b border-emerald-700/20">
           <div className="px-3 lg:px-8 flex items-center overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -214,8 +214,8 @@ export default function Home() {
       </main>
 
       {/* Footer — elegant dark */}
-      <footer className="bg-[#0a1a10] border-t border-emerald-900/20 py-3 px-6 flex items-center justify-center">
-        <p className="text-[10px] text-emerald-300/25 font-medium tracking-[0.18em]">
+      <footer className="bg-[#143525] border-t border-emerald-700/20 py-3 px-6 flex items-center justify-center">
+        <p className="text-[10px] text-emerald-300/40 font-medium tracking-[0.18em]">
           CRIATÓRIO MINAS BIRD · RIBEIRÃO VERMELHO — MG — 2026
         </p>
       </footer>
