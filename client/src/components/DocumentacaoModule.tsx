@@ -7,8 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import FiscalizacaoChecklist from "@/components/FiscalizacaoChecklist";
+import { generateChecklistPdf } from "@/lib/checklistPdf";
 import {
   FileText,
   Upload,
@@ -694,22 +693,7 @@ export default function DocumentacaoModule() {
 
   // ─── LIST VIEW ────────────────────────────────────────────────────────────────
   return (
-    <Tabs defaultValue="documentos" className="space-y-6">
-      <TabsList className="bg-slate-100 border border-slate-200 p-1 rounded-xl">
-        <TabsTrigger value="documentos" className="gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-semibold">
-          <FileText size={14} /> Documentos
-        </TabsTrigger>
-        <TabsTrigger value="checklist" className="gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-semibold">
-          <Shield size={14} /> Checklist Fiscalização
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="checklist">
-        <FiscalizacaoChecklist />
-      </TabsContent>
-
-      <TabsContent value="documentos">
-        <div className="space-y-6">
+    <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -723,12 +707,21 @@ export default function DocumentacaoModule() {
                 )}
               </p>
             </div>
-            <Button
-              onClick={() => { setForm(EMPTY_FORM); setPendingFiles([]); setEditingId(null); setView("form"); }}
-              className="bg-slate-800 hover:bg-slate-700 text-white font-semibold"
-            >
-              <Plus size={16} className="mr-1.5" /> Novo Documento
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => generateChecklistPdf(documents)}
+                variant="outline"
+                className="border-slate-300 text-slate-700 font-semibold hover:bg-slate-50"
+              >
+                <Download size={16} className="mr-1.5" /> PDF Checklist
+              </Button>
+              <Button
+                onClick={() => { setForm(EMPTY_FORM); setPendingFiles([]); setEditingId(null); setView("form"); }}
+                className="bg-slate-800 hover:bg-slate-700 text-white font-semibold"
+              >
+                <Plus size={16} className="mr-1.5" /> Novo Documento
+              </Button>
+            </div>
           </div>
 
           {/* Vencido alert banner */}
@@ -900,8 +893,6 @@ export default function DocumentacaoModule() {
               .doc-mobile-dates { display: flex !important; }
             }
           `}</style>
-        </div>
-      </TabsContent>
-    </Tabs>
+    </div>
   );
 }

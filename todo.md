@@ -383,3 +383,5 @@
 - [x] Documentação: melhorar fluxo de envio de renovações (pré-preencher datas, feedback visual, confirmação)
 - [x] Documentação: corrigir TODOS os status de vencimento — qualquer documento com data de vencimento anterior a hoje DEVE estar como "vencido"
 - [x] Documentação: redesenhar completamente a estética (cores profissionais, elegantes, apresentável para fiscalização)
+- [x] Documentação: remover aba "Checklist Fiscalização" do módulo
+- [x] Documentação: criar botão "PDF Checklist" que gera PDF imprimível com todos os documentos numerados, status OK/Vencido, e quadrado para marcar com caneta
