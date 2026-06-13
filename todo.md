@@ -419,3 +419,4 @@
 - [x] Banners: trocar imagem da aba Caixa por imagem adequada de finanças/gestão
 - [x] Banners: trocar imagem da aba Planta por imagem de planta baixa/arquitetura
 - [x] Banners: trocar imagem da aba Documentação por imagem de documentos/organização
+- [x] Validação de anilha única: normalizar (remover espaços, só alfanumérico), verificar duplicidade em tempo real ao digitar, mostrar aviso e bloquear salvamento se duplicada

@@ -491,6 +491,46 @@ export async function getNextBirdNumber(speciesId: string) {
   return { nextNumber: String(maxNum + 1).padStart(3, "0") };
 }
 
+/**
+ * Normaliza a anilha: remove tudo que não é letra/número e converte para uppercase.
+ * Espaços em branco não contam, somente números e letras.
+ */
+export function normalizeAnilha(anilha: string): string {
+  return anilha.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+/**
+ * Verifica se já existe uma ave com a mesma anilha normalizada no banco.
+ * Retorna a ave encontrada ou null se não existir duplicata.
+ * @param anilha - anilha a verificar (será normalizada internamente)
+ * @param excludeId - ID da ave a excluir da verificação (para edição)
+ */
+export async function checkAnilhaExists(anilha: string, excludeId?: number): Promise<{ id: number; ringNumber: string | null; speciesName: string; anilha: string | null } | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const normalized = normalizeAnilha(anilha);
+  if (!normalized) return null; // anilha vazia após normalização
+  
+  // Buscar todas as aves que possuem anilha preenchida
+  const allBirds = await db.select({
+    id: plantel.id,
+    ringNumber: plantel.ringNumber,
+    speciesName: plantel.speciesName,
+    anilha: plantel.anilha,
+  }).from(plantel);
+  
+  // Comparar normalizando cada anilha do banco
+  for (const bird of allBirds) {
+    if (!bird.anilha) continue;
+    if (excludeId && bird.id === excludeId) continue;
+    const birdNormalized = normalizeAnilha(bird.anilha);
+    if (birdNormalized === normalized) {
+      return bird;
+    }
+  }
+  return null;
+}
+
 // ===== BIRD DOCUMENTS CRUD =====
 
 import { birdDocuments } from "../drizzle/schema";

@@ -36,6 +36,8 @@ import {
   updatePlantelBird,
   deletePlantelBird,
   getNextBirdNumber,
+  checkAnilhaExists,
+  normalizeAnilha,
   getDocumentsByBird,
   createBirdDocument,
   deleteBirdDocument,
@@ -783,6 +785,13 @@ export const appRouter = router({
         notes: z.string().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
+        // Validar anilha única no servidor
+        if (input.anilha) {
+          const duplicate = await checkAnilhaExists(input.anilha);
+          if (duplicate) {
+            throw new Error(`Anilha já cadastrada para a ave ${duplicate.ringNumber || ''} (${duplicate.speciesName})`);
+          }
+        }
         return createPlantelBird(input);
       }),
 
@@ -809,7 +818,32 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
+        // Validar anilha única no servidor (excluindo a própria ave)
+        if (data.anilha) {
+          const duplicate = await checkAnilhaExists(data.anilha, id);
+          if (duplicate) {
+            throw new Error(`Anilha já cadastrada para a ave ${duplicate.ringNumber || ''} (${duplicate.speciesName})`);
+          }
+        }
         return updatePlantelBird(id, data);
+      }),
+
+    /** Check if an anilha already exists (normalized comparison) */
+    checkAnilha: publicProcedure
+      .input(z.object({
+        anilha: z.string(),
+        excludeId: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        const existing = await checkAnilhaExists(input.anilha, input.excludeId);
+        return {
+          exists: !!existing,
+          bird: existing ? {
+            id: existing.id,
+            ringNumber: existing.ringNumber,
+            speciesName: existing.speciesName,
+          } : null,
+        };
       }),
 
     /** Get the next available number for a species */

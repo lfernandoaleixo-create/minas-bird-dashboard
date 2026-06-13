@@ -4,7 +4,7 @@
  * Seleção de espécie ao entrar no card
  * Inclui: árvore genealógica (pai/mãe), número da NF, upload de documentos, filtro por documentação
  */
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { species } from "@/data/feeding";
 import {
@@ -179,6 +179,61 @@ export default function PlantelModule() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadDocType, setUploadDocType] = useState("outro");
+
+  // ===== ANILHA UNIQUENESS VALIDATION =====
+  const [anilhaDuplicate, setAnilhaDuplicate] = useState<{ exists: boolean; bird: { id: number; ringNumber: string | null; speciesName: string } | null } | null>(null);
+  const [anilhaChecking, setAnilhaChecking] = useState(false);
+  const anilhaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Normaliza anilha: remove tudo que não é letra/número, uppercase
+  const normalizeAnilha = useCallback((value: string) => {
+    return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  }, []);
+
+  // Debounced check de anilha duplicada
+  useEffect(() => {
+    // Limpar timer anterior
+    if (anilhaTimerRef.current) {
+      clearTimeout(anilhaTimerRef.current);
+      anilhaTimerRef.current = null;
+    }
+
+    const normalized = normalizeAnilha(form.anilha);
+    if (!normalized) {
+      setAnilhaDuplicate(null);
+      setAnilhaChecking(false);
+      return;
+    }
+
+    setAnilhaChecking(true);
+    anilhaTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await utils.plantel.checkAnilha.fetch({
+          anilha: form.anilha,
+          excludeId: editingId || undefined,
+        });
+        setAnilhaDuplicate(result);
+      } catch {
+        setAnilhaDuplicate(null);
+      } finally {
+        setAnilhaChecking(false);
+      }
+    }, 400);
+
+    return () => {
+      if (anilhaTimerRef.current) {
+        clearTimeout(anilhaTimerRef.current);
+      }
+    };
+  }, [form.anilha, editingId]);
+
+  // Reset anilha validation when switching views
+  useEffect(() => {
+    if (view !== "form") {
+      setAnilhaDuplicate(null);
+      setAnilhaChecking(false);
+    }
+  }, [view]);
 
   // tRPC
   const { data: birds = [], isLoading } = trpc.plantel.list.useQuery();
@@ -355,6 +410,8 @@ export default function PlantelModule() {
 
   const handleSubmit = async () => {
     if (!form.speciesId) return;
+    // Bloquear se anilha duplicada
+    if (anilhaDuplicate?.exists) return;
 
     // Montar código completo: prefixo + número
     const prefix = getSpeciesPrefix(form.speciesId);
@@ -842,8 +899,24 @@ export default function PlantelModule() {
                 value={form.anilha}
                 onChange={e => setForm(prev => ({ ...prev, anilha: e.target.value }))}
                 placeholder="Número da anilha física"
-                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                className={cn(
+                  "w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2",
+                  anilhaDuplicate?.exists
+                    ? "border-red-400 focus:ring-red-200 bg-red-50"
+                    : "border-stone-200 focus:ring-emerald-200"
+                )}
               />
+              {anilhaChecking && normalizeAnilha(form.anilha) && (
+                <p className="text-xs text-stone-400 mt-1">Verificando...</p>
+              )}
+              {anilhaDuplicate?.exists && anilhaDuplicate.bird && (
+                <div className="flex items-center gap-1.5 mt-1.5 p-2 rounded-lg bg-red-50 border border-red-200">
+                  <AlertTriangle size={14} className="text-red-500 shrink-0" />
+                  <p className="text-xs text-red-600 font-medium">
+                    Esta anilha já está cadastrada na ave {anilhaDuplicate.bird.ringNumber || ""} ({anilhaDuplicate.bird.speciesName})
+                  </p>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-600 mb-1.5">Nota Fiscal</label>
@@ -1338,7 +1411,7 @@ export default function PlantelModule() {
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={!form.speciesId || createMut.isPending || updateMut.isPending}
+            disabled={!form.speciesId || createMut.isPending || updateMut.isPending || !!anilhaDuplicate?.exists}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 text-white font-semibold text-sm shadow-sm transition-all"
           >
             <Save size={16} />
