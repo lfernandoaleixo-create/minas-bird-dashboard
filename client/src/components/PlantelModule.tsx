@@ -566,7 +566,7 @@ export default function PlantelModule() {
       <div className="space-y-5">
         {/* Hero Banner */}
         <div className="relative h-32 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10">
-          <img src="/manus-storage/bird-alexandrines_3b8aaf93.jpeg" alt="Plantel" className="w-full h-full object-cover object-center" />
+          <img src="/manus-storage/hero-plantel_371f540a.jpg" alt="Plantel" className="w-full h-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-5">
             <div>
               <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 2</p>

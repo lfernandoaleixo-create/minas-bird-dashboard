@@ -282,7 +282,7 @@ export default function CaixaModule() {
       <div className="space-y-5">
         {/* Hero Banner */}
         <div className="relative h-32 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10">
-          <img src="/manus-storage/bird-eclectus-red_855c6319.jpeg" alt="Caixa" className="w-full h-full object-cover object-center" />
+          <img src="/manus-storage/hero-caixa_03f05e01.jpg" alt="Caixa" className="w-full h-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-5">
             <div>
               <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 4</p>

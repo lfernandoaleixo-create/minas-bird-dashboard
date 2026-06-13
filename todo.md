@@ -415,3 +415,7 @@
 - [x] Abas: criar banner/hero visual para Documentação
 - [x] Abas: criar banner/hero visual para Mapa de Progresso
 - [x] Harmonia visual: todas as abas devem ter o mesmo padrão de apresentação
+- [x] Banners: trocar imagem da aba Plantel por foto bonita de aves (sem cortar)
+- [x] Banners: trocar imagem da aba Caixa por imagem adequada de finanças/gestão
+- [x] Banners: trocar imagem da aba Planta por imagem de planta baixa/arquitetura
+- [x] Banners: trocar imagem da aba Documentação por imagem de documentos/organização
