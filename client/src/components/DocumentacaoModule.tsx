@@ -904,6 +904,18 @@ export default function DocumentacaoModule() {
   const [activeTab, setActiveTab] = useState("documentos");
 
   return (
+    <div className="space-y-5">
+      {/* Hero Banner */}
+      <div className="relative h-44 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10">
+        <img src="/manus-storage/hero-caixa_642e214d.jpg" alt="Documentação" className="w-full h-full object-cover object-[center_30%]" style={{filter: 'hue-rotate(180deg) saturate(0.6) brightness(0.7)'}} />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-7">
+          <div>
+            <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 6</p>
+            <h1 className="text-white text-2xl lg:text-3xl font-bold tracking-tight">Documentação</h1>
+            <p className="text-white/70 text-sm mt-1.5 font-light">Licenças, registros e conformidade legal</p>
+          </div>
+        </div>
+      </div>
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="mb-6 bg-stone-100/80 p-1.5 rounded-2xl">
         <TabsTrigger
@@ -926,5 +938,6 @@ export default function DocumentacaoModule() {
         <DocumentosAuxiliares />
       </TabsContent>
     </Tabs>
+    </div>
   );
 }

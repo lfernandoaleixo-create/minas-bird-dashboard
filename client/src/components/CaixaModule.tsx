@@ -280,6 +280,17 @@ export default function CaixaModule() {
   if (view === "list") {
     return (
       <div className="space-y-5">
+        {/* Hero Banner */}
+        <div className="relative h-44 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10">
+          <img src="/manus-storage/hero-caixa_642e214d.jpg" alt="Caixa" className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-7">
+            <div>
+              <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 4</p>
+              <h1 className="text-white text-2xl lg:text-3xl font-bold tracking-tight">Caixa</h1>
+              <p className="text-white/70 text-sm mt-1.5 font-light">Controle financeiro completo do criatório</p>
+            </div>
+          </div>
+        </div>
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">

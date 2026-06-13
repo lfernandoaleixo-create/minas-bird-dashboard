@@ -1519,7 +1519,18 @@ export default function ClientsModule() {
 
   // CLIENT LIST VIEW (default)
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto space-y-5">
+      {/* Hero Banner */}
+      <div className="relative h-44 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10">
+        <img src="/manus-storage/hero-clientes_d0bd35f5.jpg" alt="Clientes" className="w-full h-full object-cover object-center" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-7">
+          <div>
+            <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 3</p>
+            <h1 className="text-white text-2xl lg:text-3xl font-bold tracking-tight">Clientes</h1>
+            <p className="text-white/70 text-sm mt-1.5 font-light">Gestão de clientes, vendas e cobranças</p>
+          </div>
+        </div>
+      </div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>

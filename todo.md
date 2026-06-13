@@ -407,3 +407,11 @@
 - [x] Header: clarear verde do fundo (está quase preto, precisa ser verde visível)
 - [x] Header: centralizar logo verticalmente (padding igual top/bottom) e aumentar tamanho
 - [x] Planta: voltar para imagem original sem marcações (apenas planta pura, sem recortes por setor)
+- [x] Header: centralizar logo DENTRO do espaço verde existente (sem aumentar altura do header)
+- [x] Abas: criar banner/hero visual para Plantel (mesmo estilo da foto de fundo da aba Alimentação)
+- [x] Abas: criar banner/hero visual para Clientes
+- [x] Abas: criar banner/hero visual para Caixa
+- [x] Abas: criar banner/hero visual para Planta
+- [x] Abas: criar banner/hero visual para Documentação
+- [x] Abas: criar banner/hero visual para Mapa de Progresso
+- [x] Harmonia visual: todas as abas devem ter o mesmo padrão de apresentação

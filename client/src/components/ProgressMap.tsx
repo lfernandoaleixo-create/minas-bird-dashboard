@@ -497,7 +497,18 @@ export default function ProgressMap({ onNavigate }: ProgressMapProps) {
     .filter((m): m is ModuleCardData => !!m);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto space-y-5">
+      {/* Hero Banner */}
+      <div className="relative h-44 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10">
+        <img src="/manus-storage/hero-mapa_6c749206.png" alt="Mapa de Progresso" className="w-full h-full object-cover object-center" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-7">
+          <div>
+            <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 7</p>
+            <h1 className="text-white text-2xl lg:text-3xl font-bold tracking-tight">Mapa de Progresso</h1>
+            <p className="text-white/70 text-sm mt-1.5 font-light">Acompanhamento de tarefas e evolução do criatório</p>
+          </div>
+        </div>
+      </div>
       <div className="flex flex-col gap-3">
         {orderedModules.map((mod) => (
           <ModuleCard
