@@ -397,3 +397,6 @@
 - [x] Landing Page: fotos nítidas em tela cheia com transição suave entre elas
 - [x] Landing Page: app não deve abrir direto na aba Alimentação, deve mostrar a landing primeiro
 - [x] Landing Page: navegação para entrar no dashboard/módulos
+- [x] Landing Page: fixar somente a foto da Eclectus vermelha (sem slideshow alternando)
+- [x] Landing Page: mostrar a ave inteira sem cortar (idêntico à foto original)
+- [x] Inatividade: redirecionar para tela inicial após 5 minutos sem uso

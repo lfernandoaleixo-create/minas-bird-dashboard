@@ -11,7 +11,8 @@ import PlantelModule from "@/components/PlantelModule";
 import CaixaModule from "@/components/CaixaModule";
 import PlantaModule from "@/components/PlantaModule";
 import DocumentacaoModule from "@/components/DocumentacaoModule";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { Utensils, FlaskConical, Users, LayoutGrid, Bird, DollarSign, Map, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +40,32 @@ const tabs: Tab[] = [
   { id: "mapa", label: "Mapa de Progresso", shortLabel: "Progresso", icon: LayoutGrid },
 ];
 
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("alimentacao");
   const [feedingSubTab, setFeedingSubTab] = useState<SubTab>("original");
   const contentRef = useRef<HTMLDivElement>(null);
+  const [, navigate] = useLocation();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      navigate("/");
+    }, INACTIVITY_TIMEOUT);
+  }, [navigate]);
+
+  useEffect(() => {
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    const handler = () => resetTimer();
+    events.forEach((e) => window.addEventListener(e, handler));
+    resetTimer();
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, handler));
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [resetTimer]);
 
   useEffect(() => {
     if (contentRef.current) {
