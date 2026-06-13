@@ -393,3 +393,6 @@
 - [x] Planta: criar planta principal limpa com nomes dos setores identificados
 - [x] Planta: layout de 6 cards pequenos (thumbnails) com foto e nome do setor
 - [x] Planta: ao clicar em um card, expandir mostrando a planta do setor em detalhe
+- [x] Planta: refazer recortes removendo marcações do usuário (linhas coloridas são apenas referência)
+- [x] Planta: recortar setores com precisão baseada na análise inteligente da estrutura da planta
+- [x] Planta: criar planta geral limpa sem marcações
