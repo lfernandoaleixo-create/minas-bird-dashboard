@@ -17,12 +17,12 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#1a1a1a]">
-      {/* Background photo — object-contain to show the full bird without cropping */}
+    <div className="relative w-full h-screen overflow-hidden bg-black">
+      {/* Background photo — fills the entire screen */}
       <img
         src={BIRD_PHOTO}
         alt="Eclectus"
-        className="absolute inset-0 w-full h-full object-contain"
+        className="absolute inset-0 w-full h-full object-cover"
       />
 
       {/* Dark overlay on the sides/edges for contrast with text */}
