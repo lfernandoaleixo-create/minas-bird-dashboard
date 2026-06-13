@@ -358,9 +358,11 @@ export default function PlantelModule() {
 
   // Stats
   const stats = useMemo(() => {
-    const total = birds.length;
-    const ativos = birds.filter(b => b.status === "ativo").length;
-    const speciesCount = new Set(birds.filter(b => b.status === "ativo").map(b => b.speciesId)).size;
+    // Só contar aves visíveis no plantel (ativas + óbito)
+    const plantelBirds = birds.filter(b => b.status === "ativo" || b.status === "obito");
+    const total = plantelBirds.length;
+    const ativos = plantelBirds.filter(b => b.status === "ativo").length;
+    const speciesCount = new Set(plantelBirds.filter(b => b.status === "ativo").map(b => b.speciesId)).size;
     return { total, ativos, speciesCount };
   }, [birds]);
 
@@ -819,24 +821,20 @@ export default function PlantelModule() {
                             {STATUS_LABELS[bird.status as BirdStatus]}
                           </span>
 
-                          {/* Info columns */}
-                          <div className="flex-1 flex items-center gap-4 sm:gap-6 min-w-0">
-                            <div className="w-[60px] flex-shrink-0 hidden sm:block">
-                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Sexo</p>
-                              <p className="text-xs font-semibold text-stone-700">{SEX_LABELS[bird.sex as BirdSex]}</p>
-                            </div>
-                            <div className="w-[60px] flex-shrink-0 hidden sm:block">
-                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Gaiola</p>
-                              <p className="text-xs font-semibold text-stone-700">{bird.enclosure || <span className="text-stone-300 italic">—</span>}</p>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Mutação</p>
-                              <p className="text-xs font-bold text-stone-800 truncate">{bird.mutation || <span className="text-stone-300 italic font-normal">—</span>}</p>
-                            </div>
-                            <div className="w-[80px] flex-shrink-0 hidden md:block">
-                              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Anilha</p>
-                              <p className="text-xs font-medium text-stone-600">{(bird as any).anilha || <span className="text-stone-300 italic">—</span>}</p>
-                            </div>
+                          {/* Info columns - inline format with larger text */}
+                          <div className="flex-1 flex items-center gap-3 sm:gap-5 min-w-0 flex-wrap">
+                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
+                              <span className="text-stone-400 font-medium">Sexo</span> - {SEX_LABELS[bird.sex as BirdSex]}
+                            </p>
+                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
+                              <span className="text-stone-400 font-medium">Anilha</span> - {(bird as any).anilha || <span className="text-stone-300 italic font-normal">—</span>}
+                            </p>
+                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
+                              <span className="text-stone-400 font-medium">Gaiola</span> - {bird.enclosure || <span className="text-stone-300 italic font-normal">—</span>}
+                            </p>
+                            <p className="text-sm font-bold text-stone-800 truncate min-w-0">
+                              <span className="text-stone-400 font-medium">Mutação</span> - {bird.mutation || <span className="text-stone-300 italic font-normal">—</span>}
+                            </p>
                           </div>
 
                           {/* Arrow */}

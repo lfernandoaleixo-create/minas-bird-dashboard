@@ -423,3 +423,5 @@
 - [x] Plantel: formulário de cadastro só permite status "ativo" ou "óbito" (remover vendido, doado, emprestado do seletor)
 - [x] Plantel: listagem mostra apenas aves com status "ativo" ou "óbito" (vendido/doado/emprestado saem do plantel via módulo Clientes)
 - [x] Plantel: reorganizar listagem em cards por espécie (expansíveis), aves ordenadas por numeração dentro de cada card
+- [x] Plantel: corrigir contagem total de aves (considerar apenas ativas no plantel)
+- [x] Plantel: reorganizar colunas expandidas - anilha depois de sexo e antes de gaiola, texto maior formato inline (ex: "Sexo - Macho")
