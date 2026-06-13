@@ -420,3 +420,5 @@
 - [x] Banners: trocar imagem da aba Planta por imagem de planta baixa/arquitetura
 - [x] Banners: trocar imagem da aba Documentação por imagem de documentos/organização
 - [x] Validação de anilha única: normalizar (remover espaços, só alfanumérico), verificar duplicidade em tempo real ao digitar, mostrar aviso e bloquear salvamento se duplicada
+- [x] Plantel: formulário de cadastro só permite status "ativo" ou "óbito" (remover vendido, doado, emprestado do seletor)
+- [x] Plantel: listagem mostra apenas aves com status "ativo" ou "óbito" (vendido/doado/emprestado saem do plantel via módulo Clientes)

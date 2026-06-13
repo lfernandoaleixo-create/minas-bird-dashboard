@@ -50,6 +50,12 @@ const STATUS_LABELS: Record<BirdStatus, string> = {
   emprestado: "Emprestado",
 };
 
+// Status permitidos no formulário de cadastro/edição (vendido/doado/emprestado só via módulo Clientes)
+const FORM_STATUS_OPTIONS: { value: BirdStatus; label: string }[] = [
+  { value: "ativo", label: "Ativo" },
+  { value: "obito", label: "Óbito" },
+];
+
 const STATUS_COLORS: Record<BirdStatus, string> = {
   ativo: "bg-emerald-100 text-emerald-700 border-emerald-200",
   vendido: "bg-blue-100 text-blue-700 border-blue-200",
@@ -260,6 +266,9 @@ export default function PlantelModule() {
         (b.mutation && b.mutation.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (b.enclosure && b.enclosure.toLowerCase().includes(searchTerm.toLowerCase())) ||
         ((b as any).anilha && (b as any).anilha.toLowerCase().includes(searchTerm.toLowerCase()));
+      // No plantel só mostramos aves ativas ou óbito (vendido/doado/emprestado saem via Clientes)
+      const isVisibleInPlantel = b.status === "ativo" || b.status === "obito";
+      if (!isVisibleInPlantel) return false;
       const matchesStatus = filterStatus === "todos" || b.status === filterStatus;
       const matchesSpecies = filterSpecies === "todos" || b.speciesId === filterSpecies;
       // Documentation filter
@@ -667,8 +676,8 @@ export default function PlantelModule() {
               className="px-3 py-2.5 rounded-lg border border-stone-200 bg-white text-xs font-medium text-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             >
               <option value="todos">Todos Status</option>
-              {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
+              {FORM_STATUS_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
             <select
@@ -1378,8 +1387,8 @@ export default function PlantelModule() {
                 onChange={e => setForm(prev => ({ ...prev, status: e.target.value as BirdStatus }))}
                 className="w-full px-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
               >
-                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                {FORM_STATUS_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
