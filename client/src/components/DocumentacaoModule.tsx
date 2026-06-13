@@ -7,7 +7,9 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { generateChecklistPdf } from "@/lib/checklistPdf";
+import DocumentosAuxiliares from "@/components/DocumentosAuxiliares";
 import {
   FileText,
   Upload,
@@ -70,7 +72,7 @@ const EMPTY_FORM: DocForm = {
   status: "vigente",
 };
 
-export default function DocumentacaoModule() {
+function DocumentacaoModuleInner() {
   const [view, setView] = useState<"list" | "form" | "detail">("list");
   const [form, setForm] = useState<DocForm>(EMPTY_FORM);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
@@ -894,5 +896,35 @@ export default function DocumentacaoModule() {
             }
           `}</style>
     </div>
+  );
+}
+
+// Wrapper component that adds tabs
+export default function DocumentacaoModule() {
+  const [activeTab, setActiveTab] = useState("documentos");
+
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="mb-6 bg-slate-100 p-1 rounded-xl">
+        <TabsTrigger
+          value="documentos"
+          className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-5 py-2.5 text-sm font-semibold"
+        >
+          Documentos Obrigatórios
+        </TabsTrigger>
+        <TabsTrigger
+          value="auxiliares"
+          className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-5 py-2.5 text-sm font-semibold"
+        >
+          Documentos Auxiliares
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="documentos">
+        <DocumentacaoModuleInner />
+      </TabsContent>
+      <TabsContent value="auxiliares">
+        <DocumentosAuxiliares />
+      </TabsContent>
+    </Tabs>
   );
 }

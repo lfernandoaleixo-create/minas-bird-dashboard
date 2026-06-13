@@ -385,3 +385,4 @@
 - [x] Documentação: redesenhar completamente a estética (cores profissionais, elegantes, apresentável para fiscalização)
 - [x] Documentação: remover aba "Checklist Fiscalização" do módulo
 - [x] Documentação: criar botão "PDF Checklist" que gera PDF imprimível com todos os documentos numerados, status OK/Vencido, e quadrado para marcar com caneta
+- [x] Documentação: criar aba "Documentos Auxiliares" com 11 itens para fiscalização (Projeto Arquitetônico, ETE, Lista Plantel, Mapa Recintos, NF+Certificado Origem+GTS, Plano Sanitário, Quarentena, Dietas, Reprodução, Visitas Vet/Bio)
