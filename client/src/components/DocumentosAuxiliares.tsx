@@ -1,28 +1,26 @@
 /**
  * DocumentosAuxiliares — Documentos de apoio para ter em mãos durante fiscalização
- * Não são documentos com vencimento, mas sim materiais que o fiscal pode solicitar
+ * Funcionário pode marcar "Em Mãos" quando separar o documento fisicamente
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  FileText,
   CheckCircle2,
   Circle,
-  Upload,
-  ExternalLink,
   ClipboardList,
   MapPin,
   Leaf,
   Shield,
-  Bug,
+  Receipt,
   Utensils,
   Heart,
   Stethoscope,
-  Receipt,
+  Download,
+  HandMetal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { trpc } from "@/lib/trpc";
+import { generateAuxiliaresPdf } from "@/lib/auxiliaresPdf";
 
-// 11 documentos auxiliares para fiscalização
+// 10 documentos auxiliares para fiscalização (sem item 11)
 const AUXILIARY_DOCS = [
   {
     id: 1,
@@ -77,7 +75,7 @@ const AUXILIARY_DOCS = [
     title: "Protocolo de Quarentena",
     description:
       "Procedimentos para aves recém-chegadas: período de isolamento, exames realizados, observações. O criadouro possui sala de quarentena no projeto.",
-    icon: Bug,
+    icon: Stethoscope,
     tip: "Registrar cada ave que passou pela quarentena com datas de entrada e saída.",
   },
   {
@@ -104,45 +102,61 @@ const AUXILIARY_DOCS = [
     icon: Stethoscope,
     tip: "Solicitar ao profissional que assine e carimbe cada visita.",
   },
-  {
-    id: 11,
-    title: "Comprovantes de Transferência SISPASS",
-    description:
-      "Registros de transferência de aves entre criadores no sistema SISPASS. Comprova toda movimentação legal do plantel.",
-    icon: FileText,
-    tip: "Imprimir comprovante de cada transferência realizada.",
-  },
 ];
 
-export default function DocumentosAuxiliares() {
-  const { data: documents = [] } = trpc.documentacao.list.useQuery();
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+// LocalStorage key for persisting "em mãos" state
+const STORAGE_KEY = "minas-bird-auxiliares-em-maos";
 
-  // Check if a document has been uploaded (match by partial title)
-  const getDocStatus = (auxDoc: (typeof AUXILIARY_DOCS)[0]) => {
-    const keywords = auxDoc.title.toLowerCase().split(" ").slice(0, 3);
-    const found = documents.find((d: any) => {
-      const docTitle = d.title.toLowerCase();
-      return keywords.some((kw) => kw.length > 4 && docTitle.includes(kw));
-    });
-    return found ? "anexado" : "pendente";
+export default function DocumentosAuxiliares() {
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [emMaos, setEmMaos] = useState<Record<number, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Persist to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(emMaos));
+  }, [emMaos]);
+
+  const toggleEmMaos = (id: number) => {
+    setEmMaos((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const totalAnexados = AUXILIARY_DOCS.filter(
-    (d) => getDocStatus(d) === "anexado"
-  ).length;
+  const totalEmMaos = AUXILIARY_DOCS.filter((d) => emMaos[d.id]).length;
+
+  const handleGeneratePdf = () => {
+    const items = AUXILIARY_DOCS.map((d) => ({
+      title: d.title,
+      emMaos: !!emMaos[d.id],
+    }));
+    generateAuxiliaresPdf(items);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">
-          Documentos Auxiliares para Fiscalização
-        </h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Materiais de apoio que o fiscal pode solicitar durante a vistoria —
-          organize e tenha sempre em mãos
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Documentos Auxiliares para Fiscalização
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Materiais de apoio que o fiscal pode solicitar — marque quando estiver separado
+          </p>
+        </div>
+        <Button
+          onClick={handleGeneratePdf}
+          variant="outline"
+          className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+        >
+          <Download size={14} />
+          PDF Auxiliares
+        </Button>
       </div>
 
       {/* Progress */}
@@ -152,20 +166,19 @@ export default function DocumentosAuxiliares() {
             Preparação para Fiscalização
           </span>
           <span className="text-sm font-bold text-slate-900">
-            {totalAnexados}/{AUXILIARY_DOCS.length} organizados
+            {totalEmMaos}/{AUXILIARY_DOCS.length} em mãos
           </span>
         </div>
         <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
           <div
             className="h-full bg-emerald-500 rounded-full transition-all duration-500"
             style={{
-              width: `${(totalAnexados / AUXILIARY_DOCS.length) * 100}%`,
+              width: `${(totalEmMaos / AUXILIARY_DOCS.length) * 100}%`,
             }}
           />
         </div>
         <p className="text-xs text-slate-400 mt-2">
-          Documentos encontrados no sistema com título correspondente são
-          marcados como "Anexado"
+          Clique em "Em Mãos" quando o documento estiver separado e pronto para apresentar
         </p>
       </div>
 
@@ -175,23 +188,20 @@ export default function DocumentosAuxiliares() {
           <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
             <span className="w-6">#</span>
             <span className="flex-1">Documento</span>
-            <span className="w-24 text-center">Status</span>
+            <span className="w-28 text-center">Status</span>
           </div>
         </div>
 
         <div className="divide-y divide-slate-100">
           {AUXILIARY_DOCS.map((doc, idx) => {
-            const status = getDocStatus(doc);
+            const isReady = !!emMaos[doc.id];
             const isExpanded = expandedId === doc.id;
             const Icon = doc.icon;
 
             return (
               <div key={doc.id}>
                 <div
-                  onClick={() =>
-                    setExpandedId(isExpanded ? null : doc.id)
-                  }
-                  className={`px-5 py-4 flex items-center gap-4 cursor-pointer transition-colors ${
+                  className={`px-5 py-4 flex items-center gap-4 transition-colors ${
                     isExpanded ? "bg-slate-50" : "hover:bg-slate-50/50"
                   }`}
                 >
@@ -203,39 +213,55 @@ export default function DocumentosAuxiliares() {
                   {/* Icon */}
                   <div
                     className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                      status === "anexado"
-                        ? "bg-emerald-100"
-                        : "bg-slate-100"
+                      isReady ? "bg-emerald-100" : "bg-slate-100"
                     }`}
                   >
                     <Icon
                       size={16}
                       className={
-                        status === "anexado"
-                          ? "text-emerald-600"
-                          : "text-slate-500"
+                        isReady ? "text-emerald-600" : "text-slate-500"
                       }
                     />
                   </div>
 
-                  {/* Title */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-800 text-sm">
+                  {/* Title - clickable to expand */}
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() =>
+                      setExpandedId(isExpanded ? null : doc.id)
+                    }
+                  >
+                    <h3
+                      className={`font-semibold text-sm ${
+                        isReady
+                          ? "text-emerald-800 line-through opacity-70"
+                          : "text-slate-800"
+                      }`}
+                    >
                       {doc.title}
                     </h3>
                   </div>
 
-                  {/* Status */}
-                  <div className="w-24 text-center shrink-0">
-                    {status === "anexado" ? (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-emerald-600 text-white px-2.5 py-1 rounded-full uppercase tracking-wider">
-                        <CheckCircle2 size={10} /> Anexado
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                        <Circle size={10} /> Pendente
-                      </span>
-                    )}
+                  {/* Em Mãos button */}
+                  <div className="w-28 flex justify-center shrink-0">
+                    <button
+                      onClick={() => toggleEmMaos(doc.id)}
+                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider transition-all ${
+                        isReady
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
+                      }`}
+                    >
+                      {isReady ? (
+                        <>
+                          <CheckCircle2 size={11} /> Em Mãos
+                        </>
+                      ) : (
+                        <>
+                          <Circle size={11} /> Pendente
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -255,12 +281,6 @@ export default function DocumentosAuxiliares() {
                           <strong>Dica:</strong> {doc.tip}
                         </p>
                       </div>
-                      {status === "pendente" && (
-                        <p className="text-xs text-slate-500 italic">
-                          Para marcar como "Anexado", cadastre este documento
-                          na aba "Documentos" com um título correspondente.
-                        </p>
-                      )}
                     </div>
                   </div>
                 )}
@@ -278,10 +298,9 @@ export default function DocumentosAuxiliares() {
             Preparação para o dia da fiscalização
           </p>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Imprima e organize estes documentos em uma pasta física. O fiscal
-            pode solicitar qualquer um deles durante a vistoria. Documentos
-            digitais no sistema são úteis, mas ter cópia impressa demonstra
-            organização e agiliza a inspeção.
+            Imprima o PDF e organize estes documentos em uma pasta física. O
+            fiscal pode solicitar qualquer um deles durante a vistoria.
+            Marque como "Em Mãos" conforme for separando cada item.
           </p>
         </div>
       </div>

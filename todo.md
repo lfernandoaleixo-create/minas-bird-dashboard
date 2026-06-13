@@ -386,3 +386,6 @@
 - [x] Documentação: remover aba "Checklist Fiscalização" do módulo
 - [x] Documentação: criar botão "PDF Checklist" que gera PDF imprimível com todos os documentos numerados, status OK/Vencido, e quadrado para marcar com caneta
 - [x] Documentação: criar aba "Documentos Auxiliares" com 11 itens para fiscalização (Projeto Arquitetônico, ETE, Lista Plantel, Mapa Recintos, NF+Certificado Origem+GTS, Plano Sanitário, Quarentena, Dietas, Reprodução, Visitas Vet/Bio)
+- [x] Documentos Auxiliares: remover item 11 (Comprovantes de Transferência SISPASS)
+- [x] Documentos Auxiliares: adicionar botão "Em Mãos" para marcar cada item sem necessidade de anexar arquivo
+- [x] Documentos Auxiliares: criar PDF imprimível com lista dos documentos auxiliares e quadrado para ticar com caneta
