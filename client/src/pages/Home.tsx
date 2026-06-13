@@ -86,13 +86,13 @@ export default function Home() {
               <img
                 src={MB_SYMBOL}
                 alt="Minas Bird"
-                className="h-10 lg:h-12 w-auto object-contain"
+                className="h-11 lg:h-12 w-auto object-contain"
               />
               <div>
-                <h1 className="text-white font-bold text-xl lg:text-2xl tracking-[0.14em] leading-none">
+                <h1 className="text-white font-bold text-lg lg:text-xl tracking-[0.14em] leading-none">
                   MINAS BIRD
                 </h1>
-                <p className="text-emerald-400/50 text-[9px] lg:text-[10px] tracking-[0.2em] font-light mt-1">
+                <p className="text-emerald-400/50 text-[9px] lg:text-[10px] tracking-[0.2em] font-light mt-0.5">
                   MANUAL OPERACIONAL
                 </p>
               </div>
