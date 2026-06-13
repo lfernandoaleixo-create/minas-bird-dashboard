@@ -511,13 +511,13 @@ export async function checkAnilhaExists(anilha: string, excludeId?: number): Pro
   const normalized = normalizeAnilha(anilha);
   if (!normalized) return null; // anilha vazia após normalização
   
-  // Buscar todas as aves que possuem anilha preenchida
+  // Buscar apenas aves ativas ou óbito (visíveis no plantel) que possuem anilha preenchida
   const allBirds = await db.select({
     id: plantel.id,
     ringNumber: plantel.ringNumber,
     speciesName: plantel.speciesName,
     anilha: plantel.anilha,
-  }).from(plantel);
+  }).from(plantel).where(inArray(plantel.status, ["ativo", "obito"]));
   
   // Comparar normalizando cada anilha do banco
   for (const bird of allBirds) {

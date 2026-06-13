@@ -425,3 +425,5 @@
 - [x] Plantel: reorganizar listagem em cards por espécie (expansíveis), aves ordenadas por numeração dentro de cada card
 - [x] Plantel: corrigir contagem total de aves (considerar apenas ativas no plantel)
 - [x] Plantel: reorganizar colunas expandidas - anilha depois de sexo e antes de gaiola, texto maior formato inline (ex: "Sexo - Macho")
+- [x] BUG: validação de anilha verifica aves vendidas/doadas/emprestadas que não estão mais no plantel — deve verificar apenas aves ativas/óbito
+- [x] Atualizar todas as aves no banco para status "ativo" (todas devem ser ativas nesse primeiro momento)
