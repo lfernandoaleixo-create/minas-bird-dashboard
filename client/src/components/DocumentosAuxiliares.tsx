@@ -160,7 +160,7 @@ export default function DocumentosAuxiliares() {
       </div>
 
       {/* Progress */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-bold text-slate-700">
             Preparação para Fiscalização
@@ -268,7 +268,7 @@ export default function DocumentosAuxiliares() {
                 {/* Expanded detail */}
                 {isExpanded && (
                   <div className="px-5 pb-5 pt-0 ml-10">
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
                       <p className="text-sm text-slate-700 leading-relaxed">
                         {doc.description}
                       </p>
@@ -291,7 +291,7 @@ export default function DocumentosAuxiliares() {
       </div>
 
       {/* Footer tip */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-start gap-3">
         <ClipboardList size={18} className="text-slate-500 mt-0.5 shrink-0" />
         <div>
           <p className="text-sm font-semibold text-slate-700">

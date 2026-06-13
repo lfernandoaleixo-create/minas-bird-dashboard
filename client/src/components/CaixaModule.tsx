@@ -282,7 +282,7 @@ export default function CaixaModule() {
       <div className="space-y-5">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <Wallet size={14} className="text-stone-500" />
               <p className="text-[10px] text-stone-500 font-medium uppercase tracking-wider">Saldo Total</p>
@@ -291,21 +291,21 @@ export default function CaixaModule() {
               {formatCurrency(totalBalance)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <ArrowUpCircle size={14} className="text-emerald-500" />
               <p className="text-[10px] text-stone-500 font-medium uppercase tracking-wider">Entradas (Período)</p>
             </div>
             <p className="text-xl font-bold text-emerald-700">{formatCurrency(stats.entradas)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <ArrowDownCircle size={14} className="text-red-500" />
               <p className="text-[10px] text-stone-500 font-medium uppercase tracking-wider">Saídas (Período)</p>
             </div>
             <p className="text-xl font-bold text-red-700">{formatCurrency(stats.saidas)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp size={14} className="text-blue-500" />
               <p className="text-[10px] text-stone-500 font-medium uppercase tracking-wider">Resultado (Período)</p>
@@ -317,7 +317,7 @@ export default function CaixaModule() {
         </div>
 
         {/* Daily Evolution Chart — Current Month */}
-        <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <BarChart3 size={14} className="text-stone-500" />
@@ -401,7 +401,7 @@ export default function CaixaModule() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm space-y-3">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -451,7 +451,7 @@ export default function CaixaModule() {
         </div>
 
         {/* Transactions List */}
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 overflow-hidden">
           {isLoading ? (
             <div className="p-8 text-center text-stone-400 text-sm">Carregando...</div>
           ) : filteredTransactions.length === 0 ? (
@@ -525,7 +525,7 @@ export default function CaixaModule() {
           </h2>
         </div>
 
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-6 shadow-sm space-y-5">
           {/* Type selector */}
           <div>
             <label className="block text-xs font-semibold text-stone-600 mb-2">Tipo</label>
@@ -706,7 +706,7 @@ export default function CaixaModule() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-6 shadow-sm">
           {/* Type badge + Value */}
           <div className="flex items-center justify-between mb-5">
             <span className={cn("px-3 py-1.5 rounded-full text-xs font-semibold", colors.bg, colors.text, `border ${colors.border}`)}>

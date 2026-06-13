@@ -704,7 +704,7 @@ export default function FoodCalendarCard() {
     };
 
     return (
-      <div key={sp.id} className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden border-l-4 border-l-emerald-400">
+      <div key={sp.id} className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 overflow-hidden border-l-4 border-l-emerald-400">
         {/* Species Header — clickable */}
         <button
           onClick={() => toggleSpeciesExpand(sp.id)}

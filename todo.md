@@ -400,3 +400,7 @@
 - [x] Landing Page: fixar somente a foto da Eclectus vermelha (sem slideshow alternando)
 - [x] Landing Page: mostrar a ave inteira sem cortar (idêntico à foto original)
 - [x] Inatividade: redirecionar para tela inicial após 5 minutos sem uso
+- [x] Dashboard: redesenhar header com mesmo nível de qualidade da landing page
+- [x] Dashboard: melhorar navegação (tabs) com visual mais premium e profissional
+- [x] Dashboard: refinar visual geral dos containers de conteúdo em todas as abas
+- [x] Dashboard: manter consistência de design (tipografia, espaçamento, cores) com a capa

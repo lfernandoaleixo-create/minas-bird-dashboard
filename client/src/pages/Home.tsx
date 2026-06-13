@@ -1,7 +1,7 @@
 /**
- * Home Page — Minas Bird
- * Professional layout with brand identity
- * Green criatório color, aviary background, large brand emphasis
+ * Home Page — Minas Bird Dashboard
+ * Premium design matching the landing page quality
+ * Refined header, elegant navigation, polished content areas
  */
 import FeedingModule from "@/components/FeedingModule";
 import FeedingModuleTest from "@/components/FeedingModuleTest";
@@ -13,12 +13,11 @@ import PlantaModule from "@/components/PlantaModule";
 import DocumentacaoModule from "@/components/DocumentacaoModule";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Utensils, FlaskConical, Users, LayoutGrid, Bird, DollarSign, Map, FileText } from "lucide-react";
+import { Utensils, FlaskConical, Users, LayoutGrid, Bird, DollarSign, Map, FileText, Home as HomeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Brand assets
 const MB_SYMBOL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663487476806/GbyPqTQ4WPAeZLRC6VPuta/mb-symbol_eba1d647.png";
-const AVIARY_BG = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663487476806/hxUogTsXUMSRebXV.png";
 
 type TabId = "alimentacao" | "plantel" | "clientes" | "caixa" | "planta" | "documentacao" | "mapa";
 type SubTab = "original" | "teste";
@@ -73,86 +72,115 @@ export default function Home() {
     }
   }, [activeTab]);
 
-  return (
-    <div className="min-h-screen bg-[#f5f3f0] flex flex-col">
-      {/* Header — Green criatório with aviary background */}
-      <header className="sticky top-0 z-30 shadow-xl">
-        {/* Brand bar — large, green with aviary photo */}
-        <div className="relative h-[6.5rem] overflow-hidden">
-          {/* Background image */}
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${AVIARY_BG})` }}
-          />
-          {/* Green overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a4d2e]/95 via-[#1a4d2e]/88 to-[#1a4d2e]/80" />
+  const activeTabData = tabs.find((t) => t.id === activeTab);
 
-          {/* Content */}
-          <div className="relative h-full px-5 lg:px-10 flex items-center justify-between">
-            {/* Logo + Brand name */}
+  return (
+    <div className="min-h-screen bg-[#0f1f15] flex flex-col">
+      {/* Header — Sleek dark green with glass effect */}
+      <header className="sticky top-0 z-30">
+        {/* Top brand bar */}
+        <div className="relative bg-gradient-to-r from-[#0a1a10] via-[#122b1a] to-[#0a1a10] border-b border-emerald-900/30">
+          <div className="px-5 lg:px-10 py-4 flex items-center justify-between">
+            {/* Logo + Brand */}
             <div className="flex items-center gap-4">
               <img
                 src={MB_SYMBOL}
                 alt="Minas Bird"
-                className="h-[5rem] w-auto object-contain relative z-10 mt-1"
+                className="h-12 lg:h-14 w-auto object-contain"
               />
-              <span className="text-white font-bold text-3xl lg:text-4xl tracking-[0.14em] leading-tight drop-shadow-sm">
-                MINAS BIRD
-              </span>
+              <div>
+                <h1 className="text-white font-bold text-xl lg:text-2xl tracking-[0.14em] leading-none">
+                  MINAS BIRD
+                </h1>
+                <p className="text-emerald-400/50 text-[9px] lg:text-[10px] tracking-[0.2em] font-light mt-1">
+                  MANUAL OPERACIONAL
+                </p>
+              </div>
             </div>
 
-            {/* Version badge */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-sm">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_4px_rgba(110,231,183,0.6)]" />
-                <span className="text-[10px] text-white/70 font-mono">v1.1</span>
+            {/* Right side — Home button + status */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-900/30 border border-emerald-800/30 text-emerald-300/70 hover:text-emerald-200 hover:bg-emerald-900/50 transition-all text-xs"
+              >
+                <HomeIcon size={13} />
+                <span className="hidden sm:inline">Início</span>
+              </button>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-900/20 border border-emerald-800/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)] animate-pulse" />
+                <span className="text-[10px] text-emerald-300/50 font-mono">v1.1</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Navigation tabs — darker green */}
-        <div className="bg-[#143d24] px-2 lg:px-6 flex items-center overflow-x-auto scrollbar-hide border-t border-white/5">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "relative flex items-center gap-2 px-4 lg:px-5 py-3 text-[11px] lg:text-[13px] font-medium transition-all duration-200 whitespace-nowrap",
-                  isActive
-                    ? "text-emerald-200"
-                    : "text-white/40 hover:text-white/70"
-                )}
-              >
-                <Icon size={14} strokeWidth={isActive ? 2.2 : 1.8} />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.shortLabel}</span>
-                {/* Active indicator — emerald underline */}
-                {isActive && (
-                  <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-gradient-to-r from-transparent via-emerald-300 to-transparent rounded-full" />
-                )}
-              </button>
-            );
-          })}
+        {/* Navigation tabs — refined glass style */}
+        <div className="bg-[#0d1a12]/95 backdrop-blur-xl border-b border-emerald-900/20">
+          <div className="px-3 lg:px-8 flex items-center overflow-x-auto scrollbar-hide">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "relative flex items-center gap-2.5 px-4 lg:px-5 py-3.5 text-[11px] lg:text-[12px] font-medium transition-all duration-300 whitespace-nowrap",
+                    isActive
+                      ? "text-emerald-300"
+                      : "text-white/35 hover:text-white/60"
+                  )}
+                >
+                  <Icon
+                    size={15}
+                    strokeWidth={isActive ? 2.2 : 1.6}
+                    className={cn(
+                      "transition-all duration-300",
+                      isActive && "drop-shadow-[0_0_4px_rgba(110,231,183,0.4)]"
+                    )}
+                  />
+                  <span className="hidden sm:inline tracking-wide">{tab.label}</span>
+                  <span className="sm:hidden tracking-wide">{tab.shortLabel}</span>
+                  {/* Active indicator */}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent rounded-full shadow-[0_0_8px_rgba(52,211,153,0.3)]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 
       {/* Content area */}
-      <main ref={contentRef} className="flex-1 overflow-y-auto">
+      <main ref={contentRef} className="flex-1 overflow-y-auto bg-[#f7f5f2]">
+        {/* Content header breadcrumb */}
+        <div className="bg-white/80 backdrop-blur-sm border-b border-stone-200/60 px-5 lg:px-10 py-3">
+          <div className="flex items-center gap-2.5">
+            {activeTabData && (
+              <>
+                <activeTabData.icon size={14} className="text-emerald-700/60" />
+                <span className="text-sm font-medium text-stone-700 tracking-wide">
+                  {activeTabData.label}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Main content */}
         <div className="px-4 lg:px-8 py-6 pb-16">
           {activeTab === "alimentacao" && (
             <div>
               {/* Sub-tab selector */}
-              <div className="flex items-center gap-1 mb-5 bg-white rounded-lg border border-stone-200 shadow-sm p-1 w-fit">
+              <div className="flex items-center gap-1 mb-6 bg-white rounded-xl border border-stone-200/80 shadow-sm p-1.5 w-fit">
                 <button
                   onClick={() => setFeedingSubTab("original")}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                    "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                     feedingSubTab === "original"
-                      ? "bg-emerald-600 text-white shadow-sm"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/20"
                       : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
                   )}
                 >
@@ -162,9 +190,9 @@ export default function Home() {
                 <button
                   onClick={() => setFeedingSubTab("teste")}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                    "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                     feedingSubTab === "teste"
-                      ? "bg-amber-600 text-white shadow-sm"
+                      ? "bg-amber-600 text-white shadow-md shadow-amber-900/20"
                       : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
                   )}
                 >
@@ -185,9 +213,9 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer — matching green */}
-      <footer className="bg-[#143d24] border-t border-[#1a4d2e] py-2.5 px-6 flex items-center justify-center">
-        <p className="text-[10px] text-white/30 font-medium tracking-[0.15em]">
+      {/* Footer — elegant dark */}
+      <footer className="bg-[#0a1a10] border-t border-emerald-900/20 py-3 px-6 flex items-center justify-center">
+        <p className="text-[10px] text-emerald-300/25 font-medium tracking-[0.18em]">
           CRIATÓRIO MINAS BIRD · RIBEIRÃO VERMELHO — MG — 2026
         </p>
       </footer>

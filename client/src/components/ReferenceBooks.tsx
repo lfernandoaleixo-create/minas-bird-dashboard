@@ -57,13 +57,13 @@ export default function ReferenceBooks() {
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 overflow-hidden">
         {/* Header expansível */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-stone-50 transition-colors"
+          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-stone-50/70 transition-colors"
         >
-          <div className="w-8 h-8 rounded-full bg-emerald-800 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-900 flex items-center justify-center flex-shrink-0 shadow-sm">
             <BookOpen className="w-4 h-4 text-amber-300" />
           </div>
           <h3 className="font-bold text-stone-800">Referência Bibliográfica</h3>

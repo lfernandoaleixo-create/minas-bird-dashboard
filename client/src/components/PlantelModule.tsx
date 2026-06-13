@@ -566,15 +566,15 @@ export default function PlantelModule() {
       <div className="space-y-5">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
             <p className="text-[10px] text-stone-500 font-medium uppercase tracking-wider">Total Aves</p>
             <p className="text-2xl font-bold text-stone-800 mt-1">{stats.total}</p>
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
             <p className="text-[10px] text-stone-500 font-medium uppercase tracking-wider">Ativas</p>
             <p className="text-2xl font-bold text-emerald-700 mt-1">{stats.ativos}</p>
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm">
             <p className="text-[10px] text-stone-500 font-medium uppercase tracking-wider">Espécies</p>
             <p className="text-2xl font-bold text-stone-800 mt-1">{stats.speciesCount}</p>
           </div>
@@ -653,7 +653,7 @@ export default function PlantelModule() {
               <div
                 key={bird.id}
                 onClick={() => handleViewBird(bird)}
-                className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group"
+                className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-4">
                   {/* Left: Icon + Code (destaque principal) */}
@@ -725,7 +725,7 @@ export default function PlantelModule() {
         </div>
 
         {/* Form */}
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-6 shadow-sm space-y-5">
           {/* Species selector */}
           <div>
             <label className="block text-xs font-semibold text-stone-600 mb-1.5">
@@ -1381,7 +1381,7 @@ export default function PlantelModule() {
         </div>
 
         {/* Detail card */}
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-6 shadow-sm">
           <div className="flex items-center gap-4 mb-5 pb-5 border-b border-stone-100">
             <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center border-2 border-emerald-200">
               <Bird size={28} className="text-emerald-600" />

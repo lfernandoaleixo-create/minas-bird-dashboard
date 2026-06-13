@@ -335,7 +335,7 @@ function DocumentacaoModuleInner() {
           </div>
         )}
 
-        <div className={`bg-white border-2 rounded-2xl shadow-sm overflow-hidden ${isVencido ? "border-red-300" : "border-slate-200"}`}>
+        <div className={`bg-white border-2 rounded-2xl shadow-md shadow-stone-200/30 overflow-hidden ${isVencido ? "border-red-300" : "border-slate-200"}`}>
           {/* Header bar */}
           <div className={`px-6 py-4 flex items-center justify-between ${isVencido ? "bg-red-50 border-b-2 border-red-200" : "bg-slate-50 border-b border-slate-200"}`}>
             <div className="flex items-center gap-3">
@@ -367,7 +367,7 @@ function DocumentacaoModuleInner() {
           {/* DATES — Large and prominent: 3 columns */}
           <div className="px-6 pb-5">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl p-4 bg-slate-50 border border-slate-200">
+              <div className="rounded-2xl p-4 bg-stone-50/80 border border-stone-200/80">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Data do Documento</p>
                 <p className="text-2xl font-bold text-slate-800 tabular-nums">
                   {formatDateLarge(selectedDoc.documentDate) || "—"}
@@ -787,7 +787,7 @@ function DocumentacaoModuleInner() {
 
           {/* Document list */}
           {filteredDocs.length === 0 ? (
-            <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-md shadow-stone-200/30">
               <FileText size={48} className="mx-auto mb-4 text-slate-300" />
               <p className="text-slate-600 font-semibold">
                 {documents.length === 0 ? "Nenhum documento cadastrado" : "Nenhum resultado encontrado"}
@@ -797,7 +797,7 @@ function DocumentacaoModuleInner() {
               </p>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-stone-200/80 rounded-2xl overflow-hidden shadow-md shadow-stone-200/30">
               {/* Table header */}
               <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 hidden sm:block">
                 <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -905,16 +905,16 @@ export default function DocumentacaoModule() {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="mb-6 bg-slate-100 p-1 rounded-xl">
+      <TabsList className="mb-6 bg-stone-100/80 p-1.5 rounded-2xl">
         <TabsTrigger
           value="documentos"
-          className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-5 py-2.5 text-sm font-semibold"
+          className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-xl px-5 py-2.5 text-sm font-semibold"
         >
           Documentos Obrigatórios
         </TabsTrigger>
         <TabsTrigger
           value="auxiliares"
-          className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-5 py-2.5 text-sm font-semibold"
+          className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-xl px-5 py-2.5 text-sm font-semibold"
         >
           Documentos Auxiliares
         </TabsTrigger>

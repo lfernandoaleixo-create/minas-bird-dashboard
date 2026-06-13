@@ -706,7 +706,7 @@ export default function FeedingModuleTest() {
       {/* ===== DIETAS SALVAS — LISTA ===== */}
       {dietMode === "saved-list" && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 overflow-hidden">
             <div className="p-5 border-b border-stone-100">
                 <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -897,7 +897,7 @@ export default function FeedingModuleTest() {
       {/* ===== DIETA SALVA — DETALHE ===== */}
       {dietMode === "saved-detail" && viewingDiet && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <button onClick={() => setDietMode("menu")} className="text-stone-400 hover:text-stone-600 transition-colors">
@@ -1069,7 +1069,7 @@ export default function FeedingModuleTest() {
       )}
 
       {(dietMode === "creating" || dietMode === "editing") && (
-      <div className="bg-white rounded-xl border border-stone-200 shadow-sm">
+      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30">
 
         {/* ===== STEP 1: ESPÉCIE ===== */}
         <div className="p-5 border-b border-stone-100">
@@ -1617,7 +1617,7 @@ export default function FeedingModuleTest() {
       {/* ===== RESUMO FINAL ===== */}
       {nossaDieta && (dietMode === "creating" || dietMode === "editing") && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-emerald-700" />

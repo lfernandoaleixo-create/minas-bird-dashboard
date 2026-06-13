@@ -82,7 +82,7 @@ export default function FiscalizacaoChecklist() {
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-6 text-white shadow-lg">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
+          <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
             <Shield size={28} className="text-white" />
           </div>
           <div>
@@ -96,26 +96,26 @@ export default function FiscalizacaoChecklist() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border-2 border-emerald-200 p-4 text-center shadow-sm">
+        <div className="bg-white rounded-2xl border-2 border-emerald-200 p-4 text-center shadow-sm">
           <p className="text-3xl font-bold text-emerald-600">{okCount}</p>
           <p className="text-xs font-semibold text-emerald-700 mt-1 uppercase tracking-wide">Regulares</p>
         </div>
-        <div className="bg-white rounded-xl border-2 border-red-200 p-4 text-center shadow-sm">
+        <div className="bg-white rounded-2xl border-2 border-red-200 p-4 text-center shadow-sm">
           <p className="text-3xl font-bold text-red-600">{vencidoCount}</p>
           <p className="text-xs font-semibold text-red-700 mt-1 uppercase tracking-wide">Vencidos</p>
         </div>
-        <div className="bg-white rounded-xl border-2 border-amber-200 p-4 text-center shadow-sm">
+        <div className="bg-white rounded-2xl border-2 border-amber-200 p-4 text-center shadow-sm">
           <p className="text-3xl font-bold text-amber-600">{aVencerCount}</p>
           <p className="text-xs font-semibold text-amber-700 mt-1 uppercase tracking-wide">A Vencer</p>
         </div>
-        <div className="bg-white rounded-xl border-2 border-slate-200 p-4 text-center shadow-sm">
+        <div className="bg-white rounded-2xl border-2 border-slate-200 p-4 text-center shadow-sm">
           <p className="text-3xl font-bold text-slate-500">{pendenteCount}</p>
           <p className="text-xs font-semibold text-slate-600 mt-1 uppercase tracking-wide">Pendentes</p>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-bold text-slate-800">
             Conformidade Geral
@@ -212,7 +212,7 @@ export default function FiscalizacaoChecklist() {
 
       {/* Footer */}
       {vencidoCount > 0 && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5 flex items-start gap-4">
+        <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-5 flex items-start gap-4">
           <XCircle size={22} className="text-red-600 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-bold text-red-800">Ação Urgente Necessária</p>

@@ -569,7 +569,7 @@ export default function ClientsModule() {
 
         {/* Sale Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
             <p className="text-xs text-stone-400 mb-1">Ave</p>
             <p className="text-sm font-semibold text-stone-800">
               {purchase.quantity}x {purchase.species}
@@ -578,13 +578,13 @@ export default function ClientsModule() {
               <p className="text-xs text-stone-500 mt-0.5">Mutação: {purchase.mutation}</p>
             )}
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
             <p className="text-xs text-stone-400 mb-1">Valor Total</p>
             <p className="text-lg font-bold text-emerald-700">
               {purchase.valueCents ? formatCurrency(purchase.valueCents) : "Não informado"}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
             <p className="text-xs text-stone-400 mb-1">Pagamento</p>
             <p className="text-sm font-semibold text-stone-800">
               {getPaymentLabel(purchase.paymentMethod)}
@@ -596,7 +596,7 @@ export default function ClientsModule() {
         </div>
 
         {/* Documentação Entregue */}
-        <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-5 mb-4">
           <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
             <FileText size={14} className="text-emerald-600" />
             Documentação Entregue
@@ -621,7 +621,7 @@ export default function ClientsModule() {
 
         {/* Parcelas */}
         {parcelas.length > 0 && (
-          <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-5 mb-4">
             <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
               <Banknote size={14} className="text-emerald-600" />
               Parcelas ({parcelas.length}x)
@@ -697,7 +697,7 @@ export default function ClientsModule() {
 
         {/* Notes */}
         {purchase.notes && (
-          <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-5">
             <h3 className="text-sm font-semibold text-stone-700 mb-2">Observações</h3>
             <p className="text-sm text-stone-600 whitespace-pre-wrap">{purchase.notes}</p>
           </div>
@@ -779,12 +779,12 @@ export default function ClientsModule() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
             <p className="text-xs text-stone-400 mb-1">Total em Vendas</p>
             <p className="text-lg font-bold text-emerald-700">{formatCurrency(totalVendas)}</p>
             <p className="text-xs text-stone-500">{purchases.length} venda(s)</p>
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
             <p className="text-xs text-stone-400 mb-1">Pendente a Receber</p>
             <p className={cn("text-lg font-bold", totalParcelas > 0 ? "text-amber-600" : "text-stone-400")}>
               {formatCurrency(totalParcelas)}
@@ -793,7 +793,7 @@ export default function ClientsModule() {
               <p className="text-xs text-red-500 font-medium">{parcelasAtrasadas} parcela(s) atrasada(s)</p>
             )}
           </div>
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
             <p className="text-xs text-stone-400 mb-1">Contato</p>
             <p className="text-sm font-medium text-stone-700">{formatPhone(client.phone)}</p>
             {client.city && <p className="text-xs text-stone-500">{client.city}{client.state ? ` — ${client.state}` : ""}</p>}
@@ -803,7 +803,7 @@ export default function ClientsModule() {
         {/* Info cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Contact */}
-          <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-5">
             <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
               <Phone size={14} className="text-emerald-600" />
               Contato
@@ -835,7 +835,7 @@ export default function ClientsModule() {
           </div>
 
           {/* Address */}
-          <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-5">
             <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
               <MapPin size={14} className="text-emerald-600" />
               Endereço
@@ -861,7 +861,7 @@ export default function ClientsModule() {
         </div>
 
         {/* Purchase History */}
-        <div className="bg-white rounded-xl border border-stone-200 p-5">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-stone-700 flex items-center gap-2">
               <ShoppingBag size={14} className="text-emerald-600" />
@@ -1263,7 +1263,7 @@ export default function ClientsModule() {
           </h2>
         </div>
 
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 p-6">
           {/* Personal Info */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-stone-700 mb-4 pb-2 border-b border-stone-100">
@@ -1604,7 +1604,7 @@ export default function ClientsModule() {
           <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
         </div>
       ) : filteredClients.length === 0 ? (
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-10 text-center">
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 p-10 text-center">
           <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
             <Users className="w-6 h-6 text-stone-400" />
           </div>
@@ -1622,7 +1622,7 @@ export default function ClientsModule() {
           {filteredClients.map((client) => (
             <div
               key={client.id}
-              className="bg-white rounded-xl border border-stone-200 hover:border-emerald-200 hover:shadow-sm transition-all p-4 cursor-pointer group"
+              className="bg-white rounded-2xl border border-stone-200/80 hover:border-emerald-200 hover:shadow-sm transition-all p-4 cursor-pointer group"
               onClick={() => { setSelectedClientId(client.id); setView("detail"); }}
             >
               <div className="flex items-center justify-between">
@@ -1694,7 +1694,7 @@ export default function ClientsModule() {
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl border border-stone-200 shadow-xl p-6 max-w-sm w-full mx-4">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-xl p-6 max-w-sm w-full mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
                 <AlertTriangle size={18} className="text-red-500" />

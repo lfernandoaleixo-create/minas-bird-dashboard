@@ -671,13 +671,13 @@ export default function FeedingModule() {
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <div className="relative h-40 rounded-xl overflow-hidden">
+      <div className="relative h-44 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10">
         <img src={HERO_IMAGE} alt="Alimentação" className="w-full h-full object-cover object-center" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-end p-6">
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-7">
           <div>
-            <p className="text-white/70 text-xs font-semibold tracking-widest uppercase">Módulo 1</p>
-            <h1 className="text-white text-2xl font-bold">Alimentação</h1>
-            <p className="text-white/80 text-sm mt-1">Balanceamento nutricional dinâmico baseado no DietBirdPet</p>
+            <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 1</p>
+            <h1 className="text-white text-2xl lg:text-3xl font-bold tracking-tight">Alimentação</h1>
+            <p className="text-white/70 text-sm mt-1.5 font-light">Balanceamento nutricional dinâmico baseado no DietBirdPet</p>
           </div>
         </div>
       </div>
@@ -686,7 +686,7 @@ export default function FeedingModule() {
       {dietMode === "menu" && (
         <>
         {/* Card único "Dietas" expansível */}
-        <div className="bg-white rounded-xl border border-stone-200 shadow-md overflow-hidden">
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-lg shadow-stone-200/50 overflow-hidden">
           <button
             type="button"
             onClick={() => setDietCardExpanded(!dietCardExpanded)}
@@ -869,7 +869,7 @@ export default function FeedingModule() {
                                 <div
                                   key={diet.id}
                                   onClick={() => { setViewingDiet(diet); setDietMode("saved-detail"); }}
-                                  className="mx-1 px-4 py-3.5 bg-white rounded-xl border border-stone-200/80 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group"
+                                  className="mx-1 px-4 py-3.5 bg-white rounded-2xl border border-stone-200/80/80 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group"
                                 >
                                   <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">
@@ -1045,7 +1045,7 @@ export default function FeedingModule() {
 
 
             return (
-              <div key={speciesName} className="bg-white rounded-xl border border-stone-200 shadow-sm border-l-4 border-l-emerald-400">
+              <div key={speciesName} className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 border-l-4 border-l-emerald-400">
                 {/* Sticky header: nome da espécie + seletor de dieta */}
                 <div className={cn(
                   "rounded-t-xl",
@@ -1573,12 +1573,12 @@ export default function FeedingModule() {
           const now = new Date();
           const currentMonth = now.getMonth() + 1;
           return (
-            <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 overflow-hidden">
               <button
                 onClick={() => setExportCardExpanded(!exportCardExpanded)}
-                className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-stone-50 transition-colors"
+                className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-stone-50/70 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <FileDown className="w-4 h-4 text-indigo-700" />
                 </div>
                 <h3 className="font-bold text-stone-800">Exportar Calendários em PDF</h3>
@@ -1796,7 +1796,7 @@ export default function FeedingModule() {
       {/* ===== DIETAS SALVAS — LISTA ===== */}
       {dietMode === "saved-list" && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-stone-100">
                 <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -1987,7 +1987,7 @@ export default function FeedingModule() {
       {/* ===== DIETA SALVA — DETALHE ===== */}
       {dietMode === "saved-detail" && viewingDiet && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <button onClick={() => setDietMode("menu")} className="text-stone-400 hover:text-stone-600 transition-colors">
@@ -2159,7 +2159,7 @@ export default function FeedingModule() {
       )}
 
       {(dietMode === "creating" || dietMode === "editing") && (
-      <div className="bg-white rounded-xl border border-stone-200 shadow-sm">
+      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm">
 
         {/* ===== STEP 1: ESPÉCIE ===== */}
         <div className="p-5 border-b border-stone-100">
@@ -2707,7 +2707,7 @@ export default function FeedingModule() {
       {/* ===== RESUMO FINAL ===== */}
       {nossaDieta && (dietMode === "creating" || dietMode === "editing") && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-emerald-700" />

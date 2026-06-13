@@ -236,7 +236,7 @@ export default function PlantaModule() {
               setScale(1);
               setPosition({ x: 0, y: 0 });
             }}
-            className="group relative bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md hover:border-stone-300 transition-all text-left"
+            className="group relative bg-white rounded-2xl border border-stone-200/80 overflow-hidden shadow-sm hover:shadow-md hover:border-stone-300 transition-all text-left"
           >
             {/* Thumbnail */}
             <div className="relative h-36 md:h-44 bg-stone-100 overflow-hidden">
