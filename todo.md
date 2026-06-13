@@ -377,3 +377,4 @@
 - [x] Documentação: datas de emissão e vencimento bem grandes e visíveis nos cards
 - [x] Documentação: corrigir erro ao abrir/visualizar documentos (PDF não abre)
 - [x] Documentação: adicionar campo para anexar documento de renovação dentro de cada card
+- [x] Documentação: adicionar 3 campos de data ao enviar renovação (Data do Documento, Data de Vigência, Data de Vencimento)

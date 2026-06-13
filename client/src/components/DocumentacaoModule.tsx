@@ -55,6 +55,7 @@ type DocForm = {
   category: string;
   description: string;
   documentDate: string;
+  vigenciaDate: string;
   expirationDate: string;
   status: "vigente" | "vencido" | "em_andamento" | "arquivado";
 };
@@ -64,6 +65,7 @@ const EMPTY_FORM: DocForm = {
   category: "Legalização / Licenças",
   description: "",
   documentDate: "",
+  vigenciaDate: "",
   expirationDate: "",
   status: "vigente",
 };
@@ -74,6 +76,9 @@ export default function DocumentacaoModule() {
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [renewalFiles, setRenewalFiles] = useState<File[]>([]);
+  const [renewalDocDate, setRenewalDocDate] = useState("");
+  const [renewalVigDate, setRenewalVigDate] = useState("");
+  const [renewalExpDate, setRenewalExpDate] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadingRenewal, setUploadingRenewal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -148,6 +153,7 @@ export default function DocumentacaoModule() {
           fileSize: file.size || null,
           description: form.description || null,
           documentDate: form.documentDate ? new Date(form.documentDate) : null,
+          vigenciaDate: form.vigenciaDate ? new Date(form.vigenciaDate) : null,
           expirationDate: form.expirationDate ? new Date(form.expirationDate) : null,
           status: form.status,
         });
@@ -170,6 +176,7 @@ export default function DocumentacaoModule() {
       category: form.category || undefined,
       description: form.description || null,
       documentDate: form.documentDate ? new Date(form.documentDate) : null,
+      vigenciaDate: form.vigenciaDate ? new Date(form.vigenciaDate) : null,
       expirationDate: form.expirationDate ? new Date(form.expirationDate) : null,
       status: form.status,
     });
@@ -199,16 +206,22 @@ export default function DocumentacaoModule() {
         contentType: file.type,
       });
 
-      // Update the same document with the new file URL, fileName, fileSize and mark as vigente
+      // Update the same document with the new file URL, fileName, fileSize, dates and mark as vigente
       await updateMut.mutateAsync({
         id: selectedDoc.id,
         status: "vigente",
         fileUrl: url,
         fileName: file.name,
         fileSize: file.size || null,
+        ...(renewalDocDate ? { documentDate: new Date(renewalDocDate) } : {}),
+        ...(renewalVigDate ? { vigenciaDate: new Date(renewalVigDate) } : {}),
+        ...(renewalExpDate ? { expirationDate: new Date(renewalExpDate) } : {}),
       });
 
       setRenewalFiles([]);
+      setRenewalDocDate("");
+      setRenewalVigDate("");
+      setRenewalExpDate("");
       setSelectedDoc(null);
       setView("list");
     } catch (err) {
@@ -231,6 +244,9 @@ export default function DocumentacaoModule() {
   const handleViewDetail = (doc: any) => {
     setSelectedDoc(doc);
     setRenewalFiles([]);
+    setRenewalDocDate("");
+    setRenewalVigDate("");
+    setRenewalExpDate("");
     setView("detail");
   };
 
@@ -241,6 +257,7 @@ export default function DocumentacaoModule() {
       category: doc.category,
       description: doc.description || "",
       documentDate: doc.documentDate ? new Date(doc.documentDate).toISOString().split("T")[0] : "",
+      vigenciaDate: doc.vigenciaDate ? new Date(doc.vigenciaDate).toISOString().split("T")[0] : "",
       expirationDate: doc.expirationDate ? new Date(doc.expirationDate).toISOString().split("T")[0] : "",
       status: doc.status,
     });
@@ -328,19 +345,25 @@ export default function DocumentacaoModule() {
             </div>
           </div>
 
-          {/* DATES — Large and prominent */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* DATES — Large and prominent: 3 columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className={`rounded-xl p-4 border ${isVencido ? "bg-red-50/50 border-red-200" : "bg-muted/20 border-border"}`}>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Data de Emissão</p>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Data do Documento</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {formatDateLarge(selectedDoc.documentDate) || "—"}
+              </p>
+            </div>
+            <div className={`rounded-xl p-4 border ${selectedDoc.vigenciaDate ? "bg-emerald-50/50 border-emerald-200" : "bg-muted/20 border-border"}`}>
+              <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Data de Vigência</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground">
+                {formatDateLarge(selectedDoc.vigenciaDate) || "—"}
               </p>
             </div>
             <div className={`rounded-xl p-4 border ${isVencido ? "bg-red-100 border-red-300" : selectedDoc.expirationDate ? "bg-amber-50/50 border-amber-200" : "bg-muted/20 border-border"}`}>
               <p className={`text-xs font-medium uppercase tracking-wide mb-1 ${isVencido ? "text-red-600" : "text-muted-foreground"}`}>
-                {isVencido ? "⚠ VENCIDO EM" : "Validade / Vencimento"}
+                {isVencido ? "⚠ VENCIDO EM" : "Data de Vencimento"}
               </p>
-              <p className={`text-2xl font-bold ${isVencido ? "text-red-700" : "text-foreground"}`}>
+              <p className={`text-xl sm:text-2xl font-bold ${isVencido ? "text-red-700" : "text-foreground"}`}>
                 {formatDateLarge(selectedDoc.expirationDate) || "Sem validade"}
               </p>
             </div>
@@ -413,53 +436,91 @@ export default function DocumentacaoModule() {
                 : "Anexe aqui o documento renovado. O arquivo anterior será substituído e o status atualizado para \"Vigente\"."}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                <div
-                  onClick={() => renewalInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                    renewalFiles.length > 0
-                      ? "border-emerald-400 bg-emerald-50/50"
-                      : isVencido
-                      ? "border-red-300 hover:border-red-400 hover:bg-red-50/30"
-                      : "border-border hover:border-primary/50 hover:bg-muted/20"
-                  }`}
-                >
-                  {renewalFiles.length > 0 ? (
-                    <div className="flex items-center gap-2 justify-center">
-                      <FileText size={18} className="text-emerald-600" />
-                      <span className="text-sm font-medium text-emerald-700">{renewalFiles[0].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({(renewalFiles[0].size / 1024 / 1024).toFixed(1)} MB)
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 justify-center">
-                      <Upload size={18} className="text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        {(!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0)
-                          ? "Clique para selecionar o arquivo deste documento"
-                          : "Clique para selecionar o arquivo renovado"}
-                      </span>
-                    </div>
-                  )}
-                </div>
+            {/* File selector */}
+            <div className="mb-4">
+              <div
+                onClick={() => renewalInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                  renewalFiles.length > 0
+                    ? "border-emerald-400 bg-emerald-50/50"
+                    : isVencido
+                    ? "border-red-300 hover:border-red-400 hover:bg-red-50/30"
+                    : "border-border hover:border-primary/50 hover:bg-muted/20"
+                }`}
+              >
+                {renewalFiles.length > 0 ? (
+                  <div className="flex items-center gap-2 justify-center">
+                    <FileText size={18} className="text-emerald-600" />
+                    <span className="text-sm font-medium text-emerald-700">{renewalFiles[0].name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({(renewalFiles[0].size / 1024 / 1024).toFixed(1)} MB)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 justify-center">
+                    <Upload size={18} className="text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {(!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0)
+                        ? "Clique para selecionar o arquivo deste documento"
+                        : "Clique para selecionar o arquivo renovado"}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={renewalInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                onChange={handleRenewalSelect}
+                className="hidden"
+              />
+            </div>
+
+            {/* 3 Date fields for renewal */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                  <Calendar size={12} className="inline mr-1" />Data do Documento
+                </label>
                 <input
-                  ref={renewalInputRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  onChange={handleRenewalSelect}
-                  className="hidden"
+                  type="date"
+                  value={renewalDocDate}
+                  onChange={(e) => setRenewalDocDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
-              <Button
-                onClick={handleRenewalUpload}
-                disabled={renewalFiles.length === 0 || uploadingRenewal}
-                className={`shrink-0 ${isVencido ? "bg-red-600 hover:bg-red-700" : ""}`}
-              >
-                {uploadingRenewal ? "Enviando..." : (!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0) ? "Enviar Documento" : "Enviar Renovação"}
-              </Button>
+              <div>
+                <label className="block text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">
+                  <Calendar size={12} className="inline mr-1" />Data de Vigência
+                </label>
+                <input
+                  type="date"
+                  value={renewalVigDate}
+                  onChange={(e) => setRenewalVigDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50/30 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400/30"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
+                  <Calendar size={12} className="inline mr-1" />Data de Vencimento
+                </label>
+                <input
+                  type="date"
+                  value={renewalExpDate}
+                  onChange={(e) => setRenewalExpDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-red-300 bg-red-50/30 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-400/30"
+                />
+              </div>
             </div>
+
+            {/* Submit button */}
+            <Button
+              onClick={handleRenewalUpload}
+              disabled={renewalFiles.length === 0 || uploadingRenewal}
+              className={`w-full ${isVencido ? "bg-red-600 hover:bg-red-700" : ""}`}
+            >
+              {uploadingRenewal ? "Enviando..." : (!selectedDoc.fileUrl || selectedDoc.fileUrl.length === 0) ? "Enviar Documento" : "Enviar Renovação"}
+            </Button>
           </div>
         </div>
       </div>
@@ -522,7 +583,7 @@ export default function DocumentacaoModule() {
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Data do Documento</label>
               <Input
@@ -532,7 +593,15 @@ export default function DocumentacaoModule() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Data de Validade</label>
+              <label className="text-sm font-medium text-emerald-700">Data de Vigência</label>
+              <Input
+                type="date"
+                value={form.vigenciaDate}
+                onChange={(e) => setForm({ ...form, vigenciaDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Data de Vencimento</label>
               <Input
                 type="date"
                 value={form.expirationDate}
@@ -764,8 +833,12 @@ export default function DocumentacaoModule() {
                   <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 mr-2">
                     {doc.documentDate && (
                       <span className="text-xs text-muted-foreground">
-                        <Calendar size={10} className="inline mr-1" />
-                        {formatDateLarge(doc.documentDate)}
+                        Doc: {formatDateLarge(doc.documentDate)}
+                      </span>
+                    )}
+                    {doc.vigenciaDate && (
+                      <span className="text-xs text-emerald-700 font-medium">
+                        Vig: {formatDateLarge(doc.vigenciaDate)}
                       </span>
                     )}
                     {doc.expirationDate && (
@@ -792,10 +865,15 @@ export default function DocumentacaoModule() {
                 </div>
 
                 {/* Mobile dates row */}
-                <div className="sm:hidden flex items-center gap-4 mt-2 ml-14 text-xs">
+                <div className="sm:hidden flex flex-wrap items-center gap-3 mt-2 ml-14 text-xs">
                   {doc.documentDate && (
                     <span className="text-muted-foreground">
-                      Emissão: {formatDateLarge(doc.documentDate)}
+                      Doc: {formatDateLarge(doc.documentDate)}
+                    </span>
+                  )}
+                  {doc.vigenciaDate && (
+                    <span className="text-emerald-700 font-medium">
+                      Vig: {formatDateLarge(doc.vigenciaDate)}
                     </span>
                   )}
                   {doc.expirationDate && (

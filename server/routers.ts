@@ -963,6 +963,7 @@ export const appRouter = router({
         fileSize: z.number().nullable().optional(),
         description: z.string().nullable().optional(),
         documentDate: z.date().nullable().optional(),
+        vigenciaDate: z.date().nullable().optional(),
         expirationDate: z.date().nullable().optional(),
         status: z.enum(["vigente", "vencido", "em_andamento", "arquivado"]).optional(),
       }))
@@ -977,6 +978,7 @@ export const appRouter = router({
         category: z.string().optional(),
         description: z.string().nullable().optional(),
         documentDate: z.date().nullable().optional(),
+        vigenciaDate: z.date().nullable().optional(),
         expirationDate: z.date().nullable().optional(),
         status: z.enum(["vigente", "vencido", "em_andamento", "arquivado"]).optional(),
         fileUrl: z.string().optional(),

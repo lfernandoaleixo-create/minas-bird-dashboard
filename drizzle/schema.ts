@@ -478,7 +478,9 @@ export const criatorioDocuments = mysqlTable("criatorio_documents", {
   description: text("description"),
   /** Data do documento (ex: data de emissão) */
   documentDate: timestamp("documentDate"),
-  /** Data de validade (se aplicável) */
+  /** Data de vigência (início da validade) */
+  vigenciaDate: timestamp("vigenciaDate"),
+  /** Data de vencimento (fim da validade) */
   expirationDate: timestamp("expirationDate"),
   /** Status do documento */
   status: mysqlEnum("status", ["vigente", "vencido", "em_andamento", "arquivado"]).default("vigente").notNull(),

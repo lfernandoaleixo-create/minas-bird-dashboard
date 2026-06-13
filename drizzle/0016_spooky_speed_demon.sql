@@ -1,0 +1,1 @@
+ALTER TABLE `criatorio_documents` ADD `vigenciaDate` timestamp;
