@@ -389,3 +389,7 @@
 - [x] Documentos Auxiliares: remover item 11 (Comprovantes de Transferência SISPASS)
 - [x] Documentos Auxiliares: adicionar botão "Em Mãos" para marcar cada item sem necessidade de anexar arquivo
 - [x] Documentos Auxiliares: criar PDF imprimível com lista dos documentos auxiliares e quadrado para ticar com caneta
+- [x] Planta: recortar imagem da planta em 6 setores individuais (Baias 1, Baias 2, Matrizes 1, 2, 3, Planta Geral)
+- [x] Planta: criar planta principal limpa com nomes dos setores identificados
+- [x] Planta: layout de 6 cards pequenos (thumbnails) com foto e nome do setor
+- [x] Planta: ao clicar em um card, expandir mostrando a planta do setor em detalhe
