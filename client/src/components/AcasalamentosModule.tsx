@@ -801,51 +801,45 @@ export default function AcasalamentosModule() {
                           )}
                           onClick={() => handleEdit(pair)}
                         >
-                          {/* REGRA: tudo na mesma linha, nada embaixo de nada, perfeitamente centralizado */}
+                          {/* Tudo na mesma linha, colunas distribuídas no espaço horizontal */}
 
-                          {/* Gaiola + número (inline) */}
-                          <span className="text-base font-extrabold text-stone-800 whitespace-nowrap flex-shrink-0">
-                            <span className="text-stone-500 font-semibold">Gaiola</span>{" "}
-                            <span className="text-emerald-700 font-mono">{pair.enclosure || <span className="text-stone-300 italic font-normal">—</span>}</span>
+                          {/* Gaiola + número */}
+                          <span className="text-base font-bold whitespace-nowrap">
+                            <span className="text-stone-500">Gaiola</span>{" "}
+                            <span className="text-emerald-700 font-extrabold font-mono">{pair.enclosure || <span className="text-stone-300 italic font-normal">—</span>}</span>
                           </span>
 
-                          {/* Status badge */}
-                          <span className={cn("px-2.5 py-1 rounded-full text-xs font-bold border flex-shrink-0", STATUS_COLORS[pair.status as PairStatus])}>
+                          {/* Status */}
+                          <span className={cn("px-2.5 py-1 rounded-full text-xs font-bold border", STATUS_COLORS[pair.status as PairStatus])}>
                             {STATUS_LABELS[pair.status as PairStatus]}
                           </span>
 
-                          {/* ♂ anilha mutação */}
-                          <span className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
-                            <span className="text-blue-600 font-bold">♂</span>{" "}
-                            {male?.mutation ? (
-                              <><span className="text-emerald-700 font-bold">{male.mutation}</span>{male.ringNumber && <span className="text-stone-500 font-medium ml-1">{male.ringNumber}</span>}</>
-                            ) : (
-                              <>{male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}</>
-                            )}
+                          {/* ♂ código + mutação */}
+                          <span className="text-base font-bold whitespace-nowrap flex-1 truncate">
+                            <span className="text-blue-600">♂</span>{" "}
+                            <span className="text-stone-800">{male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}</span>
+                            {male?.mutation && <span className="text-emerald-700 font-bold ml-1.5">{male.mutation}</span>}
                           </span>
 
-                          {/* ♀ anilha mutação */}
-                          <span className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
-                            <span className="text-rose-500 font-bold">♀</span>{" "}
-                            {female?.mutation ? (
-                              <><span className="text-emerald-700 font-bold">{female.mutation}</span>{female.ringNumber && <span className="text-stone-500 font-medium ml-1">{female.ringNumber}</span>}</>
-                            ) : (
-                              <>{female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}</>
-                            )}
+                          {/* ♀ código + mutação */}
+                          <span className="text-base font-bold whitespace-nowrap flex-1 truncate">
+                            <span className="text-rose-500">♀</span>{" "}
+                            <span className="text-stone-800">{female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}</span>
+                            {female?.mutation && <span className="text-emerald-700 font-bold ml-1.5">{female.mutation}</span>}
                           </span>
 
-                          {/* Genética + símbolo (inline) */}
-                          <span className="text-base font-extrabold text-stone-800 whitespace-nowrap flex-shrink-0">
-                            <span className="text-stone-500 font-semibold">Genética</span>{" "}
+                          {/* Genética + símbolo */}
+                          <span className="text-base font-bold whitespace-nowrap">
+                            <span className="text-stone-500">Genética</span>{" "}
                             {maleGen || femaleGen ? (
-                              <span className="text-emerald-700 font-mono">✓</span>
+                              <span className="text-emerald-700 font-extrabold">✓</span>
                             ) : (
                               <span className="text-stone-300 italic font-normal">—</span>
                             )}
                           </span>
 
                           {/* Actions */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-auto">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {deleteConfirm === pair.id ? (
                               <div className="flex items-center gap-1">
                                 <button
@@ -873,7 +867,7 @@ export default function AcasalamentosModule() {
                           </div>
 
                           {/* Arrow */}
-                          <ChevronRight size={14} className="text-stone-300 group-hover:text-emerald-400 transition-colors flex-shrink-0" />
+                          <ChevronRight size={14} className="text-stone-300 group-hover:text-emerald-400 transition-colors" />
                         </div>
                       );
                     })}
