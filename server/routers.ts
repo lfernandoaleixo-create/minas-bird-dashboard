@@ -53,6 +53,11 @@ import {
   deleteCriatorioDocument,
   getAllPurchasesWithClients,
   getOverdueInstallments,
+  getAllBreedingPairs,
+  getBreedingPairById,
+  createBreedingPair,
+  updateBreedingPair,
+  deleteBreedingPair,
 } from "./db";
 import {
   getFoodCalendarFoods,
@@ -1041,6 +1046,72 @@ export const appRouter = router({
         const key = `documentacao/${Date.now()}-${input.fileName}`;
         const { url } = await storagePut(key, buffer, input.contentType);
         return { url, key };
+      }),
+  }),
+
+  // =============================================
+  // ACASALAMENTOS (BREEDING PAIRS)
+  // =============================================
+  breeding: router({
+    list: protectedProcedure.query(async () => {
+      return getAllBreedingPairs();
+    }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getBreedingPairById(input.id);
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        speciesId: z.string(),
+        speciesName: z.string(),
+        maleId: z.number(),
+        femaleId: z.number(),
+        pairName: z.string().optional(),
+        enclosure: z.string().optional(),
+        status: z.enum(["ativo", "separado", "em_descanso"]).default("ativo"),
+        startDate: z.date().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createBreedingPair({
+          speciesId: input.speciesId,
+          speciesName: input.speciesName,
+          maleId: input.maleId,
+          femaleId: input.femaleId,
+          pairName: input.pairName || null,
+          enclosure: input.enclosure || null,
+          status: input.status,
+          startDate: input.startDate || null,
+          notes: input.notes || null,
+        });
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        pairName: z.string().optional(),
+        enclosure: z.string().optional(),
+        status: z.enum(["ativo", "separado", "em_descanso"]).optional(),
+        startDate: z.date().nullable().optional(),
+        endDate: z.date().nullable().optional(),
+        notes: z.string().nullable().optional(),
+        maleId: z.number().optional(),
+        femaleId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateBreedingPair(id, data as any);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteBreedingPair(input.id);
+        return { success: true };
       }),
   }),
 });

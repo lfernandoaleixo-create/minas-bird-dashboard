@@ -11,15 +11,16 @@ import PlantelModule from "@/components/PlantelModule";
 import CaixaModule from "@/components/CaixaModule";
 import PlantaModule from "@/components/PlantaModule";
 import DocumentacaoModule from "@/components/DocumentacaoModule";
+import AcasalamentosModule from "@/components/AcasalamentosModule";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Utensils, FlaskConical, Users, LayoutGrid, Bird, DollarSign, Map, FileText, Home as HomeIcon } from "lucide-react";
+import { Utensils, FlaskConical, Users, LayoutGrid, Bird, DollarSign, Map, FileText, Home as HomeIcon, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Brand assets
 const MB_SYMBOL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663487476806/GbyPqTQ4WPAeZLRC6VPuta/mb-symbol_eba1d647.png";
 
-type TabId = "alimentacao" | "plantel" | "clientes" | "caixa" | "planta" | "documentacao" | "mapa";
+type TabId = "alimentacao" | "plantel" | "acasalamentos" | "clientes" | "caixa" | "planta" | "documentacao" | "mapa";
 type SubTab = "original" | "teste";
 
 interface Tab {
@@ -32,6 +33,7 @@ interface Tab {
 const tabs: Tab[] = [
   { id: "alimentacao", label: "Alimentação", shortLabel: "Aliment.", icon: Utensils },
   { id: "plantel", label: "Plantel", shortLabel: "Plantel", icon: Bird },
+  { id: "acasalamentos", label: "Acasalamentos", shortLabel: "Casais", icon: Heart },
   { id: "clientes", label: "Clientes", shortLabel: "Clientes", icon: Users },
   { id: "caixa", label: "Caixa", shortLabel: "Caixa", icon: DollarSign },
   { id: "planta", label: "Planta", shortLabel: "Planta", icon: Map },
@@ -205,6 +207,7 @@ export default function Home() {
             </div>
           )}
           {activeTab === "plantel" && <PlantelModule />}
+          {activeTab === "acasalamentos" && <AcasalamentosModule />}
           {activeTab === "clientes" && <ClientsModule />}
           {activeTab === "caixa" && <CaixaModule />}
           {activeTab === "planta" && <PlantaModule />}

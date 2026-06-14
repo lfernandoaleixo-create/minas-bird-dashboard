@@ -489,3 +489,36 @@ export const criatorioDocuments = mysqlTable("criatorio_documents", {
 });
 export type CriatorioDocument = typeof criatorioDocuments.$inferSelect;
 export type InsertCriatorioDocument = typeof criatorioDocuments.$inferInsert;
+
+/**
+ * Acasalamentos — Casais reprodutores do criatório
+ * Cada registro é um casal (macho + fêmea) da mesma espécie
+ */
+export const breedingPairs = mysqlTable("breeding_pairs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ID da espécie */
+  speciesId: varchar("speciesId", { length: 128 }).notNull(),
+  /** Nome da espécie (desnormalizado) */
+  speciesName: varchar("speciesName", { length: 255 }).notNull(),
+  /** ID do macho no plantel */
+  maleId: int("maleId").notNull(),
+  /** ID da fêmea no plantel */
+  femaleId: int("femaleId").notNull(),
+  /** Nome/código identificador do casal (ex: "Casal 1", "Violeta x Clear") */
+  pairName: varchar("pairName", { length: 255 }),
+  /** Gaiola/viveiro onde o casal está alojado */
+  enclosure: varchar("enclosure", { length: 128 }),
+  /** Status do casal */
+  status: mysqlEnum("pairStatus", ["ativo", "separado", "em_descanso"]).default("ativo").notNull(),
+  /** Data de formação do casal */
+  startDate: timestamp("startDate"),
+  /** Data de separação (se separado) */
+  endDate: timestamp("endDate"),
+  /** Observações sobre o casal */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BreedingPair = typeof breedingPairs.$inferSelect;
+export type InsertBreedingPair = typeof breedingPairs.$inferInsert;

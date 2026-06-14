@@ -429,3 +429,9 @@
 - [x] Atualizar todas as aves no banco para status "ativo" (todas devem ser ativas nesse primeiro momento)
 - [x] Plantel: adicionar botão PDF em cada card de espécie para gerar relatório imprimível com as informações do resumo
 - [x] Plantel: alinhar colunas da listagem expandida e melhorar tipografia
+- [x] Acasalamentos: criar tabela no banco (casais com macho_id, fêmea_id, espécie, status, gaiola, data início, notas)
+- [ ] Acasalamentos: criar db helpers (CRUD casais)
+- [ ] Acasalamentos: criar tRPC procedures (list, create, update, delete casais)
+- [ ] Acasalamentos: criar componente AcasalamentosModule com cards por espécie
+- [ ] Acasalamentos: formulário de novo casal (selecionar macho e fêmea da mesma espécie do plantel)
+- [x] Acasalamentos: integrar na sidebar/navegação

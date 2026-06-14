@@ -710,3 +710,41 @@ export async function getExpiredDocuments() {
     )
   );
 }
+
+// =============================================
+// ACASALAMENTOS (BREEDING PAIRS)
+// =============================================
+import { breedingPairs } from "../drizzle/schema";
+import type { InsertBreedingPair } from "../drizzle/schema";
+
+export async function getAllBreedingPairs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(breedingPairs).orderBy(asc(breedingPairs.speciesName), asc(breedingPairs.id));
+}
+
+export async function getBreedingPairById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(breedingPairs).where(eq(breedingPairs.id, id));
+  return rows[0] || null;
+}
+
+export async function createBreedingPair(data: Omit<InsertBreedingPair, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(breedingPairs).values(data);
+  return { id: result[0].insertId };
+}
+
+export async function updateBreedingPair(id: number, data: Partial<Omit<InsertBreedingPair, "id" | "createdAt" | "updatedAt">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(breedingPairs).set(data).where(eq(breedingPairs.id, id));
+}
+
+export async function deleteBreedingPair(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(breedingPairs).where(eq(breedingPairs.id, id));
+}
