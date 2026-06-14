@@ -796,7 +796,7 @@ export default function AcasalamentosModule() {
                         <div
                           key={pair.id}
                           className={cn(
-                            "flex items-center gap-4 px-5 py-3 hover:bg-emerald-50/40 transition-colors cursor-pointer group",
+                            "flex items-center gap-6 px-5 py-3 hover:bg-emerald-50/40 transition-colors cursor-pointer group",
                             idx < group.pairs.length - 1 && "border-b border-stone-100/60"
                           )}
                           onClick={() => handleEdit(pair)}
@@ -804,13 +804,13 @@ export default function AcasalamentosModule() {
                           {/* Tudo na mesma linha, colunas distribuídas no espaço horizontal */}
 
                           {/* Gaiola + número */}
-                          <span className="text-base font-bold whitespace-nowrap">
+                          <span className="text-base font-bold whitespace-nowrap min-w-[100px]">
                             <span className="text-stone-500">Gaiola</span>{" "}
                             <span className="text-emerald-700 font-extrabold font-mono">{pair.enclosure || <span className="text-stone-300 italic font-normal">—</span>}</span>
                           </span>
 
                           {/* Status */}
-                          <span className={cn("px-2.5 py-1 rounded-full text-xs font-bold border", STATUS_COLORS[pair.status as PairStatus])}>
+                          <span className={cn("px-3 py-1 rounded-full text-xs font-bold border min-w-[90px] text-center", STATUS_COLORS[pair.status as PairStatus])}>
                             {STATUS_LABELS[pair.status as PairStatus]}
                           </span>
 
