@@ -190,7 +190,7 @@ export const RINGNECK_LOCI: MutationLocus[] = [
       { id: "normal", name: "Normal", nameEn: "Normal", isWildType: true },
       { id: "slino", name: "Ino (Lutino/Albino)", nameEn: "SL Ino", isWildType: false },
       { id: "platinum", name: "Platinum", nameEn: "Platinum", isWildType: false },
-      { id: "pallid", name: "Pallid (Lacewing)", nameEn: "Pallid/Lacewing", isWildType: false },
+      { id: "pallid", name: "Pallid", nameEn: "Pallid", isWildType: false },
     ],
   },
   {
@@ -259,7 +259,7 @@ export const VISUAL_MUTATIONS = {
   sexLinked: [
     { id: "slino", label: "Ino" },
     { id: "platinum", label: "Platinum" },
-    { id: "pallid", label: "Lacewing" },
+    { id: "pallid", label: "Pallid" },
     { id: "opaline", label: "Opalino" },
     { id: "cinnamon", label: "Canela" },
   ],
@@ -288,7 +288,7 @@ export const AVAILABLE_SPLITS = {
   sexLinked: [
     { id: "slino", label: "Ino" },
     { id: "platinum", label: "Platinum" },
-    { id: "pallid", label: "Lacewing" },
+    { id: "pallid", label: "Pallid" },
     { id: "opaline", label: "Opalino" },
     { id: "cinnamon", label: "Canela" },
   ],
@@ -337,11 +337,11 @@ export const COMPOSITE_NAMES: Record<string, string> = {
   "green+grey_sf": "Verde Cinza",
   "grey_sf+turquoise": "Turquesa Cinza",
   "aqua+grey_sf": "Aqua Cinza",
-  // === Lacewing ===
-  "blue+pallid": "Lacewing Azul",
-  "green+pallid": "Lacewing Verde",
-  "pallid+turquoise": "Lacewing Turquesa",
-  "aqua+pallid": "Lacewing Aqua",
+  // === Pallid ===
+  "blue+pallid": "Pallid Azul",
+  "green+pallid": "Pallid Verde",
+  "pallid+turquoise": "Pallid Turquesa",
+  "aqua+pallid": "Pallid Aqua",
   // === Pallid-ino ===
   "green+pallidino": "Pallid-ino Verde",
   "blue+pallidino": "Pallid-ino Azul",
