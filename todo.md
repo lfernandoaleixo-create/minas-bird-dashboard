@@ -427,3 +427,5 @@
 - [x] Plantel: reorganizar colunas expandidas - anilha depois de sexo e antes de gaiola, texto maior formato inline (ex: "Sexo - Macho")
 - [x] BUG: validação de anilha verifica aves vendidas/doadas/emprestadas que não estão mais no plantel — deve verificar apenas aves ativas/óbito
 - [x] Atualizar todas as aves no banco para status "ativo" (todas devem ser ativas nesse primeiro momento)
+- [x] Plantel: adicionar botão PDF em cada card de espécie para gerar relatório imprimível com as informações do resumo
+- [x] Plantel: alinhar colunas da listagem expandida e melhorar tipografia

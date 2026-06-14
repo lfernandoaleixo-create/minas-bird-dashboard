@@ -10,10 +10,11 @@ import { species } from "@/data/feeding";
 import {
   Bird, Plus, Search, Edit2, Trash2, ArrowLeft, Save,
   Filter, ChevronDown, ChevronRight, X, Upload, FileText, ExternalLink,
-  AlertTriangle, Download, Users
+  AlertTriangle, Download, Users, Printer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { generateLineagePdf } from "@/lib/lineagePdf";
+import { generateSpeciesPdf } from "@/lib/speciesPdf";
 
 // Apenas as espécies do plantel (inCurrentFlock: true)
 const SPECIES_LIST = species
@@ -785,6 +786,27 @@ export default function PlantelModule() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateSpeciesPdf({
+                            speciesName: group.speciesName,
+                            prefix: getSpeciesPrefix(group.speciesId),
+                            birds: group.birds.map(b => ({
+                              ringNumber: b.ringNumber,
+                              sex: b.sex,
+                              anilha: (b as any).anilha || null,
+                              enclosure: b.enclosure,
+                              mutation: b.mutation,
+                              status: b.status,
+                            })),
+                          });
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-emerald-100 transition-colors text-emerald-600 hover:text-emerald-800"
+                        title="Gerar PDF da espécie"
+                      >
+                        <Printer size={15} />
+                      </button>
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
                         {getSpeciesPrefix(group.speciesId)}
                       </span>
@@ -821,19 +843,19 @@ export default function PlantelModule() {
                             {STATUS_LABELS[bird.status as BirdStatus]}
                           </span>
 
-                          {/* Info columns - inline format with larger text */}
-                          <div className="flex-1 flex items-center gap-3 sm:gap-5 min-w-0 flex-wrap">
+                          {/* Info columns - aligned grid */}
+                          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 min-w-0">
                             <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
-                              <span className="text-stone-400 font-medium">Sexo</span> - {SEX_LABELS[bird.sex as BirdSex]}
+                              <span className="text-stone-400 font-medium text-xs">Sexo</span> {SEX_LABELS[bird.sex as BirdSex]}
                             </p>
                             <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
-                              <span className="text-stone-400 font-medium">Anilha</span> - {(bird as any).anilha || <span className="text-stone-300 italic font-normal">—</span>}
+                              <span className="text-stone-400 font-medium text-xs">Anilha</span> {(bird as any).anilha || <span className="text-stone-300 italic font-normal">—</span>}
                             </p>
                             <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
-                              <span className="text-stone-400 font-medium">Gaiola</span> - {bird.enclosure || <span className="text-stone-300 italic font-normal">—</span>}
+                              <span className="text-stone-400 font-medium text-xs">Gaiola</span> {bird.enclosure || <span className="text-stone-300 italic font-normal">—</span>}
                             </p>
                             <p className="text-sm font-bold text-stone-800 truncate min-w-0">
-                              <span className="text-stone-400 font-medium">Mutação</span> - {bird.mutation || <span className="text-stone-300 italic font-normal">—</span>}
+                              <span className="text-stone-400 font-medium text-xs">Mutação</span> {bird.mutation || <span className="text-stone-300 italic font-normal">—</span>}
                             </p>
                           </div>
 
