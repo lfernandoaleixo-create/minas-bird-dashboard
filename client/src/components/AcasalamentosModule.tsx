@@ -817,38 +817,23 @@ export default function AcasalamentosModule() {
                           </span>
 
                           {/* Info columns */}
-                          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 min-w-0">
-                            <div className="min-w-0">
-                              <p className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
-                                <span className="text-blue-600 font-bold">♂</span> {male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
-                              </p>
-                              {male?.mutation ? (
-                                <p className="text-sm font-bold text-emerald-700 truncate">{male.mutation}</p>
-                              ) : (
-                                <p className="text-sm text-stone-300 italic">sem mutação</p>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
-                                <span className="text-rose-500 font-bold">♀</span> {female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
-                              </p>
-                              {female?.mutation ? (
-                                <p className="text-sm font-bold text-emerald-700 truncate">{female.mutation}</p>
-                              ) : (
-                                <p className="text-sm text-stone-300 italic">sem mutação</p>
-                              )}
-                            </div>
-                            <p className="text-base font-semibold text-stone-700 whitespace-nowrap">
-                              <span className="text-stone-400 font-medium text-xs">Nome</span> {pair.pairName || <span className="text-stone-300 italic font-normal">—</span>}
+                          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5 min-w-0">
+                            <p className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
+                              <span className="text-blue-600 font-bold">♂</span> {male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
+                              {male?.mutation && <span className="text-emerald-700 font-bold ml-1.5">{male.mutation}</span>}
                             </p>
-                            <p className="text-base font-bold text-stone-800 truncate min-w-0">
-                              <span className="text-stone-400 font-medium text-xs">Genética</span>{" "}
+                            <p className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
+                              <span className="text-rose-500 font-bold">♀</span> {female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
+                              {female?.mutation && <span className="text-emerald-700 font-bold ml-1.5">{female.mutation}</span>}
+                            </p>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Genética</p>
                               {maleGen || femaleGen ? (
-                                <span className="text-emerald-600">✓</span>
+                                <p className="text-lg font-extrabold text-emerald-700 font-mono">✓</p>
                               ) : (
-                                <span className="text-stone-300 italic font-normal">—</span>
+                                <p className="text-base font-medium text-stone-300 italic">—</p>
                               )}
-                            </p>
+                            </div>
                           </div>
 
                           {/* Actions */}
