@@ -1076,6 +1076,8 @@ export const appRouter = router({
         status: z.enum(["ativo", "separado", "em_descanso"]).default("ativo"),
         startDate: z.date().optional(),
         notes: z.string().optional(),
+        maleGenetics: z.any().optional(),
+        femaleGenetics: z.any().optional(),
       }))
       .mutation(async ({ input }) => {
         return createBreedingPair({
@@ -1088,6 +1090,8 @@ export const appRouter = router({
           status: input.status,
           startDate: input.startDate || null,
           notes: input.notes || null,
+          maleGenetics: input.maleGenetics || null,
+          femaleGenetics: input.femaleGenetics || null,
         });
       }),
 
@@ -1102,6 +1106,8 @@ export const appRouter = router({
         notes: z.string().nullable().optional(),
         maleId: z.number().optional(),
         femaleId: z.number().optional(),
+        maleGenetics: z.any().nullable().optional(),
+        femaleGenetics: z.any().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;

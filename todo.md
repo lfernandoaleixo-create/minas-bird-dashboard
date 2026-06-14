@@ -442,3 +442,5 @@
 - [x] Genética: integrar calculadora no módulo Acasalamentos (previsão automática ao selecionar casal)
 - [x] Genética: corrigir engine — Turquesa é DOMINANTE sobre Azul (série alélica no mesmo locus), Ino e Pallid são alelos do mesmo locus sex-linked
 - [x] Genética: mover parametrização para dentro da aba Acasalamentos (card opcional ao selecionar macho/fêmea), remover do Plantel
+- [x] Genética: salvar parametrização genética junto com o casal (para não precisar preencher toda vez)
+- [x] Genética: revisar todos os nomes de mutações para português usado entre criadores de aves

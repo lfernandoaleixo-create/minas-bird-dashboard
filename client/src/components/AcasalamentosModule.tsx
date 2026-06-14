@@ -322,6 +322,8 @@ export default function AcasalamentosModule() {
           notes: form.notes || null,
           maleId: form.maleId,
           femaleId: form.femaleId,
+          maleGenetics: maleGenetics.visual.length > 0 || maleGenetics.splits.length > 0 ? maleGenetics : null,
+          femaleGenetics: femaleGenetics.visual.length > 0 || femaleGenetics.splits.length > 0 ? femaleGenetics : null,
         });
       } else {
         await createMut.mutateAsync({
@@ -334,6 +336,8 @@ export default function AcasalamentosModule() {
           status: form.status,
           startDate: form.startDate ? new Date(form.startDate) : undefined,
           notes: form.notes || undefined,
+          maleGenetics: maleGenetics.visual.length > 0 || maleGenetics.splits.length > 0 ? maleGenetics : undefined,
+          femaleGenetics: femaleGenetics.visual.length > 0 || femaleGenetics.splits.length > 0 ? femaleGenetics : undefined,
         });
       }
       utils.breeding.list.invalidate();
@@ -361,6 +365,11 @@ export default function AcasalamentosModule() {
       startDate: pair.startDate ? new Date(pair.startDate).toISOString().split("T")[0] : "",
       notes: pair.notes || "",
     });
+    // Restaurar genética salva
+    const mg = (pair as any).maleGenetics;
+    const fg = (pair as any).femaleGenetics;
+    setMaleGenetics(mg && (mg.visual?.length > 0 || mg.splits?.length > 0) ? mg : { visual: [], splits: [] });
+    setFemaleGenetics(fg && (fg.visual?.length > 0 || fg.splits?.length > 0) ? fg : { visual: [], splits: [] });
     setView("form");
   };
 
@@ -540,7 +549,7 @@ export default function AcasalamentosModule() {
                           {o.sex === 'macho' ? '♂' : o.sex === 'femea' ? '♀' : '♂♀'}
                         </span>
                         <span className="text-sm font-bold text-emerald-700 min-w-[45px] text-right">
-                          {(o.probability * 100).toFixed(1)}%
+                          {o.probability.toFixed(1)}%
                         </span>
                       </div>
                     </div>
@@ -801,6 +810,11 @@ export default function AcasalamentosModule() {
                                 {pair.notes && (
                                   <span className="text-xs text-stone-400 flex items-center gap-1">
                                     <FileText size={10} /> Obs.
+                                  </span>
+                                )}
+                                {(pair as any).maleGenetics && (pair as any).femaleGenetics && (
+                                  <span className="text-xs text-emerald-500 flex items-center gap-1">
+                                    <FlaskConical size={10} /> Genética salva
                                   </span>
                                 )}
                               </div>

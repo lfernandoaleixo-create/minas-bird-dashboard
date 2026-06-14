@@ -645,17 +645,17 @@ export function calculateBreeding(
     }
   }
   
-  // Converter para resultado final
+  // Converter para resultado final (probabilidade em porcentagem 0-100)
   const offspring: OffspringResult[] = Array.from(grouped.values())
     .map(o => ({
       phenotype: buildPhenotypeName(o.visual),
       genotype: buildGenotypeName(o.visual, o.splits),
-      probability: Math.round(o.probability * 10000) / 10000,
+      probability: Math.round(o.probability * 10000) / 100, // Converte para % (ex: 0.25 -> 25%)
       sex: o.sex,
       visual: o.visual,
       splits: o.splits,
     }))
-    .filter(o => o.probability >= 0.001)
+    .filter(o => o.probability >= 0.1) // Filtrar < 0.1%
     .sort((a, b) => b.probability - a.probability);
   
   return {
@@ -719,7 +719,7 @@ function getMutationLabel(id: string): string {
 }
 
 function buildPhenotypeName(visual: string[]): string {
-  if (visual.length === 0) return "Normal (Verde)";
+  if (visual.length === 0) return "Verde";
   
   // Check for composite names (exact match)
   const sortedKey = [...visual].sort().join("+");

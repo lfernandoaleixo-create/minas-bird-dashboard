@@ -228,7 +228,7 @@ export const RINGNECK_LOCI: MutationLocus[] = [
 export const VISUAL_MUTATIONS = {
   // Cores base (série azul)
   base: [
-    { id: "green", label: "Verde (Selvagem)" },
+    { id: "green", label: "Verde" },
     { id: "blue", label: "Azul" },
     { id: "turquoise", label: "Turquesa" },
     { id: "aqua", label: "Aqua" },
@@ -257,9 +257,9 @@ export const VISUAL_MUTATIONS = {
   ],
   // Ligadas ao sexo
   sexLinked: [
-    { id: "slino", label: "Ino (Lutino/Albino)" },
+    { id: "slino", label: "Ino" },
     { id: "platinum", label: "Platinum" },
-    { id: "pallid", label: "Pallid (Lacewing)" },
+    { id: "pallid", label: "Lacewing" },
     { id: "opaline", label: "Opalino" },
     { id: "cinnamon", label: "Canela" },
   ],
@@ -286,9 +286,9 @@ export const AVAILABLE_SPLITS = {
   ],
   // Splits ligados ao sexo (SOMENTE para machos)
   sexLinked: [
-    { id: "slino", label: "Ino (Lutino/Albino)" },
+    { id: "slino", label: "Ino" },
     { id: "platinum", label: "Platinum" },
-    { id: "pallid", label: "Pallid (Lacewing)" },
+    { id: "pallid", label: "Lacewing" },
     { id: "opaline", label: "Opalino" },
     { id: "cinnamon", label: "Canela" },
   ],
@@ -304,42 +304,49 @@ export const AVAILABLE_SPLITS = {
  */
 export const COMPOSITE_NAMES: Record<string, string> = {
   // Keys MUST be alphabetically sorted to match engine's [...visual].sort().join("+")
+  // === Fator Escuro ===
   "blue+dark_sf": "Cobalto",
   "blue+dark_df": "Malva",
   "dark_sf+green": "Verde Escuro",
   "dark_df+green": "Oliva",
+  // === Violeta ===
   "blue+violet_sf": "Violeta",
   "blue+dark_sf+violet_sf": "Violeta Cobalto",
+  // === Ino (Lutino/Albino/Cremino) ===
   "blue+slino": "Albino",
   "green+slino": "Lutino",
   "slino+turquoise": "Cremino",
-  "blue+cinnamon": "Azul Canela",
+  "aqua+slino": "Cremino Aqua",
+  // === Canela ===
+  "blue+cinnamon": "Skyblue",
   "cinnamon+green": "Canela",
+  "cinnamon+turquoise": "Canela Turquesa",
+  "aqua+cinnamon": "Canela Aqua",
+  // === Opalino ===
   "blue+opaline": "Opalino Azul",
-  "green+opaline": "Opalino Verde",
-  "blue+cleartail": "Cleartail Azul",
-  "cleartail+green": "Cleartail Verde",
+  "green+opaline": "Opalino",
+  "opaline+turquoise": "Opalino Turquesa",
+  "aqua+opaline": "Opalino Aqua",
+  // === Cleartail ===
+  "blue+cleartail": "Clear Azul",
+  "cleartail+green": "Clear Verde",
+  "cleartail+turquoise": "Clear Turquesa",
+  "aqua+cleartail": "Clear Aqua",
+  // === Cinza ===
   "blue+grey_sf": "Cinza",
   "green+grey_sf": "Verde Cinza",
+  "grey_sf+turquoise": "Turquesa Cinza",
+  "aqua+grey_sf": "Aqua Cinza",
+  // === Lacewing ===
   "blue+pallid": "Lacewing Azul",
   "green+pallid": "Lacewing Verde",
+  "pallid+turquoise": "Lacewing Turquesa",
+  "aqua+pallid": "Lacewing Aqua",
+  // === Pallid-ino ===
   "green+pallidino": "Pallid-ino Verde",
   "blue+pallidino": "Pallid-ino Azul",
   "pallidino+turquoise": "Pallid-ino Turquesa",
-  // Turquesa combinações
-  "cinnamon+turquoise": "Canela Turquesa",
-  "opaline+turquoise": "Opalino Turquesa",
-  "cleartail+turquoise": "Cleartail Turquesa",
-  "grey_sf+turquoise": "Turquesa Cinza",
-  "pallid+turquoise": "Lacewing Turquesa",
-  // Aqua combinações
-  "aqua+slino": "Cremino Aqua",
-  "aqua+cinnamon": "Canela Aqua",
-  "aqua+opaline": "Opalino Aqua",
-  "aqua+cleartail": "Cleartail Aqua",
-  "aqua+grey_sf": "Aqua Cinza",
-  "aqua+pallid": "Lacewing Aqua",
-  // Arlequim combinações
+  // === Arlequim ===
   "green+rec_pied": "Arlequim Recessivo Verde",
   "blue+rec_pied": "Arlequim Recessivo Azul",
   "rec_pied+turquoise": "Arlequim Recessivo Turquesa",
@@ -347,24 +354,39 @@ export const COMPOSITE_NAMES: Record<string, string> = {
   "dom_pied_sf+green": "Arlequim Dominante Verde",
   "blue+dom_pied_sf": "Arlequim Dominante Azul",
   "dom_pied_sf+turquoise": "Arlequim Dominante Turquesa",
-  // Diluido combinações
+  // === Diluído ===
   "dilute+green": "Diluído Verde",
   "blue+dilute": "Diluído Azul",
   "dilute+turquoise": "Diluído Turquesa",
-  // NSL Ino combinações
+  // === NSL Ino ===
   "green+nsino": "NSL Ino Verde",
   "blue+nsino": "NSL Ino Azul",
   "nsino+turquoise": "NSL Ino Turquesa",
-  // Combinações múltiplas comuns
+  // === Combinações Múltiplas Comuns ===
+  // Silver = Cinza + Canela (azul + cinza + canela)
+  "blue+cinnamon+grey_sf": "Silver",
+  "cinnamon+green+grey_sf": "Canela Verde Cinza",
+  "cinnamon+grey_sf+turquoise": "Silver Turquesa",
+  // Skyblue combinações
+  "blue+cinnamon+dark_sf": "Cobalto Canela",
+  // Opalino + Canela
   "blue+cinnamon+opaline": "Opalino Canela Azul",
-  "cinnamon+green+opaline": "Opalino Canela Verde",
+  "cinnamon+green+opaline": "Opalino Canela",
   "cinnamon+opaline+turquoise": "Opalino Canela Turquesa",
+  // Ino combinações
   "blue+opaline+slino": "Albino Opalino",
   "green+opaline+slino": "Lutino Opalino",
   "opaline+slino+turquoise": "Cremino Opalino",
   "blue+cinnamon+slino": "Albino Canela",
   "cinnamon+green+slino": "Lutino Canela",
   "cinnamon+slino+turquoise": "Cremino Canela",
+  // Violeta combinações
+  "cinnamon+turquoise+violet_sf": "Violeta Canela Turquesa",
+  "blue+cinnamon+violet_sf": "Violeta Canela",
+  "cinnamon+green+violet_sf": "Violeta Canela Verde",
+  // Cobalto combinações
+  "dark_sf+turquoise": "Turquesa Cobalto",
+  "cinnamon+dark_sf+turquoise": "Canela Turquesa Cobalto",
 };
 
 // ============================================================

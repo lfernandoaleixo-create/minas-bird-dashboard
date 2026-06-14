@@ -518,6 +518,10 @@ export const breedingPairs = mysqlTable("breeding_pairs", {
   endDate: timestamp("endDate"),
   /** Observações sobre o casal */
   notes: text("notes"),
+  /** Genética do macho (parametrização para calculadora) */
+  maleGenetics: json("maleGenetics"),
+  /** Genética da fêmea (parametrização para calculadora) */
+  femaleGenetics: json("femaleGenetics"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
