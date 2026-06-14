@@ -1,26 +1,28 @@
 /**
  * Motor de Cálculo Genético — Ring Neck (Psittacula krameri)
  * 
- * Implementa lógica de Punnett Square para cada locus genético,
- * combinando resultados de todos os loci para prever filhotes.
+ * CORRIGIDO: Implementa lógica de série alélica para o locus Parblue
+ * e para o locus Ino (sex-linked).
  * 
  * Regras fundamentais:
  * - Aves: Macho = ZZ, Fêmea = ZW
  * - Fêmeas NÃO podem ser split para mutações ligadas ao sexo (cromossomo W não carrega)
- * - Mutações autossômicas: ambos os sexos herdam igualmente
- * - Mutações dominantes: SF = 1 cópia, DF = 2 cópias
+ * - Locus Parblue: série alélica Verde > Aqua > Turquesa > Azul (MESMO locus!)
+ * - Locus Ino (sex-linked): série alélica Normal > Pallid > Ino (MESMO locus!)
+ * - Turquesa é DOMINANTE sobre Azul (ave tq/bl = VISUAL turquesa!)
+ * - Aqua é DOMINANTE sobre Turquesa e Azul
  */
 
 import type { BirdGeneticsData } from "./genetics";
-import { RINGNECK_LOCI, AVAILABLE_SPLITS, VISUAL_MUTATIONS, COMPOSITE_NAMES } from "./genetics";
+import { AVAILABLE_SPLITS, VISUAL_MUTATIONS, COMPOSITE_NAMES } from "./genetics";
 
 // ============================================================
 // TIPOS
 // ============================================================
 
 export interface OffspringResult {
-  phenotype: string;         // Descrição visual (ex: "Azul Opalino")
-  genotype: string;          // Genótipo completo (ex: "Azul / Ino / Cleartail")
+  phenotype: string;         // Descrição visual (ex: "Turquesa Opalino")
+  genotype: string;          // Genótipo completo (ex: "Turquesa / Azul / Ino")
   probability: number;       // Probabilidade (0 a 1)
   sex: "macho" | "femea" | "ambos";
   visual: string[];          // IDs das mutações visuais
@@ -35,6 +37,101 @@ export interface BreedingPrediction {
 }
 
 // ============================================================
+// HIERARQUIA DE DOMINÂNCIA — SÉRIE ALÉLICA PARBLUE
+// ============================================================
+
+/**
+ * Hierarquia de dominância do locus Parblue:
+ * Verde (selvagem) > Aqua > Turquesa > Azul
+ * 
+ * Cada ave tem 2 alelos neste locus. O fenótipo é determinado pelo
+ * alelo MAIS DOMINANTE:
+ * - verde/qualquer = Verde (visual), o outro é split
+ * - aqua/turquesa = Aqua (visual)
+ * - aqua/azul = Aqua (visual)
+ * - turquesa/azul = TURQUESA VISUAL (NÃO é "portador de turquesa"!)
+ * - azul/azul = Azul (visual)
+ */
+const PARBLUE_DOMINANCE: Record<string, number> = {
+  "green": 3,    // Mais dominante
+  "aqua": 2,
+  "turquoise": 1,
+  "blue": 0,     // Mais recessivo
+};
+
+function getParblueVisual(allele1: string, allele2: string): { visual: string; split: string | null } {
+  const norm1 = allele1 === "normal" ? "green" : allele1;
+  const norm2 = allele2 === "normal" ? "green" : allele2;
+  
+  const dom1 = PARBLUE_DOMINANCE[norm1] ?? 3;
+  const dom2 = PARBLUE_DOMINANCE[norm2] ?? 3;
+  
+  if (dom1 >= dom2) {
+    // allele1 é dominante ou igual
+    if (norm1 === norm2) {
+      return { visual: norm1, split: null }; // Homozigoto
+    }
+    return { visual: norm1, split: norm2 }; // Heterozigoto, o recessivo é split
+  } else {
+    return { visual: norm2, split: norm1 };
+  }
+}
+
+// ============================================================
+// HIERARQUIA DE DOMINÂNCIA — LOCUS INO (SEX-LINKED)
+// ============================================================
+
+/**
+ * Hierarquia do locus Ino (sex-linked):
+ * Normal (+) > Pallid (ino^pd) > Ino
+ * 
+ * Pallid e Ino são alelos do MESMO locus!
+ * - normal/normal = Normal
+ * - normal/pallid = Normal split Pallid (macho)
+ * - normal/ino = Normal split Ino (macho)
+ * - pallid/pallid = Pallid visual (macho)
+ * - pallid/ino = Pallid visual split Ino (macho) — chamado "Pallidino"
+ * - ino/ino = Ino visual (macho)
+ * - Fêmea: hemizigota (só 1 alelo)
+ */
+const INO_DOMINANCE: Record<string, number> = {
+  "normal": 2,   // Mais dominante
+  "pallid": 1,
+  "slino": 0,    // Mais recessivo
+  "platinum": 1, // Platinum = variante de pallid (mesmo nível)
+};
+
+function getInoVisual(allele1: string, allele2: string | null): { visual: string | null; split: string | null } {
+  if (allele2 === null) {
+    // Fêmea hemizigota
+    if (allele1 === "normal") return { visual: null, split: null };
+    return { visual: allele1, split: null };
+  }
+  
+  const dom1 = INO_DOMINANCE[allele1] ?? 2;
+  const dom2 = INO_DOMINANCE[allele2] ?? 2;
+  
+  if (allele1 === "normal" && allele2 === "normal") {
+    return { visual: null, split: null };
+  }
+  
+  if (dom1 >= dom2) {
+    if (allele1 === "normal") {
+      return { visual: null, split: allele2 }; // Normal split X
+    }
+    if (allele1 === allele2) {
+      return { visual: allele1, split: null }; // Homozigoto visual
+    }
+    return { visual: allele1, split: allele2 }; // Heterozigoto (pallid/ino = pallid visual split ino)
+  } else {
+    if (allele2 === "normal") {
+      return { visual: null, split: allele1 };
+    }
+    return { visual: allele2, split: allele1 };
+  }
+}
+
+// ============================================================
 // LÓGICA DE HERANÇA POR TIPO
 // ============================================================
 
@@ -45,14 +142,13 @@ interface AllelePair {
 }
 
 /**
- * Autossômica Recessiva: Punnett square 2x2
- * Pai [A, B] x Mãe [C, D] → AC, AD, BC, BD (cada 25%)
+ * Cruzamento genérico de 2 alelos (Punnett 2x2).
+ * Funciona para qualquer locus autossômico (recessivo ou série alélica).
  */
-function crossAutosomalRecessive(
+function crossTwoAlleles(
   fatherAlleles: [string, string],
   motherAlleles: [string, string]
 ): AllelePair[] {
-  const results: AllelePair[] = [];
   const combos = [
     [fatherAlleles[0], motherAlleles[0]],
     [fatherAlleles[0], motherAlleles[1]],
@@ -60,14 +156,14 @@ function crossAutosomalRecessive(
     [fatherAlleles[1], motherAlleles[1]],
   ];
   
-  // Agrupar combinações iguais
   const grouped = new Map<string, number>();
   for (const [a, b] of combos) {
-    // Normalizar ordem (menor primeiro para consistência)
+    // Normalizar ordem para consistência
     const key = [a, b].sort().join("|");
     grouped.set(key, (grouped.get(key) || 0) + 0.25);
   }
   
+  const results: AllelePair[] = [];
   for (const [key, prob] of Array.from(grouped)) {
     const [allele1, allele2] = key.split("|");
     results.push({ allele1, allele2, probability: prob });
@@ -78,7 +174,6 @@ function crossAutosomalRecessive(
 
 /**
  * Autossômica Dominante: dose (none, sf, df)
- * none=0 cópias, sf=1 cópia, df=2 cópias
  */
 function crossAutosomalDominant(
   fatherDose: string,
@@ -87,16 +182,12 @@ function crossAutosomalDominant(
   const fatherCopies = fatherDose === "df" ? 2 : fatherDose === "sf" ? 1 : 0;
   const motherCopies = motherDose === "df" ? 2 : motherDose === "sf" ? 1 : 0;
   
-  // Cada pai contribui 0 ou 1 cópia
-  // Pai com 0 cópias: sempre dá 0
-  // Pai com 1 cópia (sf): 50% dá 0, 50% dá 1
-  // Pai com 2 cópias (df): sempre dá 1
-  const fatherGives = fatherCopies === 0 ? [[0, 1.0]] :
-                      fatherCopies === 1 ? [[0, 0.5], [1, 0.5]] :
-                      [[1, 1.0]];
-  const motherGives = motherCopies === 0 ? [[0, 1.0]] :
-                      motherCopies === 1 ? [[0, 0.5], [1, 0.5]] :
-                      [[1, 1.0]];
+  const fatherGives: [number, number][] = fatherCopies === 0 ? [[0, 1.0]] :
+                    fatherCopies === 1 ? [[0, 0.5], [1, 0.5]] :
+                    [[1, 1.0]];
+  const motherGives: [number, number][] = motherCopies === 0 ? [[0, 1.0]] :
+                    motherCopies === 1 ? [[0, 0.5], [1, 0.5]] :
+                    [[1, 1.0]];
   
   const grouped = new Map<number, number>();
   for (const [fg, fp] of fatherGives) {
@@ -116,7 +207,7 @@ function crossAutosomalDominant(
 }
 
 /**
- * Ligada ao Sexo (Recessiva):
+ * Ligada ao Sexo:
  * Macho ZZ: [Z1, Z2]
  * Fêmea ZW: [Z, null] (W não carrega o gene)
  * 
@@ -124,51 +215,45 @@ function crossAutosomalDominant(
  * Filhotes fêmeas recebem 1 Z do pai + W da mãe (só o Z do pai importa)
  */
 function crossSexLinked(
-  fatherAlleles: [string, string],  // ZZ
-  motherAllele: string              // Z (o único que importa, W não carrega)
+  fatherAlleles: [string, string],
+  motherAllele: string
 ): { males: AllelePair[]; females: { allele: string; probability: number }[] } {
-  // Machos: Z do pai (50% cada) + Z da mãe (sempre o mesmo)
-  const maleResults: AllelePair[] = [];
+  // Machos: Z do pai (50% cada) + Z da mãe
   const maleCombos = [
     { allele1: fatherAlleles[0], allele2: motherAllele, probability: 0.5 },
     { allele1: fatherAlleles[1], allele2: motherAllele, probability: 0.5 },
   ];
   
-  // Agrupar machos iguais
   const maleGrouped = new Map<string, number>();
   for (const combo of maleCombos) {
     const key = [combo.allele1, combo.allele2].sort().join("|");
     maleGrouped.set(key, (maleGrouped.get(key) || 0) + combo.probability);
   }
+  const males: AllelePair[] = [];
   for (const [key, prob] of Array.from(maleGrouped)) {
     const [allele1, allele2] = key.split("|");
-    maleResults.push({ allele1, allele2, probability: prob });
+    males.push({ allele1, allele2, probability: prob });
   }
   
-  // Fêmeas: Z do pai (50% cada) + W (não carrega = hemizigota)
-  const femaleResults = [
-    { allele: fatherAlleles[0], probability: 0.5 },
-    { allele: fatherAlleles[1], probability: 0.5 },
-  ];
-  
-  // Agrupar fêmeas iguais
+  // Fêmeas: Z do pai (50% cada) + W (hemizigota)
   const femaleGrouped = new Map<string, number>();
-  for (const f of femaleResults) {
-    femaleGrouped.set(f.allele, (femaleGrouped.get(f.allele) || 0) + f.probability);
-  }
+  femaleGrouped.set(fatherAlleles[0], (femaleGrouped.get(fatherAlleles[0]) || 0) + 0.5);
+  femaleGrouped.set(fatherAlleles[1], (femaleGrouped.get(fatherAlleles[1]) || 0) + 0.5);
+  
   const females = Array.from(femaleGrouped.entries()).map(([allele, probability]) => ({ allele, probability }));
   
-  return { males: maleResults, females };
+  return { males, females };
 }
 
 // ============================================================
-// CONVERSÃO DE DADOS DO BANCO PARA GENÓTIPO INTERNO
+// CONVERSÃO DE DADOS DO FORMULÁRIO PARA GENÓTIPO INTERNO
 // ============================================================
 
 interface InternalGenotype {
   sex: "male" | "female";
-  // Autossômicas recessivas
-  blueSeries: [string, string];
+  // Locus Parblue (série alélica: green > aqua > turquoise > blue)
+  parblue: [string, string];
+  // Autossômicas recessivas simples
   cleartail: [string, string];
   dilute: [string, string];
   nsino: [string, string];
@@ -181,89 +266,150 @@ interface InternalGenotype {
   grey: string;
   domPied: string;
   // Ligadas ao sexo
-  slino: [string, string | null];
+  inoLocus: [string, string | null]; // Série alélica: normal > pallid > ino
   opaline: [string, string | null];
   cinnamon: [string, string | null];
 }
 
 /**
- * Converte dados do banco (visual[] + splits[]) para genótipo interno.
+ * Converte dados do formulário (visual[] + splits[]) para genótipo interno.
+ * 
+ * REGRA CRUCIAL para Parblue:
+ * - Se visual contém "blue" → ave é azul visual → parblue = [blue, blue]
+ * - Se visual contém "turquoise" → pode ser tq/tq ou tq/bl
+ *   - Se splits contém "blue" → parblue = [turquoise, blue]
+ *   - Senão → parblue = [turquoise, turquoise]
+ * - Se visual contém "aqua" → pode ser aq/aq, aq/tq, ou aq/bl
+ *   - Se splits contém "turquoise" → parblue = [aqua, turquoise]
+ *   - Se splits contém "blue" → parblue = [aqua, blue]
+ *   - Senão → parblue = [aqua, aqua]
+ * - Se visual contém "green" (ou nenhum dos acima) → pode ser +/+, +/bl, +/tq, +/aq
+ *   - Verificar splits para o segundo alelo
+ * 
+ * REGRA CRUCIAL para Ino (sex-linked):
+ * - Ino e Pallid são ALELOS DO MESMO LOCUS
+ * - Se visual contém "slino" → macho: [slino, slino], fêmea: [slino, null]
+ * - Se visual contém "pallid" → macho: pode ser pallid/pallid ou pallid/ino
+ * - Se splits contém "slino" → macho: [normal, slino] ou [pallid, slino]
  */
 export function dataToGenotype(data: BirdGeneticsData, sex: "macho" | "femea"): InternalGenotype {
   const isMale = sex === "macho";
   const visual = data.visual || [];
   const splits = data.splits || [];
   
-  // Helper: para um locus recessivo, determinar os 2 alelos
-  function getRecessiveAlleles(visualId: string, locusAlleleIds: string[]): [string, string] {
-    const wildType = "normal";
-    const hasVisual = visual.some(v => locusAlleleIds.includes(v));
-    const hasSplit = splits.some(s => locusAlleleIds.includes(s));
-    
-    if (hasVisual) {
-      const mutant = visual.find(v => locusAlleleIds.includes(v))!;
-      return [mutant, mutant]; // Homozigoto (visual)
+  // --- PARBLUE LOCUS (série alélica) ---
+  let parblue: [string, string];
+  const parblueAlleles = ["aqua", "turquoise", "blue"];
+  const visualParblue = visual.find(v => parblueAlleles.includes(v));
+  const splitParblue = splits.find(s => parblueAlleles.includes(s));
+  
+  if (visualParblue) {
+    // Ave mostra uma mutação parblue visual
+    if (splitParblue) {
+      // Tem split indicado — heterozigota
+      parblue = [visualParblue, splitParblue];
+    } else {
+      // Sem split — assume homozigota
+      parblue = [visualParblue, visualParblue];
     }
-    if (hasSplit) {
-      const splitAllele = splits.find(s => locusAlleleIds.includes(s))!;
-      return [wildType, splitAllele]; // Heterozigoto (split)
+  } else {
+    // Ave é verde (selvagem) — verificar splits
+    if (splitParblue) {
+      parblue = ["green", splitParblue];
+    } else {
+      parblue = ["green", "green"];
     }
-    return [wildType, wildType]; // Normal
   }
   
-  // Helper: para locus dominante
+  // --- INO LOCUS (sex-linked, série alélica: normal > pallid > ino) ---
+  let inoLocus: [string, string | null];
+  const inoAlleles = ["slino", "pallid", "platinum"];
+  const visualIno = visual.find(v => inoAlleles.includes(v));
+  const splitIno = splits.find(s => inoAlleles.includes(s));
+  
+  if (isMale) {
+    if (visualIno) {
+      if (splitIno) {
+        // Ex: pallid visual split ino → [pallid, slino]
+        inoLocus = [visualIno, splitIno];
+      } else {
+        // Homozigoto visual
+        inoLocus = [visualIno, visualIno];
+      }
+    } else {
+      if (splitIno) {
+        inoLocus = ["normal", splitIno];
+      } else {
+        inoLocus = ["normal", "normal"];
+      }
+    }
+  } else {
+    // Fêmea hemizigota
+    if (visualIno) {
+      inoLocus = [visualIno, null];
+    } else {
+      inoLocus = ["normal", null];
+    }
+  }
+  
+  // --- OPALINE (sex-linked simples) ---
+  let opaline: [string, string | null];
+  if (isMale) {
+    if (visual.includes("opaline")) {
+      opaline = ["opaline", "opaline"];
+    } else if (splits.includes("opaline")) {
+      opaline = ["normal", "opaline"];
+    } else {
+      opaline = ["normal", "normal"];
+    }
+  } else {
+    opaline = visual.includes("opaline") ? ["opaline", null] : ["normal", null];
+  }
+  
+  // --- CINNAMON (sex-linked simples) ---
+  let cinnamon: [string, string | null];
+  if (isMale) {
+    if (visual.includes("cinnamon")) {
+      cinnamon = ["cinnamon", "cinnamon"];
+    } else if (splits.includes("cinnamon")) {
+      cinnamon = ["normal", "cinnamon"];
+    } else {
+      cinnamon = ["normal", "normal"];
+    }
+  } else {
+    cinnamon = visual.includes("cinnamon") ? ["cinnamon", null] : ["normal", null];
+  }
+  
+  // --- RECESSIVAS SIMPLES ---
+  function getSimpleRecessive(alleleId: string): [string, string] {
+    if (visual.includes(alleleId)) return [alleleId, alleleId];
+    if (splits.includes(alleleId)) return ["normal", alleleId];
+    return ["normal", "normal"];
+  }
+  
+  // --- DOMINANTES ---
   function getDominantDose(sfId: string, dfId: string): string {
     if (visual.includes(dfId)) return "df";
     if (visual.includes(sfId)) return "sf";
     return "none";
   }
   
-  // Helper: para locus ligado ao sexo
-  function getSexLinkedAlleles(alleleIds: string[]): [string, string | null] {
-    const wildType = "normal";
-    const hasVisual = visual.some(v => alleleIds.includes(v));
-    const hasSplit = splits.some(s => alleleIds.includes(s));
-    
-    if (isMale) {
-      // Macho ZZ
-      if (hasVisual) {
-        const mutant = visual.find(v => alleleIds.includes(v))!;
-        return [mutant, mutant]; // Homozigoto visual
-      }
-      if (hasSplit) {
-        const splitAllele = splits.find(s => alleleIds.includes(s))!;
-        return [wildType, splitAllele]; // Split (heterozigoto)
-      }
-      return [wildType, wildType]; // Normal
-    } else {
-      // Fêmea ZW — não pode ser split, só visual ou normal
-      if (hasVisual) {
-        const mutant = visual.find(v => alleleIds.includes(v))!;
-        return [mutant, null]; // Hemizigota visual
-      }
-      return [wildType, null]; // Normal
-    }
-  }
-  
   return {
     sex: isMale ? "male" : "female",
-    // Autossômicas recessivas
-    blueSeries: getRecessiveAlleles("blue_series", ["blue", "turquoise", "aqua"]),
-    cleartail: getRecessiveAlleles("cleartail", ["cleartail"]),
-    dilute: getRecessiveAlleles("dilute", ["dilute"]),
-    nsino: getRecessiveAlleles("nsino", ["nsino", "bronze_fallow", "pastel"]),
-    recPied: getRecessiveAlleles("rec_pied", ["rec_pied"]),
-    clearheadFallow: getRecessiveAlleles("clearhead_fallow", ["clearhead_fallow"]),
-    dunFallow: getRecessiveAlleles("dun_fallow", ["dun_fallow"]),
-    // Dominantes
+    parblue,
+    cleartail: getSimpleRecessive("cleartail"),
+    dilute: getSimpleRecessive("dilute"),
+    nsino: getSimpleRecessive("nsino"),
+    recPied: getSimpleRecessive("rec_pied"),
+    clearheadFallow: getSimpleRecessive("clearhead_fallow"),
+    dunFallow: getSimpleRecessive("dun_fallow"),
     darkFactor: getDominantDose("dark_sf", "dark_df"),
     violet: getDominantDose("violet_sf", "violet_df"),
     grey: getDominantDose("grey_sf", "grey_df"),
     domPied: getDominantDose("dom_pied_sf", "dom_pied_df"),
-    // Ligadas ao sexo
-    slino: getSexLinkedAlleles(["slino", "platinum", "pallid"]),
-    opaline: getSexLinkedAlleles(["opaline"]),
-    cinnamon: getSexLinkedAlleles(["cinnamon"]),
+    inoLocus,
+    opaline,
+    cinnamon,
   };
 }
 
@@ -280,7 +426,6 @@ interface OffspringGenotype {
 
 /**
  * Calcula a previsão de filhotes para um casal.
- * Retorna todas as combinações possíveis com probabilidades.
  */
 export function calculateBreeding(
   fatherData: BirdGeneticsData,
@@ -289,17 +434,16 @@ export function calculateBreeding(
   const father = dataToGenotype(fatherData, "macho");
   const mother = dataToGenotype(motherData, "femea");
   
-  // Para cada locus, calcular as possibilidades
-  // Depois combinar tudo (produto cartesiano)
+  // --- Locus Parblue (série alélica, cruzamento normal 2x2) ---
+  const parblueResults = crossTwoAlleles(father.parblue, mother.parblue);
   
-  // --- Autossômicas Recessivas ---
-  const blueResults = crossAutosomalRecessive(father.blueSeries, mother.blueSeries);
-  const cleartailResults = crossAutosomalRecessive(father.cleartail, mother.cleartail);
-  const diluteResults = crossAutosomalRecessive(father.dilute, mother.dilute);
-  const nsinoResults = crossAutosomalRecessive(father.nsino, mother.nsino);
-  const recPiedResults = crossAutosomalRecessive(father.recPied, mother.recPied);
-  const clearheadResults = crossAutosomalRecessive(father.clearheadFallow, mother.clearheadFallow);
-  const dunResults = crossAutosomalRecessive(father.dunFallow, mother.dunFallow);
+  // --- Autossômicas Recessivas Simples ---
+  const cleartailResults = crossTwoAlleles(father.cleartail, mother.cleartail);
+  const diluteResults = crossTwoAlleles(father.dilute, mother.dilute);
+  const nsinoResults = crossTwoAlleles(father.nsino, mother.nsino);
+  const recPiedResults = crossTwoAlleles(father.recPied, mother.recPied);
+  const clearheadResults = crossTwoAlleles(father.clearheadFallow, mother.clearheadFallow);
+  const dunResults = crossTwoAlleles(father.dunFallow, mother.dunFallow);
   
   // --- Autossômicas Dominantes ---
   const darkResults = crossAutosomalDominant(father.darkFactor, mother.darkFactor);
@@ -308,9 +452,9 @@ export function calculateBreeding(
   const domPiedResults = crossAutosomalDominant(father.domPied, mother.domPied);
   
   // --- Ligadas ao Sexo ---
-  const slinoSL = crossSexLinked(
-    father.slino as [string, string],
-    mother.slino[0]
+  const inoSL = crossSexLinked(
+    father.inoLocus as [string, string],
+    mother.inoLocus[0]
   );
   const opalineSL = crossSexLinked(
     father.opaline as [string, string],
@@ -321,37 +465,10 @@ export function calculateBreeding(
     mother.cinnamon[0]
   );
   
-  // Combinar todos os loci para machos e fêmeas separadamente
   const allOffspring: OffspringGenotype[] = [];
   
-  // Helper para interpretar resultado de um locus recessivo
-  function interpretRecessive(pair: AllelePair, locusId: string): { visual: string | null; split: string | null } {
-    const { allele1, allele2 } = pair;
-    if (allele1 !== "normal" && allele1 === allele2) {
-      return { visual: allele1, split: null }; // Homozigoto mutante = visual
-    }
-    if (allele1 !== "normal" && allele2 === "normal") {
-      return { visual: null, split: allele1 }; // Heterozigoto = split
-    }
-    if (allele2 !== "normal" && allele1 === "normal") {
-      return { visual: null, split: allele2 }; // Heterozigoto = split
-    }
-    if (allele1 !== "normal" && allele2 !== "normal" && allele1 !== allele2) {
-      // Compound heterozygote (rare) — show first as visual
-      return { visual: allele1, split: allele2 };
-    }
-    return { visual: null, split: null }; // Normal
-  }
-  
-  // Helper para interpretar dominante
-  function interpretDominant(dose: string, sfId: string, dfId: string): string | null {
-    if (dose === "df") return dfId;
-    if (dose === "sf") return sfId;
-    return null;
-  }
-  
-  // Gerar combinações para MACHOS (50% dos filhotes)
-  for (const blue of blueResults) {
+  // --- Gerar combinações para MACHOS (50% dos filhotes) ---
+  for (const pb of parblueResults) {
     for (const ct of cleartailResults) {
       for (const dil of diluteResults) {
         for (const nsi of nsinoResults) {
@@ -362,54 +479,31 @@ export function calculateBreeding(
                   for (const vl of violetResults) {
                     for (const gr of greyResults) {
                       for (const dp of domPiedResults) {
-                        for (const sl of slinoSL.males) {
+                        for (const ino of inoSL.males) {
                           for (const op of opalineSL.males) {
                             for (const cn of cinnamonSL.males) {
-                              const prob = blue.probability * ct.probability * dil.probability *
+                              const prob = pb.probability * ct.probability * dil.probability *
                                 nsi.probability * rp.probability * ch.probability * dn.probability *
                                 dk.probability * vl.probability * gr.probability * dp.probability *
-                                sl.probability * op.probability * cn.probability * 0.5; // 50% machos
+                                ino.probability * op.probability * cn.probability * 0.5;
                               
-                              if (prob < 0.0001) continue; // Skip negligible
+                              if (prob < 0.0001) continue;
                               
                               const visual: string[] = [];
                               const splits: string[] = [];
                               
-                              // Blue series
-                              const blueInt = interpretRecessive(blue, "blue_series");
-                              if (blueInt.visual) visual.push(blueInt.visual);
-                              if (blueInt.split) splits.push(blueInt.split);
-                              if (!blueInt.visual) visual.push("green"); // Default verde
+                              // PARBLUE — usar hierarquia de dominância
+                              const pbResult = getParblueVisual(pb.allele1, pb.allele2);
+                              visual.push(pbResult.visual);
+                              if (pbResult.split) splits.push(pbResult.split);
                               
-                              // Cleartail
-                              const ctInt = interpretRecessive(ct, "cleartail");
-                              if (ctInt.visual) visual.push("cleartail");
-                              if (ctInt.split) splits.push("cleartail");
-                              
-                              // Dilute
-                              const dilInt = interpretRecessive(dil, "dilute");
-                              if (dilInt.visual) visual.push("dilute");
-                              if (dilInt.split) splits.push("dilute");
-                              
-                              // NSIno
-                              const nsiInt = interpretRecessive(nsi, "nsino");
-                              if (nsiInt.visual) visual.push(nsiInt.visual);
-                              if (nsiInt.split) splits.push(nsiInt.split);
-                              
-                              // Rec Pied
-                              const rpInt = interpretRecessive(rp, "rec_pied");
-                              if (rpInt.visual) visual.push("rec_pied");
-                              if (rpInt.split) splits.push("rec_pied");
-                              
-                              // Clearhead Fallow
-                              const chInt = interpretRecessive(ch, "clearhead_fallow");
-                              if (chInt.visual) visual.push("clearhead_fallow");
-                              if (chInt.split) splits.push("clearhead_fallow");
-                              
-                              // Dun Fallow
-                              const dnInt = interpretRecessive(dn, "dun_fallow");
-                              if (dnInt.visual) visual.push("dun_fallow");
-                              if (dnInt.split) splits.push("dun_fallow");
+                              // Recessivas simples
+                              interpretSimpleRecessive(ct, "cleartail", visual, splits);
+                              interpretSimpleRecessive(dil, "dilute", visual, splits);
+                              interpretSimpleRecessive(nsi, "nsino", visual, splits);
+                              interpretSimpleRecessive(rp, "rec_pied", visual, splits);
+                              interpretSimpleRecessive(ch, "clearhead_fallow", visual, splits);
+                              interpretSimpleRecessive(dn, "dun_fallow", visual, splits);
                               
                               // Dominantes
                               const dkV = interpretDominant(dk.dose, "dark_sf", "dark_df");
@@ -421,39 +515,23 @@ export function calculateBreeding(
                               const dpV = interpretDominant(dp.dose, "dom_pied_sf", "dom_pied_df");
                               if (dpV) visual.push(dpV);
                               
-                              // Sex-linked (machos ZZ)
-                              // SLino
-                              if (sl.allele1 !== "normal" && sl.allele1 === sl.allele2) {
-                                visual.push(sl.allele1);
-                              } else if (sl.allele1 !== "normal" && sl.allele2 === "normal") {
-                                splits.push(sl.allele1);
-                              } else if (sl.allele2 !== "normal" && sl.allele1 === "normal") {
-                                splits.push(sl.allele2);
-                              }
+                              // INO LOCUS (sex-linked, série alélica) — machos ZZ
+                              const inoResult = getInoVisual(ino.allele1, ino.allele2);
+                              if (inoResult.visual) visual.push(inoResult.visual);
+                              if (inoResult.split) splits.push(inoResult.split);
                               
-                              // Opaline
+                              // Opaline (sex-linked simples) — machos ZZ
                               if (op.allele1 !== "normal" && op.allele1 === op.allele2) {
                                 visual.push("opaline");
                               } else if (op.allele1 !== "normal" || op.allele2 !== "normal") {
-                                if (!(op.allele1 !== "normal" && op.allele1 === op.allele2)) {
-                                  splits.push("opaline");
-                                }
+                                splits.push("opaline");
                               }
                               
-                              // Cinnamon
+                              // Cinnamon (sex-linked simples) — machos ZZ
                               if (cn.allele1 !== "normal" && cn.allele1 === cn.allele2) {
                                 visual.push("cinnamon");
                               } else if (cn.allele1 !== "normal" || cn.allele2 !== "normal") {
-                                if (!(cn.allele1 !== "normal" && cn.allele1 === cn.allele2)) {
-                                  splits.push("cinnamon");
-                                }
-                              }
-                              
-                              // Remove "green" if there's a blue-series visual
-                              const blueSeriesVisuals = ["blue", "turquoise", "aqua"];
-                              if (visual.some(v => blueSeriesVisuals.includes(v))) {
-                                const greenIdx = visual.indexOf("green");
-                                if (greenIdx >= 0) visual.splice(greenIdx, 1);
+                                splits.push("cinnamon");
                               }
                               
                               allOffspring.push({ probability: prob, sex: "macho", visual, splits });
@@ -472,8 +550,8 @@ export function calculateBreeding(
     }
   }
   
-  // Gerar combinações para FÊMEAS (50% dos filhotes)
-  for (const blue of blueResults) {
+  // --- Gerar combinações para FÊMEAS (50% dos filhotes) ---
+  for (const pb of parblueResults) {
     for (const ct of cleartailResults) {
       for (const dil of diluteResults) {
         for (const nsi of nsinoResults) {
@@ -484,54 +562,31 @@ export function calculateBreeding(
                   for (const vl of violetResults) {
                     for (const gr of greyResults) {
                       for (const dp of domPiedResults) {
-                        for (const sl of slinoSL.females) {
+                        for (const ino of inoSL.females) {
                           for (const op of opalineSL.females) {
                             for (const cn of cinnamonSL.females) {
-                              const prob = blue.probability * ct.probability * dil.probability *
+                              const prob = pb.probability * ct.probability * dil.probability *
                                 nsi.probability * rp.probability * ch.probability * dn.probability *
                                 dk.probability * vl.probability * gr.probability * dp.probability *
-                                sl.probability * op.probability * cn.probability * 0.5; // 50% fêmeas
+                                ino.probability * op.probability * cn.probability * 0.5;
                               
                               if (prob < 0.0001) continue;
                               
                               const visual: string[] = [];
                               const splits: string[] = [];
                               
-                              // Blue series
-                              const blueInt = interpretRecessive(blue, "blue_series");
-                              if (blueInt.visual) visual.push(blueInt.visual);
-                              if (blueInt.split) splits.push(blueInt.split);
-                              if (!blueInt.visual) visual.push("green");
+                              // PARBLUE — usar hierarquia de dominância
+                              const pbResult = getParblueVisual(pb.allele1, pb.allele2);
+                              visual.push(pbResult.visual);
+                              if (pbResult.split) splits.push(pbResult.split);
                               
-                              // Cleartail
-                              const ctInt = interpretRecessive(ct, "cleartail");
-                              if (ctInt.visual) visual.push("cleartail");
-                              if (ctInt.split) splits.push("cleartail");
-                              
-                              // Dilute
-                              const dilInt = interpretRecessive(dil, "dilute");
-                              if (dilInt.visual) visual.push("dilute");
-                              if (dilInt.split) splits.push("dilute");
-                              
-                              // NSIno
-                              const nsiInt = interpretRecessive(nsi, "nsino");
-                              if (nsiInt.visual) visual.push(nsiInt.visual);
-                              if (nsiInt.split) splits.push(nsiInt.split);
-                              
-                              // Rec Pied
-                              const rpInt = interpretRecessive(rp, "rec_pied");
-                              if (rpInt.visual) visual.push("rec_pied");
-                              if (rpInt.split) splits.push("rec_pied");
-                              
-                              // Clearhead Fallow
-                              const chInt = interpretRecessive(ch, "clearhead_fallow");
-                              if (chInt.visual) visual.push("clearhead_fallow");
-                              if (chInt.split) splits.push("clearhead_fallow");
-                              
-                              // Dun Fallow
-                              const dnInt = interpretRecessive(dn, "dun_fallow");
-                              if (dnInt.visual) visual.push("dun_fallow");
-                              if (dnInt.split) splits.push("dun_fallow");
+                              // Recessivas simples
+                              interpretSimpleRecessive(ct, "cleartail", visual, splits);
+                              interpretSimpleRecessive(dil, "dilute", visual, splits);
+                              interpretSimpleRecessive(nsi, "nsino", visual, splits);
+                              interpretSimpleRecessive(rp, "rec_pied", visual, splits);
+                              interpretSimpleRecessive(ch, "clearhead_fallow", visual, splits);
+                              interpretSimpleRecessive(dn, "dun_fallow", visual, splits);
                               
                               // Dominantes
                               const dkV = interpretDominant(dk.dose, "dark_sf", "dark_df");
@@ -543,23 +598,15 @@ export function calculateBreeding(
                               const dpV = interpretDominant(dp.dose, "dom_pied_sf", "dom_pied_df");
                               if (dpV) visual.push(dpV);
                               
-                              // Sex-linked (fêmeas ZW — hemizigota, sem split possível)
-                              if (sl.allele !== "normal") {
-                                visual.push(sl.allele);
-                              }
-                              if (op.allele !== "normal") {
-                                visual.push("opaline");
-                              }
-                              if (cn.allele !== "normal") {
-                                visual.push("cinnamon");
-                              }
+                              // INO LOCUS (sex-linked, série alélica) — fêmeas hemizigotas
+                              const inoFemale = getInoVisual(ino.allele, null);
+                              if (inoFemale.visual) visual.push(inoFemale.visual);
                               
-                              // Remove "green" if there's a blue-series visual
-                              const blueSeriesVisuals = ["blue", "turquoise", "aqua"];
-                              if (visual.some(v => blueSeriesVisuals.includes(v))) {
-                                const greenIdx = visual.indexOf("green");
-                                if (greenIdx >= 0) visual.splice(greenIdx, 1);
-                              }
+                              // Opaline — fêmeas hemizigotas
+                              if (op.allele !== "normal") visual.push("opaline");
+                              
+                              // Cinnamon — fêmeas hemizigotas
+                              if (cn.allele !== "normal") visual.push("cinnamon");
                               
                               allOffspring.push({ probability: prob, sex: "femea", visual, splits });
                             }
@@ -577,7 +624,7 @@ export function calculateBreeding(
     }
   }
   
-  // Agrupar resultados iguais (mesmo fenótipo + genótipo + sexo)
+  // Agrupar resultados iguais
   const grouped = new Map<string, OffspringGenotype>();
   for (const o of allOffspring) {
     const key = `${o.sex}|${o.visual.sort().join(",")}|${o.splits.sort().join(",")}`;
@@ -594,12 +641,12 @@ export function calculateBreeding(
     .map(o => ({
       phenotype: buildPhenotypeName(o.visual),
       genotype: buildGenotypeName(o.visual, o.splits),
-      probability: Math.round(o.probability * 10000) / 10000, // 4 casas
+      probability: Math.round(o.probability * 10000) / 10000,
       sex: o.sex,
       visual: o.visual,
       splits: o.splits,
     }))
-    .filter(o => o.probability >= 0.001) // Mínimo 0.1%
+    .filter(o => o.probability >= 0.001)
     .sort((a, b) => b.probability - a.probability);
   
   return {
@@ -611,7 +658,29 @@ export function calculateBreeding(
 }
 
 // ============================================================
-// HELPERS DE FORMATAÇÃO
+// HELPERS
+// ============================================================
+
+function interpretSimpleRecessive(pair: AllelePair, alleleId: string, visual: string[], splits: string[]) {
+  const { allele1, allele2 } = pair;
+  if (allele1 !== "normal" && allele1 === allele2) {
+    visual.push(alleleId); // Homozigoto = visual
+  } else if (allele1 !== "normal" && allele2 === "normal") {
+    splits.push(alleleId); // Heterozigoto = split
+  } else if (allele2 !== "normal" && allele1 === "normal") {
+    splits.push(alleleId);
+  }
+  // Se ambos são "normal", nada a adicionar
+}
+
+function interpretDominant(dose: string, sfId: string, dfId: string): string | null {
+  if (dose === "df") return dfId;
+  if (dose === "sf") return sfId;
+  return null;
+}
+
+// ============================================================
+// FORMATAÇÃO DE NOMES
 // ============================================================
 
 const ALL_MUTATIONS = [
@@ -633,12 +702,11 @@ function buildPhenotypeName(visual: string[]): string {
   if (visual.length === 0) return "Normal (Verde)";
   
   // Check for composite names
-  const sortedKey = visual.sort().join("+");
+  const sortedKey = [...visual].sort().join("+");
   if (COMPOSITE_NAMES[sortedKey]) {
     return COMPOSITE_NAMES[sortedKey];
   }
   
-  // Build from individual labels
   return visual.map(getMutationLabel).join(" ");
 }
 
@@ -650,17 +718,12 @@ function buildGenotypeName(visual: string[], splits: string[]): string {
 }
 
 // ============================================================
-// FUNÇÃO SIMPLIFICADA PARA CRUZAMENTOS COMUNS
+// FUNÇÃO SIMPLIFICADA (alias)
 // ============================================================
 
-/**
- * Calcula previsão simplificada para casos onde apenas poucos loci estão envolvidos.
- * Otimizado para não iterar sobre loci que são normais em ambos os pais.
- */
 export function calculateBreedingSimplified(
   fatherData: BirdGeneticsData,
   motherData: BirdGeneticsData
 ): BreedingPrediction {
-  // Usar o cálculo completo — a otimização de "skip negligible" já cuida da performance
   return calculateBreeding(fatherData, motherData);
 }

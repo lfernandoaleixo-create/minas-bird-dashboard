@@ -440,3 +440,5 @@
 - [x] Genética: implementar engine de cálculo genético (Punnett square por locus)
 - [x] Genética: criar UI de parametrização na ficha da ave (seletores de mutação + splits)
 - [x] Genética: integrar calculadora no módulo Acasalamentos (previsão automática ao selecionar casal)
+- [x] Genética: corrigir engine — Turquesa é DOMINANTE sobre Azul (série alélica no mesmo locus), Ino e Pallid são alelos do mesmo locus sex-linked
+- [x] Genética: mover parametrização para dentro da aba Acasalamentos (card opcional ao selecionar macho/fêmea), remover do Plantel
