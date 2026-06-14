@@ -303,25 +303,68 @@ export const AVAILABLE_SPLITS = {
  * Usado para exibir o fenótipo de forma amigável.
  */
 export const COMPOSITE_NAMES: Record<string, string> = {
+  // Keys MUST be alphabetically sorted to match engine's [...visual].sort().join("+")
   "blue+dark_sf": "Cobalto",
   "blue+dark_df": "Malva",
-  "green+dark_sf": "Verde Escuro",
-  "green+dark_df": "Oliva",
+  "dark_sf+green": "Verde Escuro",
+  "dark_df+green": "Oliva",
   "blue+violet_sf": "Violeta",
   "blue+dark_sf+violet_sf": "Violeta Cobalto",
   "blue+slino": "Albino",
   "green+slino": "Lutino",
-  "turquoise+slino": "Cremino",
+  "slino+turquoise": "Cremino",
   "blue+cinnamon": "Azul Canela",
-  "green+cinnamon": "Canela",
+  "cinnamon+green": "Canela",
   "blue+opaline": "Opalino Azul",
   "green+opaline": "Opalino Verde",
   "blue+cleartail": "Cleartail Azul",
-  "green+cleartail": "Cleartail Verde",
+  "cleartail+green": "Cleartail Verde",
   "blue+grey_sf": "Cinza",
   "green+grey_sf": "Verde Cinza",
   "blue+pallid": "Lacewing Azul",
   "green+pallid": "Lacewing Verde",
+  "green+pallidino": "Pallid-ino Verde",
+  "blue+pallidino": "Pallid-ino Azul",
+  "pallidino+turquoise": "Pallid-ino Turquesa",
+  // Turquesa combinações
+  "cinnamon+turquoise": "Canela Turquesa",
+  "opaline+turquoise": "Opalino Turquesa",
+  "cleartail+turquoise": "Cleartail Turquesa",
+  "grey_sf+turquoise": "Turquesa Cinza",
+  "pallid+turquoise": "Lacewing Turquesa",
+  // Aqua combinações
+  "aqua+slino": "Cremino Aqua",
+  "aqua+cinnamon": "Canela Aqua",
+  "aqua+opaline": "Opalino Aqua",
+  "aqua+cleartail": "Cleartail Aqua",
+  "aqua+grey_sf": "Aqua Cinza",
+  "aqua+pallid": "Lacewing Aqua",
+  // Arlequim combinações
+  "green+rec_pied": "Arlequim Recessivo Verde",
+  "blue+rec_pied": "Arlequim Recessivo Azul",
+  "rec_pied+turquoise": "Arlequim Recessivo Turquesa",
+  "aqua+rec_pied": "Arlequim Recessivo Aqua",
+  "dom_pied_sf+green": "Arlequim Dominante Verde",
+  "blue+dom_pied_sf": "Arlequim Dominante Azul",
+  "dom_pied_sf+turquoise": "Arlequim Dominante Turquesa",
+  // Diluido combinações
+  "dilute+green": "Diluído Verde",
+  "blue+dilute": "Diluído Azul",
+  "dilute+turquoise": "Diluído Turquesa",
+  // NSL Ino combinações
+  "green+nsino": "NSL Ino Verde",
+  "blue+nsino": "NSL Ino Azul",
+  "nsino+turquoise": "NSL Ino Turquesa",
+  // Combinações múltiplas comuns
+  "blue+cinnamon+opaline": "Opalino Canela Azul",
+  "cinnamon+green+opaline": "Opalino Canela Verde",
+  "cinnamon+opaline+turquoise": "Opalino Canela Turquesa",
+  "blue+opaline+slino": "Albino Opalino",
+  "green+opaline+slino": "Lutino Opalino",
+  "opaline+slino+turquoise": "Cremino Opalino",
+  "blue+cinnamon+slino": "Albino Canela",
+  "cinnamon+green+slino": "Lutino Canela",
+  "cinnamon+slino+turquoise": "Cremino Canela",
 };
 
 // ============================================================

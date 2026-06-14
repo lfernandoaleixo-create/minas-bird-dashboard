@@ -115,6 +115,15 @@ function getInoVisual(allele1: string, allele2: string | null): { visual: string
     return { visual: null, split: null };
   }
   
+  // Caso especial: Pallid/Ino = Pallid-ino (co-dominância intermediária)
+  // Segundo psittacula-world: "Pallid behaves co-dominant towards Ino"
+  // Pallid-ino é um fenótipo INTERMEDIÁRIO (mais claro que Pallid, com marcas reduzidas)
+  const sorted = [allele1, allele2].sort();
+  if ((sorted[0] === "pallid" && sorted[1] === "slino") ||
+      (sorted[0] === "platinum" && sorted[1] === "slino")) {
+    return { visual: "pallidino", split: null }; // Fenótipo intermediário
+  }
+  
   if (dom1 >= dom2) {
     if (allele1 === "normal") {
       return { visual: null, split: allele2 }; // Normal split X
@@ -122,7 +131,7 @@ function getInoVisual(allele1: string, allele2: string | null): { visual: string
     if (allele1 === allele2) {
       return { visual: allele1, split: null }; // Homozigoto visual
     }
-    return { visual: allele1, split: allele2 }; // Heterozigoto (pallid/ino = pallid visual split ino)
+    return { visual: allele1, split: allele2 }; // Heterozigoto
   } else {
     if (allele2 === "normal") {
       return { visual: null, split: allele1 };
@@ -510,7 +519,7 @@ export function calculateBreeding(
                               if (dkV) visual.push(dkV);
                               const vlV = interpretDominant(vl.dose, "violet_sf", "violet_df");
                               if (vlV) visual.push(vlV);
-                              const grV = interpretDominant(gr.dose, "grey_sf", "grey_df");
+                              const grV = interpretGrey(gr.dose);
                               if (grV) visual.push(grV);
                               const dpV = interpretDominant(dp.dose, "dom_pied_sf", "dom_pied_df");
                               if (dpV) visual.push(dpV);
@@ -593,7 +602,7 @@ export function calculateBreeding(
                               if (dkV) visual.push(dkV);
                               const vlV = interpretDominant(vl.dose, "violet_sf", "violet_df");
                               if (vlV) visual.push(vlV);
-                              const grV = interpretDominant(gr.dose, "grey_sf", "grey_df");
+                              const grV = interpretGrey(gr.dose);
                               if (grV) visual.push(grV);
                               const dpV = interpretDominant(dp.dose, "dom_pied_sf", "dom_pied_df");
                               if (dpV) visual.push(dpV);
@@ -674,8 +683,19 @@ function interpretSimpleRecessive(pair: AllelePair, alleleId: string, visual: st
 }
 
 function interpretDominant(dose: string, sfId: string, dfId: string): string | null {
+  // Para Grey: dominância COMPLETA (SF e DF produzem mesmo visual)
+  // Para Dark/Violet/DomPied: dominância INCOMPLETA (SF ≠ DF)
   if (dose === "df") return dfId;
   if (dose === "sf") return sfId;
+  return null;
+}
+
+/**
+ * Grey é dominância COMPLETA: SF e DF produzem o mesmo fenótipo visual.
+ * Usamos grey_sf para ambos na saída visual (simplificação).
+ */
+function interpretGrey(dose: string): string | null {
+  if (dose === "df" || dose === "sf") return "grey_sf"; // Mesmo visual
   return null;
 }
 
@@ -701,20 +721,35 @@ function getMutationLabel(id: string): string {
 function buildPhenotypeName(visual: string[]): string {
   if (visual.length === 0) return "Normal (Verde)";
   
-  // Check for composite names
+  // Check for composite names (exact match)
   const sortedKey = [...visual].sort().join("+");
   if (COMPOSITE_NAMES[sortedKey]) {
     return COMPOSITE_NAMES[sortedKey];
   }
   
-  return visual.map(getMutationLabel).join(" ");
+  // For multi-mutation combos without a composite name:
+  // Remove 'green' from display if there are other mutations (green is implied as base)
+  const displayVisual = visual.length > 1 
+    ? visual.filter(v => v !== 'green')
+    : visual;
+  
+  // Try composite name without green
+  if (displayVisual.length !== visual.length) {
+    const noGreenKey = [...displayVisual].sort().join("+");
+    if (COMPOSITE_NAMES[noGreenKey]) {
+      return COMPOSITE_NAMES[noGreenKey];
+    }
+  }
+  
+  return displayVisual.map(getMutationLabel).join(" ");
 }
 
 function buildGenotypeName(visual: string[], splits: string[]): string {
-  const visualPart = visual.map(getMutationLabel).join(" ");
-  if (splits.length === 0) return visualPart || "Normal";
+  // Use the phenotype name for the visual part (handles composite names)
+  const visualPart = buildPhenotypeName(visual);
+  if (splits.length === 0) return visualPart;
   const splitsPart = splits.map(getMutationLabel).join(" / ");
-  return `${visualPart || "Normal"} / ${splitsPart}`;
+  return `${visualPart} / ${splitsPart}`;
 }
 
 // ============================================================

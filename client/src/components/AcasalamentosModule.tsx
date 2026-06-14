@@ -79,16 +79,38 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
   const bgColor = colorScheme === "blue" ? "bg-blue-50/50" : "bg-pink-50/50";
   const headerText = colorScheme === "blue" ? "text-blue-800" : "text-pink-800";
 
+  // Pares exclusivos: SF/DF do mesmo gene não podem coexistir
+  const EXCLUSIVE_PAIRS: Record<string, string> = {
+    "dark_sf": "dark_df", "dark_df": "dark_sf",
+    "violet_sf": "violet_df", "violet_df": "violet_sf",
+    "grey_sf": "grey_df", "grey_df": "grey_sf",
+    "dom_pied_sf": "dom_pied_df", "dom_pied_df": "dom_pied_sf",
+  };
+  // Ino/Pallid/Platinum são alelos do mesmo locus (exclusivos)
+  const INO_LOCUS_IDS = ["slino", "pallid", "platinum"];
+
   const toggleVisual = (id: string, group: "base" | "other") => {
-    const current = genetics.visual;
+    let current = [...genetics.visual];
     if (group === "base") {
       // Cor base é exclusiva
       const baseIds = VISUAL_MUTATIONS.base.map(b => b.id);
-      const filtered = current.filter(v => !baseIds.includes(v));
-      onChange({ ...genetics, visual: [...filtered, id] });
+      current = current.filter(v => !baseIds.includes(v));
+      onChange({ ...genetics, visual: [...current, id] });
     } else {
       const has = current.includes(id);
-      onChange({ ...genetics, visual: has ? current.filter(v => v !== id) : [...current, id] });
+      if (has) {
+        onChange({ ...genetics, visual: current.filter(v => v !== id) });
+      } else {
+        // Remover conflitantes
+        // 1. SF/DF exclusivos
+        const exclusive = EXCLUSIVE_PAIRS[id];
+        if (exclusive) current = current.filter(v => v !== exclusive);
+        // 2. Ino/Pallid/Platinum exclusivos (mesmo locus)
+        if (INO_LOCUS_IDS.includes(id)) {
+          current = current.filter(v => !INO_LOCUS_IDS.includes(v));
+        }
+        onChange({ ...genetics, visual: [...current, id] });
+      }
     }
   };
 
