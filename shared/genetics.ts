@@ -138,8 +138,8 @@ export const RINGNECK_LOCI: MutationLocus[] = [
     description: "Escurece a cor base. SF = médio (ex: Cobalto), DF = escuro (ex: Malva).",
     alleles: [
       { id: "none", name: "Sem Fator Escuro", nameEn: "No Dark Factor", isWildType: true },
-      { id: "sf", name: "Fator Escuro SF (Cobalto)", nameEn: "Dark Factor SF", isWildType: false },
-      { id: "df", name: "Fator Escuro DF (Malva)", nameEn: "Dark Factor DF", isWildType: false },
+      { id: "sf", name: "Cobalto", nameEn: "Dark Factor SF", isWildType: false },
+      { id: "df", name: "Malva", nameEn: "Dark Factor DF", isWildType: false },
     ],
   },
   {
@@ -235,8 +235,8 @@ export const VISUAL_MUTATIONS = {
   ],
   // Modificadores dominantes
   dominant: [
-    { id: "dark_sf", label: "Fator Escuro SF (Cobalto)" },
-    { id: "dark_df", label: "Fator Escuro DF (Malva)" },
+    { id: "dark_sf", label: "Cobalto" },
+    { id: "dark_df", label: "Malva" },
     { id: "violet_sf", label: "Violeta SF" },
     { id: "violet_df", label: "Violeta DF" },
     { id: "grey_sf", label: "Cinza SF" },
