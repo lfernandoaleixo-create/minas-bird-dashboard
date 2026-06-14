@@ -10,8 +10,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Heart, Plus, ChevronDown, ChevronRight, Edit2, Trash2, X,
-  Calendar, MapPin, FileText, AlertTriangle
+  Calendar, MapPin, FileText, AlertTriangle, FlaskConical
 } from "lucide-react";
+import { calculateBreeding, type BreedingPrediction } from "@shared/geneticsEngine";
+import { formatGenotype, type BirdGeneticsData } from "@shared/genetics";
 
 // Species in current flock
 const FLOCK_SPECIES = species.filter(s => s.inCurrentFlock);
@@ -286,6 +288,74 @@ export default function AcasalamentosModule() {
               </select>
             )}
           </div>
+
+          {/* Previsão Genética */}
+          {form.maleId && form.femaleId && (() => {
+            const male = activeBirds.find(b => b.id === form.maleId);
+            const female = activeBirds.find(b => b.id === form.femaleId);
+            const maleGenetics: BirdGeneticsData = (male as any)?.genetics || { visual: [], splits: [] };
+            const femaleGenetics: BirdGeneticsData = (female as any)?.genetics || { visual: [], splits: [] };
+            const hasGenetics = maleGenetics.visual.length > 0 || femaleGenetics.visual.length > 0;
+            
+            if (!hasGenetics) {
+              return (
+                <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FlaskConical size={16} className="text-amber-600" />
+                    <p className="text-sm font-semibold text-amber-800">Previsão Genética</p>
+                  </div>
+                  <p className="text-xs text-amber-700">Parametrize a genética das aves no Plantel para ver a previsão de filhotes aqui.</p>
+                </div>
+              );
+            }
+            
+            const prediction = calculateBreeding(maleGenetics, femaleGenetics);
+            const sortedOffspring = [...prediction.offspring].sort((a, b) => b.probability - a.probability);
+            
+            return (
+              <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <FlaskConical size={16} className="text-emerald-700" />
+                  <p className="text-sm font-bold text-emerald-800">🧬 Previsão Genética dos Filhotes</p>
+                </div>
+                <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
+                    <p className="font-semibold text-blue-800">♂ Pai: {male?.ringNumber || '?'}</p>
+                    <p className="text-blue-600">{formatGenotype(maleGenetics) || 'Não parametrizado'}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-pink-50 border border-pink-200">
+                    <p className="font-semibold text-pink-800">♀ Mãe: {female?.ringNumber || '?'}</p>
+                    <p className="text-pink-600">{formatGenotype(femaleGenetics) || 'Não parametrizada'}</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                  {sortedOffspring.map((o, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white border border-stone-100">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-stone-800 truncate">{o.phenotype}</p>
+                        <p className="text-[10px] text-stone-500 truncate">{o.genotype}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                          o.sex === 'macho' ? 'bg-blue-100 text-blue-700' :
+                          o.sex === 'femea' ? 'bg-pink-100 text-pink-700' :
+                          'bg-stone-100 text-stone-600'
+                        }`}>
+                          {o.sex === 'macho' ? '♂' : o.sex === 'femea' ? '♀' : '♂♀'}
+                        </span>
+                        <span className="text-sm font-bold text-emerald-700 min-w-[45px] text-right">
+                          {(o.probability * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-stone-400 mt-2 text-center">
+                  {prediction.totalCombinations} combinações calculadas
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Nome do casal */}
           <div>

@@ -788,6 +788,7 @@ export const appRouter = router({
         motherId: z.number().nullable().optional(),
         invoiceNumber: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
+        genetics: z.object({ visual: z.array(z.string()), splits: z.array(z.string()) }).nullable().optional(),
       }))
       .mutation(async ({ input }) => {
         // Validar anilha única no servidor
@@ -820,6 +821,7 @@ export const appRouter = router({
         motherId: z.number().nullable().optional(),
         invoiceNumber: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
+        genetics: z.object({ visual: z.array(z.string()), splits: z.array(z.string()) }).nullable().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;

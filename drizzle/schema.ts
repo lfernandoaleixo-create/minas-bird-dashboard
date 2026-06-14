@@ -398,6 +398,8 @@ export const plantel = mysqlTable("plantel", {
   invoiceNumber: varchar("invoiceNumber", { length: 128 }),
   /** Observações gerais */
   notes: text("notes"),
+  /** Dados genéticos: mutações visuais + splits (JSON) */
+  genetics: json("genetics").$type<{ visual: string[]; splits: string[] }>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

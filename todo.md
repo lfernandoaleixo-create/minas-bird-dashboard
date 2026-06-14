@@ -430,8 +430,13 @@
 - [x] Plantel: adicionar botão PDF em cada card de espécie para gerar relatório imprimível com as informações do resumo
 - [x] Plantel: alinhar colunas da listagem expandida e melhorar tipografia
 - [x] Acasalamentos: criar tabela no banco (casais com macho_id, fêmea_id, espécie, status, gaiola, data início, notas)
-- [ ] Acasalamentos: criar db helpers (CRUD casais)
-- [ ] Acasalamentos: criar tRPC procedures (list, create, update, delete casais)
-- [ ] Acasalamentos: criar componente AcasalamentosModule com cards por espécie
-- [ ] Acasalamentos: formulário de novo casal (selecionar macho e fêmea da mesma espécie do plantel)
+- [x] Acasalamentos: criar db helpers (CRUD casais)
+- [x] Acasalamentos: criar tRPC procedures (list, create, update, delete casais)
+- [x] Acasalamentos: criar componente AcasalamentosModule com cards por espécie
+- [x] Acasalamentos: formulário de novo casal (selecionar macho e fêmea da mesma espécie do plantel)
 - [x] Acasalamentos: integrar na sidebar/navegação
+- [x] Genética: criar tabela de mutações padronizadas em português (dados de referência por espécie)
+- [x] Genética: adicionar campos genéticos (mutação visual + splits) na tabela plantel do banco
+- [x] Genética: implementar engine de cálculo genético (Punnett square por locus)
+- [x] Genética: criar UI de parametrização na ficha da ave (seletores de mutação + splits)
+- [x] Genética: integrar calculadora no módulo Acasalamentos (previsão automática ao selecionar casal)

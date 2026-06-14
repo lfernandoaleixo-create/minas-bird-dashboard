@@ -127,6 +127,13 @@
       "when": 1781453482359,
       "tag": "0017_sleepy_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1781459024751,
+      "tag": "0018_swift_riptide",
+      "breakpoints": true
     }
   ]
 }

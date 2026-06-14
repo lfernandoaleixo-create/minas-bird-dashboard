@@ -1,0 +1,1 @@
+ALTER TABLE `plantel` ADD `genetics` json;
