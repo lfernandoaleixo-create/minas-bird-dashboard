@@ -751,6 +751,13 @@ export default function AcasalamentosModule() {
           {groupedPairs.map(group => {
             const isExpanded = expandedSpecies.has(group.speciesId);
             const activePairs = group.pairs.filter(p => p.status === "ativo").length;
+            // Contar machos e fêmeas solteiros (ativos, não estão em nenhum casal ativo)
+            const pairedMaleIds = new Set(group.pairs.filter(p => p.status === "ativo").map(p => p.maleId));
+            const pairedFemaleIds = new Set(group.pairs.filter(p => p.status === "ativo").map(p => p.femaleId));
+            const allMales = activeBirds.filter(b => b.speciesId === group.speciesId && b.sex === "macho");
+            const allFemales = activeBirds.filter(b => b.speciesId === group.speciesId && b.sex === "femea");
+            const singleMales = allMales.filter(b => !pairedMaleIds.has(b.id)).length;
+            const singleFemales = allFemales.filter(b => !pairedFemaleIds.has(b.id)).length;
 
             return (
               <div key={group.speciesId} className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
@@ -759,16 +766,18 @@ export default function AcasalamentosModule() {
                   onClick={() => toggleSpecies(group.speciesId)}
                   className="w-full px-5 py-4 flex items-center justify-between hover:bg-stone-50/50 transition-colors"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center flex-shrink-0">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center border-2 border-rose-200 flex-shrink-0">
                       <Heart size={16} className="text-rose-500" />
                     </div>
                     <div className="text-left min-w-0">
-                      <h3 className="text-sm font-bold text-stone-800 truncate">{group.speciesName}</h3>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] text-emerald-600 font-medium">{activePairs} ativo{activePairs !== 1 ? "s" : ""}</span>
+                      <h3 className="text-base font-bold text-stone-800 truncate">{group.speciesName}</h3>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-[11px] text-emerald-600 font-semibold">{activePairs} ativo{activePairs !== 1 ? "s" : ""}</span>
                         <span className="text-[11px] text-stone-300">•</span>
-                        <span className="text-[11px] text-stone-400">{group.pairs.length} total</span>
+                        <span className="text-[11px] text-blue-500 font-medium">{singleMales} ♂ solteiro{singleMales !== 1 ? "s" : ""}</span>
+                        <span className="text-[11px] text-stone-300">•</span>
+                        <span className="text-[11px] text-rose-400 font-medium">{singleFemales} ♀ solteira{singleFemales !== 1 ? "s" : ""}</span>
                       </div>
                     </div>
                   </div>
@@ -796,12 +805,12 @@ export default function AcasalamentosModule() {
                           )}
                           onClick={() => handleEdit(pair)}
                         >
-                          {/* Pair name/code — same style as bird code in Plantel */}
+                          {/* Gaiola — first column, same style as bird code in Plantel */}
                           <div className="min-w-[70px]">
-                            {pair.pairName ? (
-                              <p className="text-base font-extrabold text-emerald-700 font-mono tracking-wide">{pair.pairName}</p>
+                            {pair.enclosure ? (
+                              <p className="text-base font-extrabold text-emerald-700 font-mono tracking-wide">{pair.enclosure}</p>
                             ) : (
-                              <p className="text-sm font-medium text-stone-400 italic">#{pair.id}</p>
+                              <p className="text-sm font-medium text-stone-300 italic">—</p>
                             )}
                           </div>
 
@@ -812,14 +821,16 @@ export default function AcasalamentosModule() {
 
                           {/* Info columns — aligned grid like Plantel */}
                           <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 min-w-0">
-                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
+                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap truncate">
                               <span className="text-blue-600 font-medium text-xs">♂</span> {male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
+                              {male?.mutation && <span className="text-stone-400 font-normal text-xs ml-1">{male.mutation}</span>}
                             </p>
-                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
+                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap truncate">
                               <span className="text-rose-500 font-medium text-xs">♀</span> {female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
+                              {female?.mutation && <span className="text-stone-400 font-normal text-xs ml-1">{female.mutation}</span>}
                             </p>
                             <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
-                              <span className="text-stone-400 font-medium text-xs">Gaiola</span> {pair.enclosure || <span className="text-stone-300 italic font-normal">—</span>}
+                              <span className="text-stone-400 font-medium text-xs">Nome</span> {pair.pairName || <span className="text-stone-300 italic font-normal">—</span>}
                             </p>
                             <p className="text-sm font-bold text-stone-800 truncate min-w-0">
                               <span className="text-stone-400 font-medium text-xs">Genética</span>{" "}
