@@ -444,3 +444,4 @@
 - [x] Genética: mover parametrização para dentro da aba Acasalamentos (card opcional ao selecionar macho/fêmea), remover do Plantel
 - [x] Genética: salvar parametrização genética junto com o casal (para não precisar preencher toda vez)
 - [x] Genética: revisar todos os nomes de mutações para português usado entre criadores de aves
+- [x] Genética: implementar calculadora para Cabeça de Ameixa (Verde ancestral + Verde Cinza) com rigor

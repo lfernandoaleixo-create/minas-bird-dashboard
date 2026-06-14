@@ -12,8 +12,8 @@ import {
   Heart, Plus, ChevronDown, ChevronRight, Edit2, Trash2, X,
   Calendar, MapPin, FileText, AlertTriangle, FlaskConical
 } from "lucide-react";
-import { calculateBreeding, type BreedingPrediction } from "@shared/geneticsEngine";
-import { formatGenotype, VISUAL_MUTATIONS, AVAILABLE_SPLITS, type BirdGeneticsData } from "@shared/genetics";
+import { calculateBreedingForSpecies, type BreedingPrediction } from "@shared/geneticsEngine";
+import { formatGenotype, VISUAL_MUTATIONS, AVAILABLE_SPLITS, getVisualMutationsForSpecies, getAvailableSplitsForSpecies, type BirdGeneticsData, type SpeciesId } from "@shared/genetics";
 
 // Species in current flock
 const FLOCK_SPECIES = species.filter(s => s.inCurrentFlock);
@@ -66,13 +66,14 @@ const EMPTY_FORM: PairForm = {
 // ============================================================
 // GeneticsCard — card expansível para parametrizar genética
 // ============================================================
-function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }: {
+function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme, speciesId }: {
   title: string;
   sex: "macho" | "femea";
   birdCode: string;
   genetics: LocalGenetics;
   onChange: (g: LocalGenetics) => void;
   colorScheme: "blue" | "pink";
+  speciesId?: SpeciesId;
 }) {
   const [expanded, setExpanded] = useState(false);
   const borderColor = colorScheme === "blue" ? "border-blue-200" : "border-pink-200";
@@ -89,11 +90,15 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
   // Ino/Pallid/Platinum são alelos do mesmo locus (exclusivos)
   const INO_LOCUS_IDS = ["slino", "pallid", "platinum"];
 
+  // Use species-specific mutations if speciesId is provided
+  const speciesMutations = speciesId ? getVisualMutationsForSpecies(speciesId) : VISUAL_MUTATIONS;
+  const speciesSplits = speciesId ? getAvailableSplitsForSpecies(speciesId) : AVAILABLE_SPLITS;
+
   const toggleVisual = (id: string, group: "base" | "other") => {
     let current = [...genetics.visual];
     if (group === "base") {
       // Cor base é exclusiva
-      const baseIds = VISUAL_MUTATIONS.base.map(b => b.id);
+      const baseIds = speciesMutations.base.map(b => b.id);
       current = current.filter(v => !baseIds.includes(v));
       onChange({ ...genetics, visual: [...current, id] });
     } else {
@@ -149,7 +154,7 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
               <div>
                 <p className="text-[10px] text-stone-500 font-medium mb-1">Cor Base</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {VISUAL_MUTATIONS.base.map(m => (
+                  {speciesMutations.base.map(m => (
                     <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "base")}
                       className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
                         genetics.visual.includes(m.id) ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-stone-600 border-stone-200 hover:border-emerald-300"
@@ -157,10 +162,11 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
                   ))}
                 </div>
               </div>
+              {speciesMutations.dominant.length > 0 && (
               <div>
                 <p className="text-[10px] text-stone-500 font-medium mb-1">Dominantes</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {VISUAL_MUTATIONS.dominant.map(m => (
+                  {speciesMutations.dominant.map(m => (
                     <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "other")}
                       className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
                         genetics.visual.includes(m.id) ? "bg-violet-600 text-white border-violet-600" : "bg-white text-stone-600 border-stone-200 hover:border-violet-300"
@@ -168,10 +174,12 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
                   ))}
                 </div>
               </div>
+              )}
+              {speciesMutations.recessive.length > 0 && (
               <div>
                 <p className="text-[10px] text-stone-500 font-medium mb-1">Recessivas</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {VISUAL_MUTATIONS.recessive.map(m => (
+                  {speciesMutations.recessive.map(m => (
                     <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "other")}
                       className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
                         genetics.visual.includes(m.id) ? "bg-amber-600 text-white border-amber-600" : "bg-white text-stone-600 border-stone-200 hover:border-amber-300"
@@ -179,10 +187,12 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
                   ))}
                 </div>
               </div>
+              )}
+              {speciesMutations.sexLinked.length > 0 && (
               <div>
                 <p className="text-[10px] text-stone-500 font-medium mb-1">Ligadas ao Sexo</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {VISUAL_MUTATIONS.sexLinked.map(m => (
+                  {speciesMutations.sexLinked.map(m => (
                     <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "other")}
                       className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
                         genetics.visual.includes(m.id) ? "bg-pink-600 text-white border-pink-600" : "bg-white text-stone-600 border-stone-200 hover:border-pink-300"
@@ -190,16 +200,19 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
                   ))}
                 </div>
               </div>
+              )}
             </div>
           </div>
-          {/* Splits */}
+          {/* Splits — only show if species has available splits */}
+          {(speciesSplits.autosomal.length > 0 || speciesSplits.sexLinked.length > 0) && (
           <div>
             <p className="text-xs font-semibold text-stone-700 mb-2">Splits / Portador</p>
             <div className="space-y-2">
+              {speciesSplits.autosomal.length > 0 && (
               <div>
                 <p className="text-[10px] text-stone-500 font-medium mb-1">Autossômicos</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {AVAILABLE_SPLITS.autosomal.map(s => (
+                  {speciesSplits.autosomal.map(s => (
                     <button key={s.id} type="button" onClick={() => toggleSplit(s.id)}
                       className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
                         genetics.splits.includes(s.id) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-stone-600 border-stone-200 hover:border-blue-300"
@@ -207,11 +220,12 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
                   ))}
                 </div>
               </div>
-              {sex === "macho" && (
+              )}
+              {sex === "macho" && speciesSplits.sexLinked.length > 0 && (
                 <div>
                   <p className="text-[10px] text-stone-500 font-medium mb-1">Ligados ao Sexo (somente machos)</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {AVAILABLE_SPLITS.sexLinked.map(s => (
+                    {speciesSplits.sexLinked.map(s => (
                       <button key={s.id} type="button" onClick={() => toggleSplit(s.id)}
                         className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
                           genetics.splits.includes(s.id) ? "bg-pink-600 text-white border-pink-600" : "bg-white text-stone-600 border-stone-200 hover:border-pink-300"
@@ -220,11 +234,16 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }:
                   </div>
                 </div>
               )}
-              {sex === "femea" && (
+              {sex === "femea" && speciesSplits.sexLinked.length > 0 && (
                 <p className="text-[10px] text-amber-700 italic">Fêmeas não podem ser split para mutações ligadas ao sexo</p>
               )}
             </div>
           </div>
+          )}
+          {/* Nota para espécies sem splits */}
+          {speciesSplits.autosomal.length === 0 && speciesSplits.sexLinked.length === 0 && (
+            <p className="text-[10px] text-stone-500 italic">Esta espécie não possui splits disponíveis (mutação dominante)</p>
+          )}
           {/* Resumo */}
           {(genetics.visual.length > 0 || genetics.splits.length > 0) && (
             <div className="p-2 rounded-md bg-white border border-stone-200">
@@ -497,6 +516,7 @@ export default function AcasalamentosModule() {
               genetics={maleGenetics}
               onChange={setMaleGenetics}
               colorScheme="blue"
+              speciesId={form.speciesId as SpeciesId}
             />
           )}
 
@@ -509,12 +529,13 @@ export default function AcasalamentosModule() {
               genetics={femaleGenetics}
               onChange={setFemaleGenetics}
               colorScheme="pink"
+              speciesId={form.speciesId as SpeciesId}
             />
           )}
 
           {/* Previsão Genética dos Filhotes */}
           {form.maleId && form.femaleId && (maleGenetics.visual.length > 0 || femaleGenetics.visual.length > 0) && (() => {
-            const prediction = calculateBreeding(maleGenetics, femaleGenetics);
+            const prediction = calculateBreedingForSpecies(maleGenetics, femaleGenetics, form.speciesId);
             const sortedOffspring = [...prediction.offspring].sort((a, b) => b.probability - a.probability);
             
             return (

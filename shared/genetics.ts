@@ -390,6 +390,71 @@ export const COMPOSITE_NAMES: Record<string, string> = {
 };
 
 // ============================================================
+// CABEÇA DE AMEIXA (Psittacula cyanocephala)
+// ============================================================
+
+/**
+ * Mutações visuais disponíveis para Cabeça de Ameixa.
+ * Atualmente apenas Verde (ancestral) e Verde Cinza (Greygreen).
+ * 
+ * Verde Cinza é autossômica DOMINANTE:
+ * - SF e DF são ambos visuais (dominância completa)
+ * - Não existe "split para cinza" (gene dominante)
+ */
+export const CABECA_AMEIXA_VISUAL_MUTATIONS = {
+  base: [
+    { id: "green", label: "Verde" },
+  ],
+  dominant: [
+    { id: "grey_sf", label: "Verde Cinza SF" },
+    { id: "grey_df", label: "Verde Cinza DF" },
+  ],
+  recessive: [] as { id: string; label: string }[],
+  sexLinked: [] as { id: string; label: string }[],
+};
+
+/**
+ * Splits disponíveis para Cabeça de Ameixa.
+ * Como Verde Cinza é dominante, NÃO existe split para cinza.
+ * Atualmente não há splits disponíveis para esta espécie.
+ */
+export const CABECA_AMEIXA_AVAILABLE_SPLITS = {
+  autosomal: [] as { id: string; label: string }[],
+  sexLinked: [] as { id: string; label: string }[],
+};
+
+/**
+ * Nomes compostos para Cabeça de Ameixa.
+ */
+export const CABECA_AMEIXA_COMPOSITE_NAMES: Record<string, string> = {
+  "green+grey_sf": "Verde Cinza",
+  "green+grey_df": "Verde Cinza",
+  "grey_sf": "Verde Cinza",
+  "grey_df": "Verde Cinza",
+};
+
+// ============================================================
+// SELEÇÃO POR ESPÉCIE
+// ============================================================
+
+export type SpeciesId = "psittacula-krameri" | "psittacula-cyanocephala";
+
+export function getVisualMutationsForSpecies(speciesId: SpeciesId) {
+  if (speciesId === "psittacula-cyanocephala") return CABECA_AMEIXA_VISUAL_MUTATIONS;
+  return VISUAL_MUTATIONS;
+}
+
+export function getAvailableSplitsForSpecies(speciesId: SpeciesId) {
+  if (speciesId === "psittacula-cyanocephala") return CABECA_AMEIXA_AVAILABLE_SPLITS;
+  return AVAILABLE_SPLITS;
+}
+
+export function getCompositeNamesForSpecies(speciesId: SpeciesId) {
+  if (speciesId === "psittacula-cyanocephala") return CABECA_AMEIXA_COMPOSITE_NAMES;
+  return COMPOSITE_NAMES;
+}
+
+// ============================================================
 // INTERFACE DO GENÓTIPO DA AVE
 // ============================================================
 

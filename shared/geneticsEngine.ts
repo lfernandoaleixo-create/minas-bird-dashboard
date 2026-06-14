@@ -753,6 +753,102 @@ function buildGenotypeName(visual: string[], splits: string[]): string {
 }
 
 // ============================================================
+// CABEÇA DE AMEIXA — Motor simplificado (apenas locus Grey)
+// ============================================================
+
+/**
+ * Calcula a previsão de filhotes para Cabeça de Ameixa.
+ * 
+ * Atualmente só possui o locus Grey (Verde Cinza):
+ * - Autossômica dominante com dominância COMPLETA
+ * - SF e DF são ambos visualmente Verde Cinza
+ * - Não existe split para cinza (gene dominante)
+ * - Não é ligada ao sexo (machos e fêmeas iguais)
+ * 
+ * Cenários:
+ * - Verde x Verde = 100% Verde
+ * - Verde Cinza SF x Verde = 50% Verde Cinza SF + 50% Verde
+ * - Verde Cinza SF x Verde Cinza SF = 25% Verde Cinza DF + 50% Verde Cinza SF + 25% Verde
+ * - Verde Cinza DF x Verde = 100% Verde Cinza SF
+ * - Verde Cinza DF x Verde Cinza SF = 50% Verde Cinza DF + 50% Verde Cinza SF
+ * - Verde Cinza DF x Verde Cinza DF = 100% Verde Cinza DF
+ */
+export function calculateBreedingCabecaAmeixa(
+  fatherData: BirdGeneticsData,
+  motherData: BirdGeneticsData
+): BreedingPrediction {
+  // Extrair dose do grey de cada progenitor
+  const fatherGrey = getGreyDoseFromData(fatherData);
+  const motherGrey = getGreyDoseFromData(motherData);
+  
+  // Cruzar locus grey (autossômico dominante)
+  const greyResults = crossAutosomalDominant(fatherGrey, motherGrey);
+  
+  // Não há diferença entre machos e fêmeas (não é sex-linked)
+  const offspring: OffspringResult[] = greyResults.map(gr => {
+    const visual: string[] = ["green"]; // Sempre verde como base
+    
+    // Grey é dominância COMPLETA: SF e DF = mesmo fenótipo visual "Verde Cinza"
+    // Mas internamente guardamos se é SF ou DF para cálculos futuros
+    if (gr.dose === "sf") {
+      visual.push("grey_sf");
+    } else if (gr.dose === "df") {
+      visual.push("grey_df");
+    }
+    
+    const phenotype = gr.dose === "none" ? "Verde" : "Verde Cinza";
+    const genotypeDetail = gr.dose === "sf" ? "Verde Cinza SF" :
+                           gr.dose === "df" ? "Verde Cinza DF" : "Verde";
+    
+    return {
+      phenotype,
+      genotype: genotypeDetail,
+      probability: Math.round(gr.probability * 10000) / 100, // Converte para %
+      sex: "ambos" as const,
+      visual,
+      splits: [], // Não existe split para dominante
+    };
+  }).filter(o => o.probability >= 0.1);
+  
+  return {
+    father: fatherData,
+    mother: motherData,
+    offspring,
+    totalCombinations: offspring.length,
+  };
+}
+
+/**
+ * Extrai a dose de grey dos dados do formulário.
+ */
+function getGreyDoseFromData(data: BirdGeneticsData): string {
+  const visual = data.visual || [];
+  if (visual.includes("grey_df")) return "df";
+  if (visual.includes("grey_sf")) return "sf";
+  return "none";
+}
+
+// ============================================================
+// FUNÇÃO UNIVERSAL COM SELEÇÃO POR ESPÉCIE
+// ============================================================
+
+/**
+ * Calcula previsão de filhotes para qualquer espécie suportada.
+ * Seleciona automaticamente o motor correto com base no speciesId.
+ */
+export function calculateBreedingForSpecies(
+  fatherData: BirdGeneticsData,
+  motherData: BirdGeneticsData,
+  speciesId: string
+): BreedingPrediction {
+  if (speciesId === "psittacula-cyanocephala") {
+    return calculateBreedingCabecaAmeixa(fatherData, motherData);
+  }
+  // Default: Ring Neck
+  return calculateBreeding(fatherData, motherData);
+}
+
+// ============================================================
 // FUNÇÃO SIMPLIFICADA (alias)
 // ============================================================
 
