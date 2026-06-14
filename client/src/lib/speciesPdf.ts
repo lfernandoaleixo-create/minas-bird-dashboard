@@ -60,13 +60,16 @@ export async function generateSpeciesPdf(data: SpeciesPdfData): Promise<void> {
   );
 
   // Table columns
+  // Total usable width: pageW - 2*margin = 210 - 24 = 186mm
+  // Distribute: Código(20) + Sexo(20) + Anilha(52) + Gaiola(18) + Mutação(52) + Status(24) = 186
+  const usableW = pageW - margin * 2;
   const colDefs = [
-    { label: "Código", width: 22 },
-    { label: "Sexo", width: 22 },
-    { label: "Anilha", width: 38 },
-    { label: "Gaiola", width: 22 },
-    { label: "Mutação", width: 48 },
-    { label: "Status", width: 20 },
+    { label: "Código", width: 20 },
+    { label: "Sexo", width: 20 },
+    { label: "Anilha", width: 52 },
+    { label: "Gaiola", width: 18 },
+    { label: "Mutação", width: usableW - 20 - 20 - 52 - 18 - 24 },
+    { label: "Status", width: 24 },
   ];
 
   const tableX = margin;
@@ -84,8 +87,14 @@ export async function generateSpeciesPdf(data: SpeciesPdfData): Promise<void> {
     doc.setTextColor(...BRAND.dark);
 
     let cx = tableX + 2;
-    for (const col of colDefs) {
-      doc.text(col.label, cx, startY + headerH * 0.65);
+    for (let i = 0; i < colDefs.length; i++) {
+      const col = colDefs[i];
+      if (i === colDefs.length - 1) {
+        // Status header aligned right
+        doc.text(col.label, pageW - margin - 2, startY + headerH * 0.65, { align: "right" });
+      } else {
+        doc.text(col.label, cx, startY + headerH * 0.65);
+      }
       cx += col.width;
     }
 
@@ -156,7 +165,7 @@ export async function generateSpeciesPdf(data: SpeciesPdfData): Promise<void> {
     doc.text(truncMut, cx, textY);
     cx += colDefs[4].width;
 
-    // Status
+    // Status - aligned to right edge
     if (bird.status === "ativo") {
       doc.setTextColor(...BRAND.green);
     } else if (bird.status === "obito") {
@@ -165,7 +174,7 @@ export async function generateSpeciesPdf(data: SpeciesPdfData): Promise<void> {
       doc.setTextColor(...BRAND.text);
     }
     doc.setFont("helvetica", "bold");
-    doc.text(STATUS_MAP[bird.status] || bird.status, cx, textY);
+    doc.text(STATUS_MAP[bird.status] || bird.status, pageW - margin - 2, textY, { align: "right" });
 
     y += rowH;
   }

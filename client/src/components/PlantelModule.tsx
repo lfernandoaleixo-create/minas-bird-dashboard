@@ -802,10 +802,10 @@ export default function PlantelModule() {
                             })),
                           });
                         }}
-                        className="p-1.5 rounded-lg hover:bg-emerald-100 transition-colors text-emerald-600 hover:text-emerald-800"
+                        className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors text-emerald-700 hover:text-emerald-800 text-[11px] font-bold"
                         title="Gerar PDF da espécie"
                       >
-                        <Printer size={15} />
+                        PDF
                       </button>
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
                         {getSpeciesPrefix(group.speciesId)}
