@@ -447,3 +447,4 @@
 - [x] Genética: implementar calculadora para Cabeça de Ameixa (Verde ancestral + Verde Cinza) com rigor
 - [x] Genética: renomear "Aqua" para "Esmeralda" em toda a interface (termo usado pelos criadores brasileiros)
 - [x] Genética: esclarecido que Verde/Azul/Turquesa/Esmeralda são alelos do mesmo locus (exclusivos — correto)
+- [x] Acasalamentos: redesenhar card do casal — mais fino/compacto, letras lateralizadas (rotacionadas), campos vazios sempre visíveis

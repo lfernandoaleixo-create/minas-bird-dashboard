@@ -780,100 +780,117 @@ export default function AcasalamentosModule() {
 
                 {/* Expanded pairs list */}
                 {isExpanded && (
-                  <div className="border-t border-stone-100">
+                  <div className="border-t border-stone-100 p-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {group.pairs.map(pair => {
                       const male = getBirdInfo(pair.maleId);
                       const female = getBirdInfo(pair.femaleId);
+                      const maleGen = (pair as any).maleGenetics as LocalGenetics | null;
+                      const femaleGen = (pair as any).femaleGenetics as LocalGenetics | null;
 
                       return (
                         <div
                           key={pair.id}
-                          className="px-5 py-3.5 border-b border-stone-50 last:border-b-0 hover:bg-stone-50/30 transition-colors group"
+                          className="relative flex rounded-xl border border-stone-200 bg-white overflow-hidden hover:shadow-sm transition-shadow group"
                         >
-                          <div className="flex items-center gap-3">
-                            {/* Pair info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1.5">
-                                {pair.pairName && (
-                                  <span className="text-sm font-bold text-stone-800">{pair.pairName}</span>
-                                )}
-                                <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border", STATUS_COLORS[pair.status as PairStatus])}>
-                                  {STATUS_LABELS[pair.status as PairStatus]}
-                                </span>
-                              </div>
+                          {/* Vertical rotated label — Pair name or species */}
+                          <div className={cn(
+                            "w-5 flex-shrink-0 flex items-center justify-center",
+                            pair.status === "ativo" ? "bg-emerald-600" : pair.status === "em_descanso" ? "bg-amber-500" : "bg-stone-400"
+                          )}>
+                            <span className="text-[9px] font-bold text-white tracking-wider uppercase whitespace-nowrap [writing-mode:vertical-lr] rotate-180">
+                              {pair.pairName || `#${pair.id}`}
+                            </span>
+                          </div>
 
-                              {/* Male + Female info */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <p className="text-sm text-stone-700">
-                                  <span className="text-blue-600 font-semibold text-xs">♂ Macho</span>{" "}
-                                  <span className="font-medium">{male?.ringNumber || `#${pair.maleId}`}</span>
-                                  {male?.mutation && <span className="text-stone-400 ml-1">· {male.mutation}</span>}
-                                </p>
-                                <p className="text-sm text-stone-700">
-                                  <span className="text-rose-500 font-semibold text-xs">♀ Fêmea</span>{" "}
-                                  <span className="font-medium">{female?.ringNumber || `#${pair.femaleId}`}</span>
-                                  {female?.mutation && <span className="text-stone-400 ml-1">· {female.mutation}</span>}
-                                </p>
-                              </div>
-
-                              {/* Extra info */}
-                              <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-                                {pair.enclosure && (
-                                  <span className="text-xs text-stone-400 flex items-center gap-1">
-                                    <MapPin size={10} /> {pair.enclosure}
-                                  </span>
-                                )}
-                                {pair.startDate && (
-                                  <span className="text-xs text-stone-400 flex items-center gap-1">
-                                    <Calendar size={10} /> {new Date(pair.startDate).toLocaleDateString("pt-BR")}
-                                  </span>
-                                )}
-                                {pair.notes && (
-                                  <span className="text-xs text-stone-400 flex items-center gap-1">
-                                    <FileText size={10} /> Obs.
-                                  </span>
-                                )}
-                                {(pair as any).maleGenetics && (pair as any).femaleGenetics && (
-                                  <span className="text-xs text-emerald-500 flex items-center gap-1">
-                                    <FlaskConical size={10} /> Genética salva
-                                  </span>
+                          {/* Content */}
+                          <div className="flex-1 p-2.5 min-w-0">
+                            {/* Status badge */}
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-semibold border", STATUS_COLORS[pair.status as PairStatus])}>
+                                {STATUS_LABELS[pair.status as PairStatus]}
+                              </span>
+                              {/* Actions */}
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleEdit(pair)}
+                                  className="p-1 rounded hover:bg-emerald-50 text-stone-400 hover:text-emerald-600 transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit2 size={11} />
+                                </button>
+                                {deleteConfirm === pair.id ? (
+                                  <div className="flex items-center gap-0.5">
+                                    <button
+                                      onClick={() => handleDelete(pair.id)}
+                                      className="px-1.5 py-0.5 rounded bg-red-50 text-red-600 text-[9px] font-bold hover:bg-red-100 transition-colors"
+                                    >
+                                      Sim
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteConfirm(null)}
+                                      className="p-0.5 rounded hover:bg-stone-100 text-stone-400 transition-colors"
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setDeleteConfirm(pair.id)}
+                                    className="p-1 rounded hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
                                 )}
                               </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleEdit(pair)}
-                                className="p-1.5 rounded-lg hover:bg-emerald-50 text-stone-400 hover:text-emerald-600 transition-colors"
-                                title="Editar"
-                              >
-                                <Edit2 size={14} />
-                              </button>
-                              {deleteConfirm === pair.id ? (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => handleDelete(pair.id)}
-                                    className="px-2 py-1 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold hover:bg-red-100 transition-colors"
-                                  >
-                                    Confirmar
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteConfirm(null)}
-                                    className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 transition-colors"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => setDeleteConfirm(pair.id)}
-                                  className="p-1.5 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors"
-                                  title="Excluir"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
+                            {/* Male row */}
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-[10px] font-bold text-blue-600">♂</span>
+                              <span className="text-[11px] font-semibold text-stone-800 truncate">{male?.ringNumber || `#${pair.maleId}`}</span>
+                              <span className="text-[10px] text-stone-400 truncate">{male?.mutation || '—'}</span>
+                            </div>
+                            {/* Male genetics */}
+                            <div className="mb-1.5 pl-4">
+                              <p className="text-[9px] text-blue-500 truncate">
+                                {maleGen && maleGen.visual.length > 0 ? formatGenotype(maleGen) : <span className="text-stone-300 italic">genética não preenchida</span>}
+                              </p>
+                            </div>
+
+                            {/* Female row */}
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-[10px] font-bold text-rose-500">♀</span>
+                              <span className="text-[11px] font-semibold text-stone-800 truncate">{female?.ringNumber || `#${pair.femaleId}`}</span>
+                              <span className="text-[10px] text-stone-400 truncate">{female?.mutation || '—'}</span>
+                            </div>
+                            {/* Female genetics */}
+                            <div className="mb-1.5 pl-4">
+                              <p className="text-[9px] text-rose-400 truncate">
+                                {femaleGen && femaleGen.visual.length > 0 ? formatGenotype(femaleGen) : <span className="text-stone-300 italic">genética não preenchida</span>}
+                              </p>
+                            </div>
+
+                            {/* Meta fields — always shown */}
+                            <div className="border-t border-stone-100 pt-1.5 mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+                              <div className="flex items-center gap-1">
+                                <MapPin size={9} className="text-stone-300 flex-shrink-0" />
+                                <span className="text-[9px] text-stone-500 truncate">{pair.enclosure || <span className="text-stone-300">—</span>}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Calendar size={9} className="text-stone-300 flex-shrink-0" />
+                                <span className="text-[9px] text-stone-500 truncate">{pair.startDate ? new Date(pair.startDate).toLocaleDateString("pt-BR") : <span className="text-stone-300">—</span>}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <FileText size={9} className="text-stone-300 flex-shrink-0" />
+                                <span className="text-[9px] text-stone-500 truncate">{pair.notes ? "Obs." : <span className="text-stone-300">—</span>}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <FlaskConical size={9} className={cn("flex-shrink-0", maleGen || femaleGen ? "text-emerald-500" : "text-stone-300")} />
+                                <span className={cn("text-[9px] truncate", maleGen || femaleGen ? "text-emerald-600 font-medium" : "text-stone-300")}>
+                                  {maleGen || femaleGen ? "Genética" : "—"}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
