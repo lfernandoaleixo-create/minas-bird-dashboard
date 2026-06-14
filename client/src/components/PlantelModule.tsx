@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { generateLineagePdf } from "@/lib/lineagePdf";
 import { generateSpeciesPdf } from "@/lib/speciesPdf";
-import { VISUAL_MUTATIONS, AVAILABLE_SPLITS, formatGenotype, type BirdGeneticsData } from "@shared/genetics";
+
 
 // Apenas as espécies do plantel (inCurrentFlock: true)
 const SPECIES_LIST = species
@@ -123,9 +123,6 @@ interface BirdForm {
   motherNote: string; // Observação para mãe externa
   motherMutation: string; // Mutação da mãe externa
   motherBreeder: string; // Criatório da mãe externa
-  // Genética
-  geneticsVisual: string[];  // IDs das mutações visuais
-  geneticsSplits: string[];  // IDs dos splits
   // Drag-drop pending files for upload after bird is created
   pendingFiles: File[];
 }
@@ -169,8 +166,6 @@ const EMPTY_FORM: BirdForm = {
   motherNote: "",
   motherMutation: "",
   motherBreeder: "",
-  geneticsVisual: [],
-  geneticsSplits: [],
   pendingFiles: [],
 };
 
@@ -436,8 +431,6 @@ export default function PlantelModule() {
       birthDatePrecision: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.birthDatePrecision || "full"; } catch { return "full" as DatePrecision; } })(),
       birthMonth: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getMonth() + 1).padStart(2, "0"); })(),
       birthYear: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getFullYear()); })(),
-      geneticsVisual: (bird as any).genetics?.visual || [],
-      geneticsSplits: (bird as any).genetics?.splits || [],
       pendingFiles: [],
     });
     setEditingId(bird.id);
@@ -512,9 +505,6 @@ export default function PlantelModule() {
       fatherId: form.fatherSource === "plantel" ? (form.fatherId || null) : null,
       motherId: form.motherSource === "plantel" ? (form.motherId || null) : null,
       invoiceNumber: form.hasInvoice && form.invoiceNumber ? form.invoiceNumber : null,
-      genetics: (form.geneticsVisual.length > 0 || form.geneticsSplits.length > 0)
-        ? { visual: form.geneticsVisual, splits: form.geneticsSplits }
-        : null,
     };
 
     let birdId = editingId;
@@ -1262,193 +1252,7 @@ export default function PlantelModule() {
               />
             </div>
 
-            {/* Parametrização Genética */}
-            <div className="p-4 rounded-lg border border-emerald-200 bg-emerald-50/30">
-              <label className="block text-xs font-bold text-emerald-800 mb-3 uppercase tracking-wider">
-                🧬 Parametrização Genética (para cálculo de acasalamento)
-              </label>
 
-              {/* Mutações Visuais */}
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-stone-700 mb-2">Mutação Visual (o que a ave mostra)</p>
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-[10px] text-stone-500 font-medium mb-1">Cor Base</p>
-                    <div className="flex flex-wrap gap-2">
-                      {VISUAL_MUTATIONS.base.map(m => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            setForm(prev => {
-                              // Cor base é exclusiva (só uma por vez)
-                              const baseIds = VISUAL_MUTATIONS.base.map(b => b.id);
-                              const filtered = prev.geneticsVisual.filter(v => !baseIds.includes(v));
-                              return { ...prev, geneticsVisual: [...filtered, m.id] };
-                            });
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                            form.geneticsVisual.includes(m.id)
-                              ? "bg-emerald-600 text-white border-emerald-600"
-                              : "bg-white text-stone-600 border-stone-200 hover:border-emerald-300"
-                          )}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-stone-500 font-medium mb-1">Modificadores Dominantes</p>
-                    <div className="flex flex-wrap gap-2">
-                      {VISUAL_MUTATIONS.dominant.map(m => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            setForm(prev => {
-                              const has = prev.geneticsVisual.includes(m.id);
-                              return { ...prev, geneticsVisual: has ? prev.geneticsVisual.filter(v => v !== m.id) : [...prev.geneticsVisual, m.id] };
-                            });
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                            form.geneticsVisual.includes(m.id)
-                              ? "bg-violet-600 text-white border-violet-600"
-                              : "bg-white text-stone-600 border-stone-200 hover:border-violet-300"
-                          )}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-stone-500 font-medium mb-1">Recessivas Autossômicas</p>
-                    <div className="flex flex-wrap gap-2">
-                      {VISUAL_MUTATIONS.recessive.map(m => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            setForm(prev => {
-                              const has = prev.geneticsVisual.includes(m.id);
-                              return { ...prev, geneticsVisual: has ? prev.geneticsVisual.filter(v => v !== m.id) : [...prev.geneticsVisual, m.id] };
-                            });
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                            form.geneticsVisual.includes(m.id)
-                              ? "bg-amber-600 text-white border-amber-600"
-                              : "bg-white text-stone-600 border-stone-200 hover:border-amber-300"
-                          )}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-stone-500 font-medium mb-1">Ligadas ao Sexo</p>
-                    <div className="flex flex-wrap gap-2">
-                      {VISUAL_MUTATIONS.sexLinked.map(m => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            setForm(prev => {
-                              const has = prev.geneticsVisual.includes(m.id);
-                              return { ...prev, geneticsVisual: has ? prev.geneticsVisual.filter(v => v !== m.id) : [...prev.geneticsVisual, m.id] };
-                            });
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                            form.geneticsVisual.includes(m.id)
-                              ? "bg-pink-600 text-white border-pink-600"
-                              : "bg-white text-stone-600 border-stone-200 hover:border-pink-300"
-                          )}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Splits (portador) */}
-              <div>
-                <p className="text-xs font-semibold text-stone-700 mb-2">Splits / Portador (o que carrega no sangue)</p>
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-[10px] text-stone-500 font-medium mb-1">Autossômicos (machos e fêmeas)</p>
-                    <div className="flex flex-wrap gap-2">
-                      {AVAILABLE_SPLITS.autosomal.map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => {
-                            setForm(prev => {
-                              const has = prev.geneticsSplits.includes(s.id);
-                              return { ...prev, geneticsSplits: has ? prev.geneticsSplits.filter(v => v !== s.id) : [...prev.geneticsSplits, s.id] };
-                            });
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                            form.geneticsSplits.includes(s.id)
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-white text-stone-600 border-stone-200 hover:border-blue-300"
-                          )}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {form.sex === "macho" && (
-                    <div>
-                      <p className="text-[10px] text-stone-500 font-medium mb-1">Ligados ao Sexo (somente machos podem ser split)</p>
-                      <div className="flex flex-wrap gap-2">
-                        {AVAILABLE_SPLITS.sexLinked.map(s => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => {
-                              setForm(prev => {
-                                const has = prev.geneticsSplits.includes(s.id);
-                                return { ...prev, geneticsSplits: has ? prev.geneticsSplits.filter(v => v !== s.id) : [...prev.geneticsSplits, s.id] };
-                              });
-                            }}
-                            className={cn(
-                              "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                              form.geneticsSplits.includes(s.id)
-                                ? "bg-pink-600 text-white border-pink-600"
-                                : "bg-white text-stone-600 border-stone-200 hover:border-pink-300"
-                            )}
-                          >
-                            {s.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {form.sex === "femea" && (
-                    <p className="text-[10px] text-amber-700 italic">Fêmeas não podem ser split para mutações ligadas ao sexo (regra biológica)</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Resumo genético */}
-              {(form.geneticsVisual.length > 0 || form.geneticsSplits.length > 0) && (
-                <div className="mt-3 p-2.5 rounded-md bg-white border border-emerald-200">
-                  <p className="text-[10px] text-stone-500 font-medium mb-1">Resumo Genético:</p>
-                  <p className="text-sm font-bold text-emerald-800">
-                    {formatGenotype({ visual: form.geneticsVisual, splits: form.geneticsSplits })}
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Árvore Genealógica (abaixo de Mutação) */}

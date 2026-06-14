@@ -3,7 +3,7 @@
  * Organizado por espécie em cards expansíveis
  * Permite criar, editar e gerenciar casais (macho + fêmea)
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { species } from "@/data/feeding";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ import {
   Calendar, MapPin, FileText, AlertTriangle, FlaskConical
 } from "lucide-react";
 import { calculateBreeding, type BreedingPrediction } from "@shared/geneticsEngine";
-import { formatGenotype, type BirdGeneticsData } from "@shared/genetics";
+import { formatGenotype, VISUAL_MUTATIONS, AVAILABLE_SPLITS, type BirdGeneticsData } from "@shared/genetics";
 
 // Species in current flock
 const FLOCK_SPECIES = species.filter(s => s.inCurrentFlock);
@@ -45,6 +45,12 @@ interface PairForm {
   notes: string;
 }
 
+// Genética local (apenas informativa, não salva no banco)
+interface LocalGenetics {
+  visual: string[];
+  splits: string[];
+}
+
 const EMPTY_FORM: PairForm = {
   speciesId: "",
   speciesName: "",
@@ -57,6 +63,162 @@ const EMPTY_FORM: PairForm = {
   notes: "",
 };
 
+// ============================================================
+// GeneticsCard — card expansível para parametrizar genética
+// ============================================================
+function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme }: {
+  title: string;
+  sex: "macho" | "femea";
+  birdCode: string;
+  genetics: LocalGenetics;
+  onChange: (g: LocalGenetics) => void;
+  colorScheme: "blue" | "pink";
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const borderColor = colorScheme === "blue" ? "border-blue-200" : "border-pink-200";
+  const bgColor = colorScheme === "blue" ? "bg-blue-50/50" : "bg-pink-50/50";
+  const headerText = colorScheme === "blue" ? "text-blue-800" : "text-pink-800";
+
+  const toggleVisual = (id: string, group: "base" | "other") => {
+    const current = genetics.visual;
+    if (group === "base") {
+      // Cor base é exclusiva
+      const baseIds = VISUAL_MUTATIONS.base.map(b => b.id);
+      const filtered = current.filter(v => !baseIds.includes(v));
+      onChange({ ...genetics, visual: [...filtered, id] });
+    } else {
+      const has = current.includes(id);
+      onChange({ ...genetics, visual: has ? current.filter(v => v !== id) : [...current, id] });
+    }
+  };
+
+  const toggleSplit = (id: string) => {
+    const has = genetics.splits.includes(id);
+    onChange({ ...genetics, splits: has ? genetics.splits.filter(s => s !== id) : [...genetics.splits, id] });
+  };
+
+  return (
+    <div className={`rounded-xl border ${borderColor} ${bgColor} overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-4 py-3 flex items-center justify-between text-left"
+      >
+        <div className="flex items-center gap-2">
+          <FlaskConical size={14} className={headerText} />
+          <span className={`text-sm font-semibold ${headerText}`}>{title}</span>
+          <span className="text-xs text-stone-500">({birdCode})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {genetics.visual.length > 0 && (
+            <span className="text-[10px] text-stone-500 max-w-[150px] truncate">
+              {formatGenotype(genetics)}
+            </span>
+          )}
+          <ChevronDown size={14} className={cn("text-stone-400 transition-transform", expanded && "rotate-180")} />
+        </div>
+      </button>
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* Mutações Visuais */}
+          <div>
+            <p className="text-xs font-semibold text-stone-700 mb-2">Mutação Visual</p>
+            <div className="space-y-2">
+              <div>
+                <p className="text-[10px] text-stone-500 font-medium mb-1">Cor Base</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VISUAL_MUTATIONS.base.map(m => (
+                    <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "base")}
+                      className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
+                        genetics.visual.includes(m.id) ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-stone-600 border-stone-200 hover:border-emerald-300"
+                      )}>{m.label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-stone-500 font-medium mb-1">Dominantes</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VISUAL_MUTATIONS.dominant.map(m => (
+                    <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "other")}
+                      className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
+                        genetics.visual.includes(m.id) ? "bg-violet-600 text-white border-violet-600" : "bg-white text-stone-600 border-stone-200 hover:border-violet-300"
+                      )}>{m.label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-stone-500 font-medium mb-1">Recessivas</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VISUAL_MUTATIONS.recessive.map(m => (
+                    <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "other")}
+                      className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
+                        genetics.visual.includes(m.id) ? "bg-amber-600 text-white border-amber-600" : "bg-white text-stone-600 border-stone-200 hover:border-amber-300"
+                      )}>{m.label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-stone-500 font-medium mb-1">Ligadas ao Sexo</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VISUAL_MUTATIONS.sexLinked.map(m => (
+                    <button key={m.id} type="button" onClick={() => toggleVisual(m.id, "other")}
+                      className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
+                        genetics.visual.includes(m.id) ? "bg-pink-600 text-white border-pink-600" : "bg-white text-stone-600 border-stone-200 hover:border-pink-300"
+                      )}>{m.label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Splits */}
+          <div>
+            <p className="text-xs font-semibold text-stone-700 mb-2">Splits / Portador</p>
+            <div className="space-y-2">
+              <div>
+                <p className="text-[10px] text-stone-500 font-medium mb-1">Autossômicos</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {AVAILABLE_SPLITS.autosomal.map(s => (
+                    <button key={s.id} type="button" onClick={() => toggleSplit(s.id)}
+                      className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
+                        genetics.splits.includes(s.id) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-stone-600 border-stone-200 hover:border-blue-300"
+                      )}>{s.label}</button>
+                  ))}
+                </div>
+              </div>
+              {sex === "macho" && (
+                <div>
+                  <p className="text-[10px] text-stone-500 font-medium mb-1">Ligados ao Sexo (somente machos)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AVAILABLE_SPLITS.sexLinked.map(s => (
+                      <button key={s.id} type="button" onClick={() => toggleSplit(s.id)}
+                        className={cn("px-2 py-0.5 rounded text-[11px] font-medium border transition-all",
+                          genetics.splits.includes(s.id) ? "bg-pink-600 text-white border-pink-600" : "bg-white text-stone-600 border-stone-200 hover:border-pink-300"
+                        )}>{s.label}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sex === "femea" && (
+                <p className="text-[10px] text-amber-700 italic">Fêmeas não podem ser split para mutações ligadas ao sexo</p>
+              )}
+            </div>
+          </div>
+          {/* Resumo */}
+          {(genetics.visual.length > 0 || genetics.splits.length > 0) && (
+            <div className="p-2 rounded-md bg-white border border-stone-200">
+              <p className="text-[10px] text-stone-500 mb-0.5">Resumo:</p>
+              <p className="text-xs font-bold text-stone-800">{formatGenotype(genetics)}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// MÓDULO PRINCIPAL
+// ============================================================
 export default function AcasalamentosModule() {
   const [view, setView] = useState<View>("list");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -64,6 +226,10 @@ export default function AcasalamentosModule() {
   const [expandedSpecies, setExpandedSpecies] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<PairStatus | "todos">("todos");
+
+  // Genética local (apenas informativa, não salva)
+  const [maleGenetics, setMaleGenetics] = useState<LocalGenetics>({ visual: [], splits: [] });
+  const [femaleGenetics, setFemaleGenetics] = useState<LocalGenetics>({ visual: [], splits: [] });
 
   // tRPC queries
   const { data: pairs = [], isLoading } = trpc.breeding.list.useQuery();
@@ -152,6 +318,8 @@ export default function AcasalamentosModule() {
       setView("list");
       setEditingId(null);
       setForm(EMPTY_FORM);
+      setMaleGenetics({ visual: [], splits: [] });
+      setFemaleGenetics({ visual: [], splits: [] });
     } catch (err) {
       console.error("Erro ao salvar casal:", err);
     }
@@ -208,7 +376,7 @@ export default function AcasalamentosModule() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); }}
+              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setMaleGenetics({ visual: [], splits: [] }); setFemaleGenetics({ visual: [], splits: [] }); }}
               className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
             >
               <X size={18} className="text-stone-500" />
@@ -289,26 +457,32 @@ export default function AcasalamentosModule() {
             )}
           </div>
 
-          {/* Previsão Genética */}
-          {form.maleId && form.femaleId && (() => {
-            const male = activeBirds.find(b => b.id === form.maleId);
-            const female = activeBirds.find(b => b.id === form.femaleId);
-            const maleGenetics: BirdGeneticsData = (male as any)?.genetics || { visual: [], splits: [] };
-            const femaleGenetics: BirdGeneticsData = (female as any)?.genetics || { visual: [], splits: [] };
-            const hasGenetics = maleGenetics.visual.length > 0 || femaleGenetics.visual.length > 0;
-            
-            if (!hasGenetics) {
-              return (
-                <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50">
-                  <div className="flex items-center gap-2 mb-1">
-                    <FlaskConical size={16} className="text-amber-600" />
-                    <p className="text-sm font-semibold text-amber-800">Previsão Genética</p>
-                  </div>
-                  <p className="text-xs text-amber-700">Parametrize a genética das aves no Plantel para ver a previsão de filhotes aqui.</p>
-                </div>
-              );
-            }
-            
+          {/* Card Genética do Macho (opcional) */}
+          {form.maleId && (
+            <GeneticsCard
+              title="🧬 Genética do Pai (opcional)"
+              sex="macho"
+              birdCode={activeBirds.find(b => b.id === form.maleId)?.ringNumber || '?'}
+              genetics={maleGenetics}
+              onChange={setMaleGenetics}
+              colorScheme="blue"
+            />
+          )}
+
+          {/* Card Genética da Fêmea (opcional) */}
+          {form.femaleId && (
+            <GeneticsCard
+              title="🧬 Genética da Mãe (opcional)"
+              sex="femea"
+              birdCode={activeBirds.find(b => b.id === form.femaleId)?.ringNumber || '?'}
+              genetics={femaleGenetics}
+              onChange={setFemaleGenetics}
+              colorScheme="pink"
+            />
+          )}
+
+          {/* Previsão Genética dos Filhotes */}
+          {form.maleId && form.femaleId && (maleGenetics.visual.length > 0 || femaleGenetics.visual.length > 0) && (() => {
             const prediction = calculateBreeding(maleGenetics, femaleGenetics);
             const sortedOffspring = [...prediction.offspring].sort((a, b) => b.probability - a.probability);
             
@@ -316,16 +490,16 @@ export default function AcasalamentosModule() {
               <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/30">
                 <div className="flex items-center gap-2 mb-3">
                   <FlaskConical size={16} className="text-emerald-700" />
-                  <p className="text-sm font-bold text-emerald-800">🧬 Previsão Genética dos Filhotes</p>
+                  <p className="text-sm font-bold text-emerald-800">🌿 Previsão de Filhotes</p>
                 </div>
                 <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
                   <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
-                    <p className="font-semibold text-blue-800">♂ Pai: {male?.ringNumber || '?'}</p>
-                    <p className="text-blue-600">{formatGenotype(maleGenetics) || 'Não parametrizado'}</p>
+                    <p className="font-semibold text-blue-800">♂ {activeBirds.find(b => b.id === form.maleId)?.ringNumber || '?'}</p>
+                    <p className="text-blue-600 text-[10px]">{formatGenotype(maleGenetics) || 'Sem dados'}</p>
                   </div>
                   <div className="p-2 rounded-lg bg-pink-50 border border-pink-200">
-                    <p className="font-semibold text-pink-800">♀ Mãe: {female?.ringNumber || '?'}</p>
-                    <p className="text-pink-600">{formatGenotype(femaleGenetics) || 'Não parametrizada'}</p>
+                    <p className="font-semibold text-pink-800">♀ {activeBirds.find(b => b.id === form.femaleId)?.ringNumber || '?'}</p>
+                    <p className="text-pink-600 text-[10px]">{formatGenotype(femaleGenetics) || 'Sem dados'}</p>
                   </div>
                 </div>
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
@@ -429,7 +603,7 @@ export default function AcasalamentosModule() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); }}
+              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setMaleGenetics({ visual: [], splits: [] }); setFemaleGenetics({ visual: [], splits: [] }); }}
             >
               Cancelar
             </Button>
