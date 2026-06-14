@@ -231,7 +231,7 @@ export const VISUAL_MUTATIONS = {
     { id: "green", label: "Verde" },
     { id: "blue", label: "Azul" },
     { id: "turquoise", label: "Turquesa" },
-    { id: "aqua", label: "Aqua" },
+    { id: "aqua", label: "Esmeralda" },
   ],
   // Modificadores dominantes
   dominant: [
@@ -274,7 +274,7 @@ export const AVAILABLE_SPLITS = {
   autosomal: [
     { id: "blue", label: "Azul" },
     { id: "turquoise", label: "Turquesa" },
-    { id: "aqua", label: "Aqua" },
+    { id: "aqua", label: "Esmeralda" },
     { id: "cleartail", label: "Cleartail" },
     { id: "dilute", label: "Diluído" },
     { id: "nsino", label: "NSL Ino" },
@@ -316,32 +316,32 @@ export const COMPOSITE_NAMES: Record<string, string> = {
   "blue+slino": "Albino",
   "green+slino": "Lutino",
   "slino+turquoise": "Cremino",
-  "aqua+slino": "Cremino Aqua",
+  "aqua+slino": "Cremino Esmeralda",
   // === Canela ===
   "blue+cinnamon": "Skyblue",
   "cinnamon+green": "Canela",
   "cinnamon+turquoise": "Canela Turquesa",
-  "aqua+cinnamon": "Canela Aqua",
+  "aqua+cinnamon": "Canela Esmeralda",
   // === Opalino ===
   "blue+opaline": "Opalino Azul",
   "green+opaline": "Opalino",
   "opaline+turquoise": "Opalino Turquesa",
-  "aqua+opaline": "Opalino Aqua",
+  "aqua+opaline": "Opalino Esmeralda",
   // === Cleartail ===
   "blue+cleartail": "Clear Azul",
   "cleartail+green": "Clear Verde",
   "cleartail+turquoise": "Clear Turquesa",
-  "aqua+cleartail": "Clear Aqua",
+  "aqua+cleartail": "Clear Esmeralda",
   // === Cinza ===
   "blue+grey_sf": "Cinza",
   "green+grey_sf": "Verde Cinza",
   "grey_sf+turquoise": "Turquesa Cinza",
-  "aqua+grey_sf": "Aqua Cinza",
+  "aqua+grey_sf": "Esmeralda Cinza",
   // === Pallid ===
   "blue+pallid": "Pallid Azul",
   "green+pallid": "Pallid Verde",
   "pallid+turquoise": "Pallid Turquesa",
-  "aqua+pallid": "Pallid Aqua",
+  "aqua+pallid": "Pallid Esmeralda",
   // === Pallid-ino ===
   "green+pallidino": "Pallid-ino Verde",
   "blue+pallidino": "Pallid-ino Azul",
@@ -350,28 +350,33 @@ export const COMPOSITE_NAMES: Record<string, string> = {
   "green+rec_pied": "Arlequim Recessivo Verde",
   "blue+rec_pied": "Arlequim Recessivo Azul",
   "rec_pied+turquoise": "Arlequim Recessivo Turquesa",
-  "aqua+rec_pied": "Arlequim Recessivo Aqua",
+  "aqua+rec_pied": "Arlequim Recessivo Esmeralda",
   "dom_pied_sf+green": "Arlequim Dominante Verde",
   "blue+dom_pied_sf": "Arlequim Dominante Azul",
   "dom_pied_sf+turquoise": "Arlequim Dominante Turquesa",
+  "aqua+dom_pied_sf": "Arlequim Dominante Esmeralda",
   // === Diluído ===
   "dilute+green": "Diluído Verde",
   "blue+dilute": "Diluído Azul",
   "dilute+turquoise": "Diluído Turquesa",
+  "aqua+dilute": "Diluído Esmeralda",
   // === NSL Ino ===
   "green+nsino": "NSL Ino Verde",
   "blue+nsino": "NSL Ino Azul",
   "nsino+turquoise": "NSL Ino Turquesa",
+  "aqua+nsino": "NSL Ino Esmeralda",
   // === Combinações Múltiplas Comuns ===
   // Silver = Cinza + Canela (azul + cinza + canela)
   "blue+cinnamon+grey_sf": "Silver",
   "cinnamon+green+grey_sf": "Canela Verde Cinza",
+  "aqua+cinnamon+grey_sf": "Silver Esmeralda",
   "cinnamon+grey_sf+turquoise": "Silver Turquesa",
   // Skyblue combinações
   "blue+cinnamon+dark_sf": "Cobalto Canela",
   // Opalino + Canela
   "blue+cinnamon+opaline": "Opalino Canela Azul",
   "cinnamon+green+opaline": "Opalino Canela",
+  "aqua+cinnamon+opaline": "Opalino Canela Esmeralda",
   "cinnamon+opaline+turquoise": "Opalino Canela Turquesa",
   // Ino combinações
   "blue+opaline+slino": "Albino Opalino",
@@ -379,6 +384,7 @@ export const COMPOSITE_NAMES: Record<string, string> = {
   "opaline+slino+turquoise": "Cremino Opalino",
   "blue+cinnamon+slino": "Albino Canela",
   "cinnamon+green+slino": "Lutino Canela",
+  "aqua+cinnamon+slino": "Cremino Canela Esmeralda",
   "cinnamon+slino+turquoise": "Cremino Canela",
   // Violeta combinações
   "cinnamon+turquoise+violet_sf": "Violeta Canela Turquesa",
@@ -387,6 +393,7 @@ export const COMPOSITE_NAMES: Record<string, string> = {
   // Cobalto combinações
   "dark_sf+turquoise": "Turquesa Cobalto",
   "cinnamon+dark_sf+turquoise": "Canela Turquesa Cobalto",
+  "aqua+cinnamon+dark_sf": "Canela Esmeralda Cobalto",
 };
 
 // ============================================================

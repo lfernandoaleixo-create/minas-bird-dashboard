@@ -445,3 +445,5 @@
 - [x] Genética: salvar parametrização genética junto com o casal (para não precisar preencher toda vez)
 - [x] Genética: revisar todos os nomes de mutações para português usado entre criadores de aves
 - [x] Genética: implementar calculadora para Cabeça de Ameixa (Verde ancestral + Verde Cinza) com rigor
+- [x] Genética: renomear "Aqua" para "Esmeralda" em toda a interface (termo usado pelos criadores brasileiros)
+- [x] Genética: esclarecido que Verde/Azul/Turquesa/Esmeralda são alelos do mesmo locus (exclusivos — correto)
