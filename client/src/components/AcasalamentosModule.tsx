@@ -818,7 +818,7 @@ export default function AcasalamentosModule() {
                           <span className="text-base font-bold whitespace-nowrap flex-1 truncate">
                             <span className="text-blue-600">♂</span>{" "}
                             <span className="text-stone-800">{male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}</span>
-                            {male?.mutation && <span className="text-emerald-700 font-bold ml-1.5">{male.mutation}</span>}
+                            {male?.mutation && <span className="text-blue-600 font-bold ml-1.5">{male.mutation}</span>}
                             {male?.anilha && <span className="text-stone-900 font-semibold font-mono text-sm ml-1.5">{male.anilha}</span>}
                           </span>
 
@@ -826,7 +826,7 @@ export default function AcasalamentosModule() {
                           <span className="text-base font-bold whitespace-nowrap flex-1 truncate">
                             <span className="text-rose-500">♀</span>{" "}
                             <span className="text-stone-800">{female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}</span>
-                            {female?.mutation && <span className="text-emerald-700 font-bold ml-1.5">{female.mutation}</span>}
+                            {female?.mutation && <span className="text-rose-500 font-bold ml-1.5">{female.mutation}</span>}
                             {female?.anilha && <span className="text-stone-900 font-semibold font-mono text-sm ml-1.5">{female.anilha}</span>}
                           </span>
 
