@@ -766,23 +766,19 @@ export default function AcasalamentosModule() {
                   onClick={() => toggleSpecies(group.speciesId)}
                   className="w-full px-5 py-4 flex items-center justify-between hover:bg-stone-50/50 transition-colors"
                 >
-                  <div className="flex items-center gap-4 min-w-0">
+                  <div className="flex items-center gap-4 min-w-0 flex-wrap">
                     <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center border-2 border-rose-200 flex-shrink-0">
                       <Heart size={16} className="text-rose-500" />
                     </div>
-                    <div className="text-left min-w-0">
-                      <h3 className="text-base font-bold text-stone-800 truncate">{group.speciesName}</h3>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-[11px] text-emerald-600 font-semibold">{activePairs} ativo{activePairs !== 1 ? "s" : ""}</span>
-                        <span className="text-[11px] text-stone-300">•</span>
-                        <span className="text-[11px] text-blue-500 font-medium">{singleMales} ♂ solteiro{singleMales !== 1 ? "s" : ""}</span>
-                        <span className="text-[11px] text-stone-300">•</span>
-                        <span className="text-[11px] text-rose-400 font-medium">{singleFemales} ♀ solteira{singleFemales !== 1 ? "s" : ""}</span>
-                      </div>
-                    </div>
+                    <h3 className="text-lg font-extrabold text-stone-800">{group.speciesName}</h3>
+                    <span className="text-sm font-bold text-emerald-600">{activePairs} ativo{activePairs !== 1 ? "s" : ""}</span>
+                    <span className="text-stone-300 font-bold">•</span>
+                    <span className="text-sm font-bold text-blue-600">{singleMales} ♂ solteiro{singleMales !== 1 ? "s" : ""}</span>
+                    <span className="text-stone-300 font-bold">•</span>
+                    <span className="text-sm font-bold text-rose-500">{singleFemales} ♀ solteira{singleFemales !== 1 ? "s" : ""}</span>
                   </div>
                   <ChevronDown
-                    size={18}
+                    size={20}
                     className={cn("text-stone-400 transition-transform duration-200", isExpanded && "rotate-180")}
                   />
                 </button>
@@ -805,34 +801,47 @@ export default function AcasalamentosModule() {
                           )}
                           onClick={() => handleEdit(pair)}
                         >
-                          {/* Gaiola — first column, same style as bird code in Plantel */}
-                          <div className="min-w-[70px]">
+                          {/* Gaiola — first column with label */}
+                          <div className="min-w-[90px]">
+                            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Gaiola</p>
                             {pair.enclosure ? (
-                              <p className="text-base font-extrabold text-emerald-700 font-mono tracking-wide">{pair.enclosure}</p>
+                              <p className="text-lg font-extrabold text-emerald-700 font-mono tracking-wide">{pair.enclosure}</p>
                             ) : (
-                              <p className="text-sm font-medium text-stone-300 italic">—</p>
+                              <p className="text-base font-medium text-stone-300 italic">—</p>
                             )}
                           </div>
 
                           {/* Status badge */}
-                          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold border flex-shrink-0", STATUS_COLORS[pair.status as PairStatus])}>
+                          <span className={cn("px-2.5 py-1 rounded-full text-xs font-bold border flex-shrink-0", STATUS_COLORS[pair.status as PairStatus])}>
                             {STATUS_LABELS[pair.status as PairStatus]}
                           </span>
 
-                          {/* Info columns — aligned grid like Plantel */}
-                          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 min-w-0">
-                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap truncate">
-                              <span className="text-blue-600 font-medium text-xs">♂</span> {male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
-                              {male?.mutation && <span className="text-stone-400 font-normal text-xs ml-1">{male.mutation}</span>}
-                            </p>
-                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap truncate">
-                              <span className="text-rose-500 font-medium text-xs">♀</span> {female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
-                              {female?.mutation && <span className="text-stone-400 font-normal text-xs ml-1">{female.mutation}</span>}
-                            </p>
-                            <p className="text-sm font-semibold text-stone-700 whitespace-nowrap">
+                          {/* Info columns */}
+                          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 min-w-0">
+                            <div className="min-w-0">
+                              <p className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
+                                <span className="text-blue-600 font-bold">♂</span> {male?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
+                              </p>
+                              {male?.mutation ? (
+                                <p className="text-sm font-bold text-emerald-700 truncate">{male.mutation}</p>
+                              ) : (
+                                <p className="text-sm text-stone-300 italic">sem mutação</p>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-base font-bold text-stone-800 whitespace-nowrap truncate">
+                                <span className="text-rose-500 font-bold">♀</span> {female?.ringNumber || <span className="text-stone-300 italic font-normal">—</span>}
+                              </p>
+                              {female?.mutation ? (
+                                <p className="text-sm font-bold text-emerald-700 truncate">{female.mutation}</p>
+                              ) : (
+                                <p className="text-sm text-stone-300 italic">sem mutação</p>
+                              )}
+                            </div>
+                            <p className="text-base font-semibold text-stone-700 whitespace-nowrap">
                               <span className="text-stone-400 font-medium text-xs">Nome</span> {pair.pairName || <span className="text-stone-300 italic font-normal">—</span>}
                             </p>
-                            <p className="text-sm font-bold text-stone-800 truncate min-w-0">
+                            <p className="text-base font-bold text-stone-800 truncate min-w-0">
                               <span className="text-stone-400 font-medium text-xs">Genética</span>{" "}
                               {maleGen || femaleGen ? (
                                 <span className="text-emerald-600">✓</span>
