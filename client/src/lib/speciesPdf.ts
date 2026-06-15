@@ -24,6 +24,7 @@ export interface BirdRow {
   originBreeder?: string | null;
   birthDate?: string | null;
   birthDatePrecision?: string | null;
+  speciesName?: string | null;
 }
 
 export interface PdfFilters {
@@ -115,11 +116,12 @@ interface ColDef {
 
 function getColumnDefs(columns: string[], usableW: number): ColDef[] {
   const allCols: Record<string, { label: string; baseWidth: number; align?: "left" | "right" }> = {
-    codigo: { label: "Código", baseWidth: 18 },
+    especie: { label: "Esp\u00e9cie", baseWidth: 36 },
+    codigo: { label: "C\u00f3digo", baseWidth: 18 },
     sexo: { label: "Sexo", baseWidth: 16 },
     anilha: { label: "Anilha", baseWidth: 40 },
     gaiola: { label: "Gaiola", baseWidth: 16 },
-    mutacao: { label: "Mutação", baseWidth: 44 },
+    mutacao: { label: "Muta\u00e7\u00e3o", baseWidth: 44 },
     status: { label: "Status", baseWidth: 18, align: "right" },
     nf: { label: "NF", baseWidth: 30 },
     origem: { label: "Origem", baseWidth: 24 },
@@ -141,6 +143,7 @@ function getColumnDefs(columns: string[], usableW: number): ColDef[] {
 
 function getCellValue(bird: BirdRow, colKey: string): string {
   switch (colKey) {
+    case "especie": return bird.speciesName || "—";
     case "codigo": return bird.ringNumber || "—";
     case "sexo": return SEX_MAP[bird.sex] || bird.sex;
     case "anilha": return bird.anilha || "—";

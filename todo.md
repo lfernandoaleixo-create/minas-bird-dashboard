@@ -459,3 +459,5 @@
 - [x] BUG CRÍTICO: Datas de nascimento — corrigir bug de fuso horário que mostra ano anterior (UTC-3)
 - [x] BUG CRÍTICO: Datas de nascimento — migrar aves existentes com 01/01 para year_only
 - [x] Plantel: criar filtros completos para geração de PDF (NF, gaiola, mutação, sexo, status, espécie, origem, etc.)
+- [x] Plantel PDF: adicionar coluna Espécie para incluir nome da espécie na frente de cada ave no PDF
+- [x] Plantel PDF: corrigir palavras em formato de código para português legível

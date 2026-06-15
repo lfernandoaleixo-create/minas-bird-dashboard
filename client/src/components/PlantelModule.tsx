@@ -1954,6 +1954,7 @@ function PdfFilterModal({
   const mutations = Array.from(new Set(speciesData.birds.map((b: any) => b.mutation).filter(Boolean))) as string[];
 
   const ALL_COLUMNS = [
+    { key: "especie", label: "Esp\u00e9cie" },
     { key: "codigo", label: "C\u00f3digo" },
     { key: "sexo", label: "Sexo" },
     { key: "anilha", label: "Anilha" },
@@ -1992,6 +1993,7 @@ function PdfFilterModal({
         originBreeder: b.originBreeder || null,
         birthDate: b.birthDate || null,
         birthDatePrecision: b.birthDatePrecision || null,
+        speciesName: b.speciesName || speciesData.speciesName,
       })),
       filters: {
         sex: filterSex,
