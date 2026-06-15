@@ -248,6 +248,7 @@ function StatusBadge({ status }: { status: ClientStatus }) {
 
 export default function ClientsModule() {
   const [view, setView] = useState<"list" | "form" | "detail" | "purchase_detail">("list");
+  const [listTab, setListTab] = useState<"clientes" | "vendas">("clientes");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
@@ -260,6 +261,11 @@ export default function ClientsModule() {
   const [speciesDropdownOpen, setSpeciesDropdownOpen] = useState(false);
   const [birdFilterSpecies, setBirdFilterSpecies] = useState<string>("todos");
   const [birdFilterMutation, setBirdFilterMutation] = useState<string>("todos");
+  // Sales tab filters
+  const [salesFilterSpecies, setSalesFilterSpecies] = useState<string>("todos");
+  const [salesFilterClient, setSalesFilterClient] = useState<string>("todos");
+  const [salesFilterDateFrom, setSalesFilterDateFrom] = useState<string>("");
+  const [salesFilterDateTo, setSalesFilterDateTo] = useState<string>("");
 
   // tRPC queries
   const clientsQuery = trpc.cliente.list.useQuery();
@@ -388,6 +394,76 @@ export default function ClientsModule() {
   const overdueTotal = useMemo(() => {
     return (overdueQuery.data || []).reduce((sum, i: any) => sum + i.valueCents, 0);
   }, [overdueQuery.data]);
+
+  // Sales tab: processed and filtered sales data
+  const allSalesData = useMemo(() => {
+    const purchases = allPurchasesQuery.data;
+    if (!purchases) return [];
+    return purchases.map((p: any) => {
+      const installments = p.installments || [];
+      const pagas = installments.filter((i: any) => i.status === "pago");
+      const pendentes = installments.filter((i: any) => i.status === "pendente");
+      const atrasadas = installments.filter((i: any) => i.status === "atrasado" || (i.status === "pendente" && new Date(i.dueDate) < new Date()));
+      return {
+        id: p.id,
+        clientId: p.clientId,
+        clientName: p.clientName || "—",
+        species: p.species,
+        mutation: p.mutation,
+        birdCode: p.birdCode || "",
+        quantity: p.quantity,
+        valueCents: p.valueCents,
+        paymentMethod: p.paymentMethod,
+        saleDate: p.saleDate,
+        saleStatus: p.saleStatus,
+        installmentsCount: installments.length || 1,
+        parcelasPagas: pagas.length,
+        parcelasAtrasadas: atrasadas.length,
+        totalPago: pagas.reduce((s: number, i: any) => s + i.valueCents, 0),
+        totalPendente: [...pendentes, ...atrasadas].reduce((s: number, i: any) => s + i.valueCents, 0),
+      };
+    });
+  }, [allPurchasesQuery.data]);
+
+  const filteredSales = useMemo(() => {
+    let list = allSalesData;
+    if (salesFilterSpecies !== "todos") {
+      list = list.filter(s => s.species === salesFilterSpecies);
+    }
+    if (salesFilterClient !== "todos") {
+      list = list.filter(s => String(s.clientId) === salesFilterClient);
+    }
+    if (salesFilterDateFrom) {
+      list = list.filter(s => s.saleDate >= salesFilterDateFrom);
+    }
+    if (salesFilterDateTo) {
+      list = list.filter(s => s.saleDate <= salesFilterDateTo);
+    }
+    return list.sort((a, b) => (b.saleDate || "").localeCompare(a.saleDate || ""));
+  }, [allSalesData, salesFilterSpecies, salesFilterClient, salesFilterDateFrom, salesFilterDateTo]);
+
+  // Unique species from all sales for filter dropdown
+  const salesSpeciesOptions = useMemo(() => {
+    const set = new Set<string>();
+    allSalesData.forEach(s => { if (s.species) set.add(s.species); });
+    return Array.from(set).sort();
+  }, [allSalesData]);
+
+  // Unique clients from all sales for filter dropdown
+  const salesClientOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    allSalesData.forEach(s => map.set(String(s.clientId), s.clientName));
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allSalesData]);
+
+  // Sales totals
+  const salesTotals = useMemo(() => {
+    const totalVendas = filteredSales.reduce((s, p) => s + (p.valueCents || 0), 0);
+    const totalRecebido = filteredSales.reduce((s, p) => s + p.totalPago, 0);
+    const totalPendente = filteredSales.reduce((s, p) => s + p.totalPendente, 0);
+    const totalAves = filteredSales.reduce((s, p) => s + (p.quantity || 1), 0);
+    return { totalVendas, totalRecebido, totalPendente, totalAves };
+  }, [filteredSales]);
 
   // WhatsApp helper
   const openWhatsApp = (phone: string, name?: string) => {
@@ -1535,180 +1611,379 @@ export default function ClientsModule() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent flex items-end p-5">
           <div>
             <p className="text-emerald-300/80 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Módulo 3</p>
-            <h1 className="text-white text-xl lg:text-2xl font-bold tracking-tight">Clientes</h1>
+            <h1 className="text-white text-xl lg:text-2xl font-bold tracking-tight">Clientes & Vendas</h1>
             <p className="text-white/70 text-sm mt-1.5 font-light">Gestão de clientes, vendas e cobranças</p>
           </div>
         </div>
       </div>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
-            <Users size={20} className="text-emerald-600" />
-            Cadastro de Clientes
-          </h2>
-          <p className="text-sm text-stone-500 mt-1">
-            {clientsQuery.data?.length ?? 0} cliente(s) cadastrado(s)
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSalesReport}
-            disabled={!allPurchasesQuery.data || allPurchasesQuery.data.length === 0}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-xs font-medium hover:bg-stone-50 disabled:opacity-40 transition-all"
-            title="Exportar relatório de vendas em PDF"
-          >
-            <Download size={13} />
-            Relatório PDF
-          </button>
-          <button
-            onClick={() => { setFormData(emptyForm); setEditingId(null); setView("form"); }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
-          >
-            <Plus size={15} />
-            Novo Cliente
-          </button>
-        </div>
+
+      {/* Tab Switcher */}
+      <div className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1.5 shadow-sm">
+        <button
+          onClick={() => setListTab("clientes")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+            listTab === "clientes"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
+          )}
+        >
+          <Users size={15} />
+          Clientes
+        </button>
+        <button
+          onClick={() => setListTab("vendas")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+            listTab === "vendas"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
+          )}
+        >
+          <ShoppingBag size={15} />
+          Vendas ({allSalesData.length})
+        </button>
       </div>
 
-      {/* Overdue Installments Alert */}
-      {overdueCount > 0 && (
-        <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-            <AlertTriangle size={16} className="text-red-600" />
+      {/* ===== VENDAS TAB ===== */}
+      {listTab === "vendas" && (
+        <div className="space-y-5">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
+              <p className="text-xs text-stone-400 mb-1">Aves Vendidas</p>
+              <p className="text-xl font-bold text-stone-800">{salesTotals.totalAves}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
+              <p className="text-xs text-stone-400 mb-1">Total Vendas</p>
+              <p className="text-xl font-bold text-emerald-700">{formatCurrency(salesTotals.totalVendas)}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
+              <p className="text-xs text-stone-400 mb-1">Recebido</p>
+              <p className="text-xl font-bold text-blue-700">{formatCurrency(salesTotals.totalRecebido)}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-stone-200/80 p-4">
+              <p className="text-xs text-stone-400 mb-1">Pendente</p>
+              <p className={cn("text-xl font-bold", salesTotals.totalPendente > 0 ? "text-amber-600" : "text-stone-400")}>{formatCurrency(salesTotals.totalPendente)}</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-800">
-              {overdueCount} parcela{overdueCount > 1 ? "s" : ""} vencida{overdueCount > 1 ? "s" : ""}
-            </p>
-            <p className="text-xs text-red-600">
-              Total pendente: {formatCurrency(overdueTotal)}
-            </p>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3">
+            <select
+              value={salesFilterSpecies}
+              onChange={(e) => setSalesFilterSpecies(e.target.value)}
+              className="px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white text-stone-600"
+            >
+              <option value="todos">Todas Espécies</option>
+              {salesSpeciesOptions.map(sp => (
+                <option key={sp} value={sp}>{sp}</option>
+              ))}
+            </select>
+            <select
+              value={salesFilterClient}
+              onChange={(e) => setSalesFilterClient(e.target.value)}
+              className="px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white text-stone-600"
+            >
+              <option value="todos">Todos Clientes</option>
+              {salesClientOptions.map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={salesFilterDateFrom}
+                onChange={(e) => setSalesFilterDateFrom(e.target.value)}
+                className="px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white text-stone-600"
+                title="Data inicial"
+              />
+              <span className="text-stone-400 text-xs">até</span>
+              <input
+                type="date"
+                value={salesFilterDateTo}
+                onChange={(e) => setSalesFilterDateTo(e.target.value)}
+                className="px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white text-stone-600"
+                title="Data final"
+              />
+            </div>
+            {(salesFilterSpecies !== "todos" || salesFilterClient !== "todos" || salesFilterDateFrom || salesFilterDateTo) && (
+              <button
+                onClick={() => { setSalesFilterSpecies("todos"); setSalesFilterClient("todos"); setSalesFilterDateFrom(""); setSalesFilterDateTo(""); }}
+                className="px-3 py-2 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
+
+          {/* Sales List */}
+          {allPurchasesQuery.isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
+            </div>
+          ) : filteredSales.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 p-10 text-center">
+              <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
+                <ShoppingBag className="w-6 h-6 text-stone-400" />
+              </div>
+              <h3 className="text-base font-semibold text-stone-700 mb-1">Nenhuma venda encontrada</h3>
+              <p className="text-stone-500 text-sm">Tente alterar os filtros ou cadastre uma venda pelo perfil do cliente.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 overflow-hidden">
+              {/* Table Header */}
+              <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-3 bg-stone-50 border-b border-stone-200 text-xs font-semibold text-stone-500 uppercase tracking-wide">
+                <div className="col-span-2">Data</div>
+                <div className="col-span-2">Cliente</div>
+                <div className="col-span-3">Ave</div>
+                <div className="col-span-2">Valor</div>
+                <div className="col-span-2">Pagamento</div>
+                <div className="col-span-1">Status</div>
+              </div>
+              {/* Table Body */}
+              <div className="divide-y divide-stone-100">
+                {filteredSales.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-2 px-5 py-3.5 hover:bg-emerald-50/30 transition-colors cursor-pointer items-center"
+                    onClick={() => {
+                      setSelectedClientId(sale.clientId);
+                      setSelectedPurchaseId(sale.id);
+                      setView("purchase_detail");
+                    }}
+                  >
+                    <div className="col-span-2 text-sm text-stone-600">
+                      {sale.saleDate ? new Date(sale.saleDate + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
+                    </div>
+                    <div className="col-span-2 text-sm font-medium text-stone-800 truncate">
+                      {sale.clientName}
+                    </div>
+                    <div className="col-span-3">
+                      <p className="text-sm font-medium text-stone-800">{sale.species}</p>
+                      {sale.mutation && <p className="text-xs text-stone-500">{sale.mutation}</p>}
+                    </div>
+                    <div className="col-span-2 text-sm font-semibold text-emerald-700">
+                      {sale.valueCents ? formatCurrency(sale.valueCents) : "—"}
+                    </div>
+                    <div className="col-span-2 text-xs text-stone-500">
+                      {getPaymentLabel(sale.paymentMethod)}
+                      {sale.installmentsCount > 1 && (
+                        <span className="ml-1 text-stone-400">({sale.installmentsCount}x)</span>
+                      )}
+                    </div>
+                    <div className="col-span-1">
+                      {sale.saleStatus === "concluida" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 size={10} />
+                          Paga
+                        </span>
+                      ) : sale.parcelasAtrasadas > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-50 text-red-700 border border-red-200">
+                          <AlertCircle size={10} />
+                          Atraso
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          <Clock size={10} />
+                          Aberta
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Export PDF button */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleSalesReport}
+              disabled={!allPurchasesQuery.data || allPurchasesQuery.data.length === 0}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-stone-200 text-stone-600 text-sm font-medium hover:bg-stone-50 disabled:opacity-40 transition-all"
+            >
+              <Download size={14} />
+              Exportar Relatório PDF
+            </button>
           </div>
         </div>
       )}
 
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nome, telefone, email, cidade ou CPF..."
-            className="w-full pl-10 pr-4 py-2.5 border border-stone-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all"
-          />
-        </div>
-        <div className="flex gap-1 bg-white border border-stone-200 rounded-lg p-1">
-          {(["todos", "ativo", "inativo", "lista_espera"] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                statusFilter === status
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
-              )}
-            >
-              {status === "todos" ? "Todos" : status === "ativo" ? "Ativos" : status === "inativo" ? "Inativos" : "Espera"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Client List */}
-      {clientsQuery.isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
-        </div>
-      ) : filteredClients.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 p-10 text-center">
-          <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
-            <Users className="w-6 h-6 text-stone-400" />
+      {/* ===== CLIENTES TAB ===== */}
+      {listTab === "clientes" && (
+        <>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                <Users size={20} className="text-emerald-600" />
+                Cadastro de Clientes
+              </h2>
+              <p className="text-sm text-stone-500 mt-1">
+                {clientsQuery.data?.length ?? 0} cliente(s) cadastrado(s)
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSalesReport}
+                disabled={!allPurchasesQuery.data || allPurchasesQuery.data.length === 0}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-xs font-medium hover:bg-stone-50 disabled:opacity-40 transition-all"
+                title="Exportar relatório de vendas em PDF"
+              >
+                <Download size={13} />
+                Relatório PDF
+              </button>
+              <button
+                onClick={() => { setFormData(emptyForm); setEditingId(null); setView("form"); }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+              >
+                <Plus size={15} />
+                Novo Cliente
+              </button>
+            </div>
           </div>
-          <h3 className="text-base font-semibold text-stone-700 mb-1">
-            {searchQuery || statusFilter !== "todos" ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-          </h3>
-          <p className="text-stone-500 text-sm">
-            {searchQuery || statusFilter !== "todos"
-              ? "Tente alterar os filtros de busca."
-              : "Clique em \"Novo Cliente\" para começar."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filteredClients.map((client) => (
-            <div
-              key={client.id}
-              className="bg-white rounded-2xl border border-stone-200/80 hover:border-emerald-200 hover:shadow-sm transition-all p-4 cursor-pointer group"
-              onClick={() => { setSelectedClientId(client.id); setView("detail"); }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
-                    <span className="text-sm font-bold text-emerald-700">
-                      {client.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  {/* Info */}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-semibold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                        {client.name}
-                      </h4>
-                      <StatusBadge status={client.status} />
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-stone-500">
-                      <span className="flex items-center gap-1">
-                        <Phone size={11} />
-                        {formatPhone(client.phone)}
-                      </span>
-                      {client.city && (
-                        <span className="flex items-center gap-1">
-                          <MapPin size={11} />
-                          {client.city}{client.state ? ` — ${client.state}` : ""}
-                        </span>
-                      )}
-                      {client.email && (
-                        <span className="hidden md:flex items-center gap-1">
-                          <Mail size={11} />
-                          {client.email}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* Actions */}
-                <div className="flex items-center gap-1">
-                  {client.speciesInterest && client.speciesInterest.length > 0 && (
-                    <span className="hidden sm:flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-full text-xs text-emerald-600 mr-2">
-                      <Bird size={11} />
-                      {client.speciesInterest.length}
-                    </span>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleEdit(client); }}
-                    className="p-2 text-stone-400 hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50"
-                    title="Editar"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(client.id); }}
-                    className="p-2 text-stone-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
-                    title="Excluir"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                  <ChevronRight size={16} className="text-stone-300 ml-1" />
-                </div>
+
+          {/* Overdue Installments Alert */}
+          {overdueCount > 0 && (
+            <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle size={16} className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-800">
+                  {overdueCount} parcela{overdueCount > 1 ? "s" : ""} vencida{overdueCount > 1 ? "s" : ""}
+                </p>
+                <p className="text-xs text-red-600">
+                  Total pendente: {formatCurrency(overdueTotal)}
+                </p>
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Search & Filters */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nome, telefone, email, cidade ou CPF..."
+                className="w-full pl-10 pr-4 py-2.5 border border-stone-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all"
+              />
+            </div>
+            <div className="flex gap-1 bg-white border border-stone-200 rounded-lg p-1">
+              {(["todos", "ativo", "inativo", "lista_espera"] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                    statusFilter === status
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
+                  )}
+                >
+                  {status === "todos" ? "Todos" : status === "ativo" ? "Ativos" : status === "inativo" ? "Inativos" : "Espera"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Client List */}
+          {clientsQuery.isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
+            </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-stone-200/80 shadow-md shadow-stone-200/30 p-10 text-center">
+              <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-6 h-6 text-stone-400" />
+              </div>
+              <h3 className="text-base font-semibold text-stone-700 mb-1">
+                {searchQuery || statusFilter !== "todos" ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+              </h3>
+              <p className="text-stone-500 text-sm">
+                {searchQuery || statusFilter !== "todos"
+                  ? "Tente alterar os filtros de busca."
+                  : "Clique em \"Novo Cliente\" para começar."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredClients.map((client) => (
+                <div
+                  key={client.id}
+                  className="bg-white rounded-2xl border border-stone-200/80 hover:border-emerald-200 hover:shadow-sm transition-all p-4 cursor-pointer group"
+                  onClick={() => { setSelectedClientId(client.id); setView("detail"); }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-emerald-700">
+                          {client.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      {/* Info */}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-stone-800 group-hover:text-emerald-700 transition-colors">
+                            {client.name}
+                          </h4>
+                          <StatusBadge status={client.status} />
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-stone-500">
+                          <span className="flex items-center gap-1">
+                            <Phone size={11} />
+                            {formatPhone(client.phone)}
+                          </span>
+                          {client.city && (
+                            <span className="flex items-center gap-1">
+                              <MapPin size={11} />
+                              {client.city}{client.state ? ` — ${client.state}` : ""}
+                            </span>
+                          )}
+                          {client.email && (
+                            <span className="hidden md:flex items-center gap-1">
+                              <Mail size={11} />
+                              {client.email}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      {client.speciesInterest && client.speciesInterest.length > 0 && (
+                        <span className="hidden sm:flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-full text-xs text-emerald-600 mr-2">
+                          <Bird size={11} />
+                          {client.speciesInterest.length}
+                        </span>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleEdit(client); }}
+                        className="p-2 text-stone-400 hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50"
+                        title="Editar"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(client.id); }}
+                        className="p-2 text-stone-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                        title="Excluir"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <ChevronRight size={16} className="text-stone-300 ml-1" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Delete Confirmation Dialog */}

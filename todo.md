@@ -471,3 +471,6 @@
 - [x] Bug: ao excluir/cancelar uma venda, a ave não voltava para status "ativo" no plantel — corrigido no servidor (deletePurchase agora reverte birdStatus)
 - [x] Bug: ao excluir o cliente inteiro, as aves das vendas dele não voltavam para "ativo" — corrigido em deleteClient (reverte birdStatus de todas as aves vinculadas antes de deletar)
 - [x] Campo valor da venda: aceitar formatação monetária brasileira com separador de milhar (ex: 1.500,00 ou 12.000,00)
+- [x] Clientes: criar aba/seção "Vendas" com listagem geral de todas as aves vendidas (consolidado)
+- [x] Clientes: filtros na aba Vendas por espécie, período, cliente
+- [x] Clientes: resumo com totais (quantidade vendida, valor total, pendente a receber)
