@@ -369,6 +369,12 @@ export async function deleteClient(id: number) {
   for (const p of purchases) {
     await db.delete(saleInstallments).where(eq(saleInstallments.purchaseId, p.id));
   }
+  // Revert bird status to "ativo" for all birds linked to this client's purchases
+  for (const p of purchases) {
+    if (p.birdId) {
+      await db.update(plantel).set({ status: "ativo" }).where(eq(plantel.id, p.birdId));
+    }
+  }
   await db.delete(clientPurchases).where(eq(clientPurchases.clientId, id));
   await db.delete(clients).where(eq(clients.id, id));
   return true;

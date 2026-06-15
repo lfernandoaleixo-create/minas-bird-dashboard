@@ -328,6 +328,7 @@ export default function ClientsModule() {
   const deleteMutation = trpc.cliente.delete.useMutation({
     onSuccess: () => {
       utils.cliente.list.invalidate();
+      utils.plantel.list.invalidate();
       setShowDeleteConfirm(null);
       if (view === "detail") setView("list");
     },

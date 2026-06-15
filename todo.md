@@ -469,3 +469,4 @@
 - [ ] Clientes: ao confirmar venda — atualizar status da ave no plantel para "vendida" automaticamente
 - [ ] Clientes: criar histórico/registro de saídas (aves vendidas/doadas)
 - [x] Bug: ao excluir/cancelar uma venda, a ave não voltava para status "ativo" no plantel — corrigido no servidor (deletePurchase agora reverte birdStatus)
+- [x] Bug: ao excluir o cliente inteiro, as aves das vendas dele não voltavam para "ativo" — corrigido em deleteClient (reverte birdStatus de todas as aves vinculadas antes de deletar)
