@@ -307,8 +307,8 @@ export const COMPOSITE_NAMES: Record<string, string> = {
   // === Fator Escuro ===
   "blue+dark_sf": "Cobalto",
   "blue+dark_df": "Malva",
-  "dark_sf+green": "Verde Escuro",
-  "dark_df+green": "Oliva",
+  "dark_sf+green": "Verde Cobalto",
+  "dark_df+green": "Verde Malva",
   // === Violeta ===
   "blue+violet_sf": "Violeta",
   "blue+dark_sf+violet_sf": "Violeta Cobalto",
@@ -517,8 +517,19 @@ export function formatGenotype(data: BirdGeneticsData): string {
     ...VISUAL_MUTATIONS.recessive,
     ...VISUAL_MUTATIONS.sexLinked,
   ];
+
+  // IDs de mutações dominantes que "cobrem" o Azul visualmente
+  const DOMINANT_IDS = ["dark_sf", "dark_df", "violet_sf", "violet_df", "grey_sf", "grey_df"];
+  const hasDominant = data.visual.some(id => DOMINANT_IDS.includes(id));
+  const hasBlue = data.visual.includes("blue");
+
+  // Quando a base é Azul e tem dominantes, omitir "Azul" do nome
+  // (criadores não falam "Azul Cobalto Violeta", falam "Cobalto Violeta")
+  const filteredVisual = (hasBlue && hasDominant)
+    ? data.visual.filter(id => id !== "blue")
+    : data.visual;
   
-  const visualLabels = data.visual
+  const visualLabels = filteredVisual
     .map(id => allMutations.find(m => m.id === id)?.label || id)
     .filter(Boolean);
   

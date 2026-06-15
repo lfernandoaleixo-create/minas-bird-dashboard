@@ -449,3 +449,5 @@
 - [x] Genética: esclarecido que Verde/Azul/Turquesa/Esmeralda são alelos do mesmo locus (exclusivos — correto)
 - [x] Acasalamentos: redesenhar card do casal — mais fino/compacto, letras lateralizadas (rotacionadas), campos vazios sempre visíveis
 - [x] Genética: adicionar nomes comuns ao Fator Escuro — SF (Cobalto) e DF (Malva) no seletor e nas aves cadastradas
+- [x] Genética: nomenclatura — omitir "Azul" quando dominantes estão presentes (Cobalto Violeta, não Azul Cobalto Violeta)
+- [x] Genética: nomenclatura — Verde Escuro → Verde Cobalto, Oliva → Verde Malva
