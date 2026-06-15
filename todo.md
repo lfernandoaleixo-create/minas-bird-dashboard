@@ -461,3 +461,11 @@
 - [x] Plantel: criar filtros completos para geração de PDF (NF, gaiola, mutação, sexo, status, espécie, origem, etc.)
 - [x] Plantel PDF: adicionar coluna Espécie para incluir nome da espécie na frente de cada ave no PDF
 - [x] Plantel PDF: corrigir palavras em formato de código para português legível
+- [ ] Clientes: criar tabela clients no banco (nome, telefone, cidade, estado, email, CPF, obs)
+- [ ] Clientes: criar tabela sales no banco (clientId, birdId, valor, formaPagamento, data, obs)
+- [ ] Clientes: criar rotas tRPC para CRUD de clientes e vendas
+- [ ] Clientes: criar interface do módulo com listagem e cadastro de clientes
+- [ ] Clientes: ao vender ave — selecionar ave do plantel, valor, forma de pagamento
+- [ ] Clientes: ao confirmar venda — atualizar status da ave no plantel para "vendida" automaticamente
+- [ ] Clientes: criar histórico/registro de saídas (aves vendidas/doadas)
+- [x] Bug: ao excluir/cancelar uma venda, a ave não voltava para status "ativo" no plantel — corrigido no servidor (deletePurchase agora reverte birdStatus)

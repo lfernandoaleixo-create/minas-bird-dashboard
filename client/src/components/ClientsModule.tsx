@@ -351,6 +351,7 @@ export default function ClientsModule() {
   const deletePurchaseMutation = trpc.purchase.delete.useMutation({
     onSuccess: () => {
       utils.cliente.getById.invalidate();
+      utils.plantel.list.invalidate();
     },
   });
   const updateInstallmentMutation = trpc.purchase.updateInstallment.useMutation({

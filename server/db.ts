@@ -395,9 +395,15 @@ export async function createPurchase(purchase: InsertClientPurchase) {
 export async function deletePurchase(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // Fetch purchase to get birdId before deleting
+  const [purchase] = await db.select().from(clientPurchases).where(eq(clientPurchases.id, id));
   // Delete installments first
   await db.delete(saleInstallments).where(eq(saleInstallments.purchaseId, id));
   await db.delete(clientPurchases).where(eq(clientPurchases.id, id));
+  // Revert bird status to "ativo" if a bird was linked to this purchase
+  if (purchase && purchase.birdId) {
+    await db.update(plantel).set({ status: "ativo" }).where(eq(plantel.id, purchase.birdId));
+  }
   return true;
 }
 
