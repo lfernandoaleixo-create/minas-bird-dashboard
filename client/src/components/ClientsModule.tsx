@@ -990,13 +990,20 @@ export default function ClientsModule() {
                   <div>
                     <label className="text-xs font-medium text-stone-600 mb-1 block">Valor Total (R$)</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min={0}
+                      type="text"
+                      inputMode="numeric"
                       placeholder="0,00"
-                      value={purchaseForm.valueCents !== null ? (purchaseForm.valueCents / 100).toFixed(2) : ""}
+                      value={purchaseForm.valueCents !== null ? (purchaseForm.valueCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
                       onChange={(e) => {
-                        const val = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null;
+                        // Allow only digits, dots and commas
+                        let raw = e.target.value.replace(/[^\d,]/g, "");
+                        // Parse Brazilian format: remove dots (thousands), replace comma with dot (decimal)
+                        const parts = raw.split(",");
+                        const integerPart = parts[0].replace(/\./g, "");
+                        const decimalPart = parts[1] !== undefined ? parts[1].slice(0, 2) : "";
+                        const numericStr = integerPart + (parts[1] !== undefined ? "." + decimalPart : "");
+                        const val = numericStr ? Math.round(parseFloat(numericStr) * 100) : null;
+                        if (numericStr && isNaN(parseFloat(numericStr))) return;
                         const newForm = { ...purchaseForm, valueCents: val };
                         if (val && newForm.installmentsCount > 1) {
                           newForm.installments = generateInstallments(val, newForm.installmentsCount, newForm.saleDate);
