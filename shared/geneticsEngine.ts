@@ -729,7 +729,7 @@ function buildPhenotypeName(visual: string[]): string {
   
   // For multi-mutation combos without a composite name:
   // Remove 'green' from display if there are other mutations (green is implied as base)
-  const displayVisual = visual.length > 1 
+  let displayVisual = visual.length > 1 
     ? visual.filter(v => v !== 'green')
     : visual;
   
@@ -740,8 +740,25 @@ function buildPhenotypeName(visual: string[]): string {
       return COMPOSITE_NAMES[noGreenKey];
     }
   }
+
+  // Omitir "Azul" quando dominantes estão presentes (criadores não falam "Azul Cobalto")
+  const DOMINANT_IDS = ["dark_sf", "dark_df", "violet_sf", "violet_df", "grey_sf", "grey_df"];
+  const hasDominant = displayVisual.some(id => DOMINANT_IDS.includes(id));
+  const hasBlue = displayVisual.includes("blue");
+  if (hasBlue && hasDominant) {
+    displayVisual = displayVisual.filter(id => id !== "blue");
+  }
+
+  // Ordem de prioridade: estas mutações SEMPRE vem primeiro no nome
+  const PRIORITY_ORDER = [
+    "dom_pied_sf", "dom_pied_df", "cleartail", "dilute",
+    "rec_pied", "pallid", "opaline", "cinnamon",
+  ];
+  const priorityIds = PRIORITY_ORDER.filter(id => displayVisual.includes(id));
+  const restIds = displayVisual.filter(id => !PRIORITY_ORDER.includes(id));
+  const orderedVisual = [...priorityIds, ...restIds];
   
-  return displayVisual.map(getMutationLabel).join(" ");
+  return orderedVisual.map(getMutationLabel).join(" ");
 }
 
 function buildGenotypeName(visual: string[], splits: string[]): string {
