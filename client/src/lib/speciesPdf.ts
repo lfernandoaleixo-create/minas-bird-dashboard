@@ -172,7 +172,7 @@ export async function generateSpeciesPdf(data: SpeciesPdfData): Promise<void> {
   const obitoCount = filteredBirds.filter(b => b.status === "obito").length;
 
   const filterSummary = buildFilterSummary(data.filters);
-  const subtitle = `Prefixo: ${data.prefix} · ${activeCount} ativa${activeCount !== 1 ? "s" : ""}${obitoCount > 0 ? ` · ${obitoCount} óbito${obitoCount !== 1 ? "s" : ""}` : ""} · ${filteredBirds.length} total${filterSummary ? `\n${filterSummary}` : ""}`;
+  const subtitle = `Prefixo: ${data.prefix} · ${activeCount} ativa${activeCount !== 1 ? "s" : ""}${obitoCount > 0 ? ` · ${obitoCount} óbito${obitoCount !== 1 ? "s" : ""}` : ""} · ${filteredBirds.length} total`;
 
   let y = drawBrandHeader(
     doc,
@@ -181,6 +181,24 @@ export async function generateSpeciesPdf(data: SpeciesPdfData): Promise<void> {
     `Plantel — ${data.speciesName}`,
     subtitle,
   );
+
+  // Draw filter summary as a highlighted box below the header
+  if (filterSummary) {
+    const filterBoxX = margin;
+    const filterBoxW = pageW - margin * 2;
+    const filterBoxH = 9;
+    // Amber/yellow background for visibility
+    doc.setFillColor(255, 251, 235);
+    doc.setDrawColor(217, 169, 56);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(filterBoxX, y, filterBoxW, filterBoxH, 1.5, 1.5, "FD");
+    // Filter text — bold, larger, dark amber
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(146, 64, 14);
+    doc.text(filterSummary, pageW / 2, y + filterBoxH * 0.62, { align: "center", maxWidth: filterBoxW - 8 });
+    y += filterBoxH + 3;
+  }
 
   // Table columns
   const usableW = pageW - margin * 2;
