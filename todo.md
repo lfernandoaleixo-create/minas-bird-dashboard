@@ -451,3 +451,6 @@
 - [x] Genética: adicionar nomes comuns ao Fator Escuro — SF (Cobalto) e DF (Malva) no seletor e nas aves cadastradas
 - [x] Genética: nomenclatura — omitir "Azul" quando dominantes estão presentes (Cobalto Violeta, não Azul Cobalto Violeta)
 - [x] Genética: nomenclatura — Verde Escuro → Verde Cobalto, Oliva → Verde Malva
+- [x] Acasalamentos: remover botão de excluir do card do casal
+- [x] Acasalamentos: adicionar botão Salvar na marcação genética (travar edição após salvar)
+- [x] Acasalamentos: adicionar botão Voltar quando abrir detalhe do casal

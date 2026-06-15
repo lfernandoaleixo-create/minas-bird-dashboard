@@ -9,8 +9,8 @@ import { species } from "@/data/feeding";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  Heart, Plus, ChevronDown, ChevronRight, Edit2, Trash2, X,
-  Calendar, MapPin, FileText, AlertTriangle, FlaskConical
+  Heart, Plus, ChevronDown, ChevronRight, Edit2, X, ArrowLeft,
+  Calendar, MapPin, FileText, AlertTriangle, FlaskConical, Save, Lock
 } from "lucide-react";
 import { calculateBreedingForSpecies, type BreedingPrediction } from "@shared/geneticsEngine";
 import { formatGenotype, VISUAL_MUTATIONS, AVAILABLE_SPLITS, getVisualMutationsForSpecies, getAvailableSplitsForSpecies, type BirdGeneticsData, type SpeciesId } from "@shared/genetics";
@@ -66,7 +66,7 @@ const EMPTY_FORM: PairForm = {
 // ============================================================
 // GeneticsCard — card expansível para parametrizar genética
 // ============================================================
-function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme, speciesId }: {
+function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme, speciesId, locked, onLockToggle }: {
   title: string;
   sex: "macho" | "femea";
   birdCode: string;
@@ -74,6 +74,8 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme, s
   onChange: (g: LocalGenetics) => void;
   colorScheme: "blue" | "pink";
   speciesId?: SpeciesId;
+  locked?: boolean;
+  onLockToggle?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const borderColor = colorScheme === "blue" ? "border-blue-200" : "border-pink-200";
@@ -95,6 +97,7 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme, s
   const speciesSplits = speciesId ? getAvailableSplitsForSpecies(speciesId) : AVAILABLE_SPLITS;
 
   const toggleVisual = (id: string, group: "base" | "other") => {
+    if (locked) return;
     let current = [...genetics.visual];
     if (group === "base") {
       // Cor base é exclusiva
@@ -120,6 +123,7 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme, s
   };
 
   const toggleSplit = (id: string) => {
+    if (locked) return;
     const has = genetics.splits.includes(id);
     onChange({ ...genetics, splits: has ? genetics.splits.filter(s => s !== id) : [...genetics.splits, id] });
   };
@@ -251,6 +255,25 @@ function GeneticsCard({ title, sex, birdCode, genetics, onChange, colorScheme, s
               <p className="text-xs font-bold text-stone-800">{formatGenotype(genetics)}</p>
             </div>
           )}
+          {/* Botão Salvar / Editar */}
+          {onLockToggle && (genetics.visual.length > 0 || genetics.splits.length > 0) && (
+            <button
+              type="button"
+              onClick={onLockToggle}
+              className={cn(
+                "w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all",
+                locked
+                  ? "bg-stone-100 text-stone-500 hover:bg-stone-200 border border-stone-200"
+                  : "bg-emerald-600 text-white hover:bg-emerald-700"
+              )}
+            >
+              {locked ? <><Lock size={12} /> Genética Salva — Clique para Editar</> : <><Save size={12} /> Salvar Genética</>}
+            </button>
+          )}
+          {/* Aviso quando travado */}
+          {locked && (
+            <p className="text-[10px] text-amber-600 text-center italic mt-1">Genética travada. Clique acima para desbloquear.</p>
+          )}
         </div>
       )}
     </div>
@@ -271,6 +294,8 @@ export default function AcasalamentosModule() {
   // Genética local (apenas informativa, não salva)
   const [maleGenetics, setMaleGenetics] = useState<LocalGenetics>({ visual: [], splits: [] });
   const [femaleGenetics, setFemaleGenetics] = useState<LocalGenetics>({ visual: [], splits: [] });
+  const [maleLocked, setMaleLocked] = useState(false);
+  const [femaleLocked, setFemaleLocked] = useState(false);
 
   // tRPC queries
   const { data: pairs = [], isLoading } = trpc.breeding.list.useQuery();
@@ -387,8 +412,12 @@ export default function AcasalamentosModule() {
     // Restaurar genética salva
     const mg = (pair as any).maleGenetics;
     const fg = (pair as any).femaleGenetics;
-    setMaleGenetics(mg && (mg.visual?.length > 0 || mg.splits?.length > 0) ? mg : { visual: [], splits: [] });
-    setFemaleGenetics(fg && (fg.visual?.length > 0 || fg.splits?.length > 0) ? fg : { visual: [], splits: [] });
+    const hasMaleGenetics = mg && (mg.visual?.length > 0 || mg.splits?.length > 0);
+    const hasFemaleGenetics = fg && (fg.visual?.length > 0 || fg.splits?.length > 0);
+    setMaleGenetics(hasMaleGenetics ? mg : { visual: [], splits: [] });
+    setFemaleGenetics(hasFemaleGenetics ? fg : { visual: [], splits: [] });
+    setMaleLocked(!!hasMaleGenetics);
+    setFemaleLocked(!!hasFemaleGenetics);
     setView("form");
   };
 
@@ -426,10 +455,11 @@ export default function AcasalamentosModule() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setMaleGenetics({ visual: [], splits: [] }); setFemaleGenetics({ visual: [], splits: [] }); }}
-              className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
+              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setMaleGenetics({ visual: [], splits: [] }); setFemaleGenetics({ visual: [], splits: [] }); setMaleLocked(false); setFemaleLocked(false); }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-700"
             >
-              <X size={18} className="text-stone-500" />
+              <ArrowLeft size={16} />
+              <span className="text-sm font-medium">Voltar</span>
             </button>
             <h2 className="text-xl font-bold text-stone-800">
               {editingId ? "Editar Casal" : "Novo Casal"}
@@ -517,6 +547,8 @@ export default function AcasalamentosModule() {
               onChange={setMaleGenetics}
               colorScheme="blue"
               speciesId={form.speciesId as SpeciesId}
+              locked={maleLocked}
+              onLockToggle={() => setMaleLocked(!maleLocked)}
             />
           )}
 
@@ -530,6 +562,8 @@ export default function AcasalamentosModule() {
               onChange={setFemaleGenetics}
               colorScheme="pink"
               speciesId={form.speciesId as SpeciesId}
+              locked={femaleLocked}
+              onLockToggle={() => setFemaleLocked(!femaleLocked)}
             />
           )}
 
@@ -655,7 +689,7 @@ export default function AcasalamentosModule() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setMaleGenetics({ visual: [], splits: [] }); setFemaleGenetics({ visual: [], splits: [] }); }}
+              onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setMaleGenetics({ visual: [], splits: [] }); setFemaleGenetics({ visual: [], splits: [] }); setMaleLocked(false); setFemaleLocked(false); }}
             >
               Cancelar
             </Button>
@@ -840,33 +874,7 @@ export default function AcasalamentosModule() {
                             )}
                           </span>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {deleteConfirm === pair.id ? (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(pair.id); }}
-                                  className="px-2 py-1 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold hover:bg-red-100 transition-colors"
-                                >
-                                  Confirmar
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setDeleteConfirm(null); }}
-                                  className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 transition-colors"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(pair.id); }}
-                                className="p-1.5 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors"
-                                title="Excluir"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
+
 
                           {/* Arrow */}
                           <ChevronRight size={14} className="text-stone-300 group-hover:text-emerald-400 transition-colors" />
