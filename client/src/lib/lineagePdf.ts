@@ -53,10 +53,13 @@ const ORIGIN_LABELS: Record<string, string> = {
   troca: "Troca",
 };
 
-function formatDate(d: string | number | Date | null): string {
+function formatDate(d: string | number | Date | null, precision?: string): string {
   if (!d) return "—";
   const date = new Date(d);
-  return date.toLocaleDateString("pt-BR");
+  if (precision === "year_only") {
+    return date.getUTCFullYear().toString();
+  }
+  return `${String(date.getUTCDate()).padStart(2, "0")}/${String(date.getUTCMonth() + 1).padStart(2, "0")}/${date.getUTCFullYear()}`;
 }
 
 function getParentNote(notes: string | null, field: "fatherNote" | "motherNote"): string {
@@ -117,7 +120,7 @@ export async function generateLineagePdf(
   drawField(col2, "Anilha", bird.anilha || "—", iy);
   iy += 10;
   drawField(col1, "Sexo", SEX_LABELS[bird.sex] || bird.sex, iy);
-  drawField(col2, "Data de Nascimento", formatDate(bird.birthDate), iy);
+  drawField(col2, "Data de Nascimento", formatDate(bird.birthDate, (bird as any).birthDatePrecision), iy);
   iy += 10;
   drawField(col1, "Mutação / Cor", bird.mutation || "—", iy);
   drawField(col2, "Status", STATUS_LABELS[bird.status] || bird.status, iy);
@@ -309,7 +312,7 @@ export async function generateLineagePdf(
       doc.text(child.ringNumber || "—", margin + 3, y + 3);
       doc.text(child.mutation || "—", margin + 35, y + 3);
       doc.text(SEX_LABELS[child.sex] || child.sex, margin + 80, y + 3);
-      doc.text(formatDate(child.birthDate), margin + 105, y + 3);
+      doc.text(formatDate(child.birthDate, (child as any).birthDatePrecision), margin + 105, y + 3);
       doc.text(STATUS_LABELS[child.status] || child.status, margin + 140, y + 3);
 
       // Separator line
