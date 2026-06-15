@@ -528,8 +528,25 @@ export function formatGenotype(data: BirdGeneticsData): string {
   const filteredVisual = (hasBlue && hasDominant)
     ? data.visual.filter(id => id !== "blue")
     : data.visual;
+
+  // Ordem de prioridade: estas mutações SEMPRE vem primeiro no nome
+  // (padrão dos criadores brasileiros)
+  const PRIORITY_ORDER: string[] = [
+    "dom_pied_sf", "dom_pied_df",  // Arlequim Dominante
+    "cleartail",                     // Cleartail
+    "dilute",                        // Diluído
+    "rec_pied",                      // Arlequim Recessivo
+    "pallid",                        // Pallid
+    "opaline",                       // Opalino
+    "cinnamon",                      // Canela
+  ];
+
+  // Separar em prioritários e restantes, mantendo a ordem de prioridade
+  const priorityIds = PRIORITY_ORDER.filter(id => filteredVisual.includes(id));
+  const restIds = filteredVisual.filter(id => !PRIORITY_ORDER.includes(id));
+  const orderedVisual = [...priorityIds, ...restIds];
   
-  const visualLabels = filteredVisual
+  const visualLabels = orderedVisual
     .map(id => allMutations.find(m => m.id === id)?.label || id)
     .filter(Boolean);
   
