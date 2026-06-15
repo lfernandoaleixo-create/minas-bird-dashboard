@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { generateLineagePdf } from "@/lib/lineagePdf";
-import { generateSpeciesPdf } from "@/lib/speciesPdf";
+import { generateSpeciesPdf, type PdfFilters, type BirdRow } from "@/lib/speciesPdf";
 
 
 // Apenas as espécies do plantel (inCurrentFlock: true)
@@ -186,6 +186,17 @@ export default function PlantelModule() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [expandedSpecies, setExpandedSpecies] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
+
+  // ===== PDF FILTER MODAL =====
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [pdfModalSpecies, setPdfModalSpecies] = useState<{ speciesId: string; speciesName: string; birds: any[] } | null>(null);
+  const [pdfFilterSex, setPdfFilterSex] = useState<string>("todos");
+  const [pdfFilterStatus, setPdfFilterStatus] = useState<string>("todos");
+  const [pdfFilterNf, setPdfFilterNf] = useState<string>("todos");
+  const [pdfFilterEnclosure, setPdfFilterEnclosure] = useState<string>("todos");
+  const [pdfFilterMutation, setPdfFilterMutation] = useState<string>("todos");
+  const [pdfFilterOrigin, setPdfFilterOrigin] = useState<string>("todos");
+  const [pdfColumns, setPdfColumns] = useState<string[]>(["codigo", "sexo", "anilha", "gaiola", "mutacao", "status"]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadDocType, setUploadDocType] = useState("outro");
 
@@ -795,18 +806,15 @@ export default function PlantelModule() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          generateSpeciesPdf({
-                            speciesName: group.speciesName,
-                            prefix: getSpeciesPrefix(group.speciesId),
-                            birds: group.birds.map(b => ({
-                              ringNumber: b.ringNumber,
-                              sex: b.sex,
-                              anilha: (b as any).anilha || null,
-                              enclosure: b.enclosure,
-                              mutation: b.mutation,
-                              status: b.status,
-                            })),
-                          });
+                          setPdfModalSpecies({ speciesId: group.speciesId, speciesName: group.speciesName, birds: group.birds });
+                          setPdfFilterSex("todos");
+                          setPdfFilterStatus("todos");
+                          setPdfFilterNf("todos");
+                          setPdfFilterEnclosure("todos");
+                          setPdfFilterMutation("todos");
+                          setPdfFilterOrigin("todos");
+                          setPdfColumns(["codigo", "sexo", "anilha", "gaiola", "mutacao", "status"]);
+                          setPdfModalOpen(true);
                         }}
                         className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors text-emerald-700 hover:text-emerald-800 text-[11px] font-bold"
                         title="Gerar PDF da espécie"
@@ -879,6 +887,20 @@ export default function PlantelModule() {
             </p>
           </div>
         )}
+
+        {/* PDF Filter Modal */}
+        <PdfFilterModal
+          open={pdfModalOpen}
+          onClose={() => setPdfModalOpen(false)}
+          speciesData={pdfModalSpecies}
+          filterSex={pdfFilterSex} setFilterSex={setPdfFilterSex}
+          filterStatus={pdfFilterStatus} setFilterStatus={setPdfFilterStatus}
+          filterNf={pdfFilterNf} setFilterNf={setPdfFilterNf}
+          filterEnclosure={pdfFilterEnclosure} setFilterEnclosure={setPdfFilterEnclosure}
+          filterMutation={pdfFilterMutation} setFilterMutation={setPdfFilterMutation}
+          filterOrigin={pdfFilterOrigin} setFilterOrigin={setPdfFilterOrigin}
+          columns={pdfColumns} setColumns={setPdfColumns}
+        />
       </div>
     );
   }
@@ -1899,4 +1921,202 @@ export default function PlantelModule() {
   }
 
   return null;
+}
+
+// ===== PDF Filter Modal Component =====
+function PdfFilterModal({
+  open,
+  onClose,
+  speciesData,
+  filterSex, setFilterSex,
+  filterStatus, setFilterStatus,
+  filterNf, setFilterNf,
+  filterEnclosure, setFilterEnclosure,
+  filterMutation, setFilterMutation,
+  filterOrigin, setFilterOrigin,
+  columns, setColumns,
+}: {
+  open: boolean;
+  onClose: () => void;
+  speciesData: { speciesId: string; speciesName: string; birds: any[] } | null;
+  filterSex: string; setFilterSex: (v: string) => void;
+  filterStatus: string; setFilterStatus: (v: string) => void;
+  filterNf: string; setFilterNf: (v: string) => void;
+  filterEnclosure: string; setFilterEnclosure: (v: string) => void;
+  filterMutation: string; setFilterMutation: (v: string) => void;
+  filterOrigin: string; setFilterOrigin: (v: string) => void;
+  columns: string[]; setColumns: (v: string[]) => void;
+}) {
+  if (!open || !speciesData) return null;
+
+  // Derive unique values for dynamic filters
+  const enclosures = Array.from(new Set(speciesData.birds.map((b: any) => b.enclosure).filter(Boolean))) as string[];
+  const mutations = Array.from(new Set(speciesData.birds.map((b: any) => b.mutation).filter(Boolean))) as string[];
+
+  const ALL_COLUMNS = [
+    { key: "codigo", label: "C\u00f3digo" },
+    { key: "sexo", label: "Sexo" },
+    { key: "anilha", label: "Anilha" },
+    { key: "gaiola", label: "Gaiola" },
+    { key: "mutacao", label: "Muta\u00e7\u00e3o" },
+    { key: "status", label: "Status" },
+    { key: "nf", label: "Nota Fiscal" },
+    { key: "origem", label: "Origem" },
+    { key: "nascimento", label: "Nascimento" },
+  ];
+
+  const toggleColumn = (key: string) => {
+    if (columns.includes(key)) {
+      setColumns(columns.filter(c => c !== key));
+    } else {
+      // Maintain order
+      const ordered = ALL_COLUMNS.map(c => c.key).filter(k => columns.includes(k) || k === key);
+      setColumns(ordered);
+    }
+  };
+
+  const handleGenerate = () => {
+    const prefix = SPECIES_PREFIX[speciesData.speciesId] || speciesData.speciesId.substring(0, 2).toUpperCase();
+    generateSpeciesPdf({
+      speciesName: speciesData.speciesName,
+      prefix,
+      birds: speciesData.birds.map((b: any) => ({
+        ringNumber: b.ringNumber,
+        sex: b.sex,
+        anilha: b.anilha || null,
+        enclosure: b.enclosure,
+        mutation: b.mutation,
+        status: b.status,
+        invoiceNumber: b.invoiceNumber || null,
+        origin: b.origin || null,
+        originBreeder: b.originBreeder || null,
+        birthDate: b.birthDate || null,
+        birthDatePrecision: b.birthDatePrecision || null,
+      })),
+      filters: {
+        sex: filterSex,
+        status: filterStatus,
+        nf: filterNf,
+        enclosure: filterEnclosure,
+        mutation: filterMutation,
+        origin: filterOrigin,
+      },
+      columns,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold text-stone-800">Gerar PDF — {speciesData.speciesName}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="mb-5">
+          <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Filtros</p>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Sexo */}
+            <div>
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Sexo</label>
+              <select value={filterSex} onChange={e => setFilterSex(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                <option value="todos">Todos</option>
+                <option value="macho">Macho</option>
+                <option value="femea">F\u00eamea</option>
+                <option value="indefinido">Indefinido</option>
+              </select>
+            </div>
+            {/* Status */}
+            <div>
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Status</label>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                <option value="todos">Todos</option>
+                <option value="ativo">Ativo</option>
+                <option value="obito">\u00d3bito</option>
+              </select>
+            </div>
+            {/* NF */}
+            <div>
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Nota Fiscal</label>
+              <select value={filterNf} onChange={e => setFilterNf(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                <option value="todos">Todos</option>
+                <option value="com_nf">Com NF</option>
+                <option value="sem_nf">Sem NF</option>
+              </select>
+            </div>
+            {/* Origem */}
+            <div>
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Origem</label>
+              <select value={filterOrigin} onChange={e => setFilterOrigin(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                <option value="todos">Todas</option>
+                <option value="nascido_criadouro">Nascido aqui</option>
+                <option value="comprado">Comprado</option>
+                <option value="doado">Doado</option>
+                <option value="troca">Troca</option>
+              </select>
+            </div>
+            {/* Gaiola */}
+            <div>
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Gaiola</label>
+              <select value={filterEnclosure} onChange={e => setFilterEnclosure(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                <option value="todos">Todas</option>
+                {enclosures.map(enc => <option key={enc} value={enc}>{enc}</option>)}
+              </select>
+            </div>
+            {/* Muta\u00e7\u00e3o */}
+            <div>
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Muta\u00e7\u00e3o</label>
+              <select value={filterMutation} onChange={e => setFilterMutation(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                <option value="todos">Todas</option>
+                {mutations.map(mut => <option key={mut} value={mut}>{mut}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Columns */}
+        <div className="mb-6">
+          <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Colunas no PDF</p>
+          <div className="flex flex-wrap gap-2">
+            {ALL_COLUMNS.map(col => (
+              <button
+                key={col.key}
+                onClick={() => toggleColumn(col.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                  columns.includes(col.key)
+                    ? "bg-emerald-100 border-emerald-300 text-emerald-800"
+                    : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
+                )}
+              >
+                {col.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-lg border border-stone-200 text-stone-600 text-sm font-medium hover:bg-stone-50 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleGenerate}
+            disabled={columns.length === 0}
+            className="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <Printer size={14} />
+            Gerar PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
