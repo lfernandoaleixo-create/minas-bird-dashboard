@@ -378,6 +378,8 @@ export const plantel = mysqlTable("plantel", {
   sex: mysqlEnum("sex", ["macho", "femea", "indefinido"]).default("indefinido").notNull(),
   /** Data de nascimento / eclosão */
   birthDate: timestamp("birthDate"),
+  /** Precisão da data de nascimento: 'full' = dia/mês/ano conhecidos, 'year_only' = apenas ano */
+  birthDatePrecision: mysqlEnum("birthDatePrecision", ["full", "year_only"]).default("full").notNull(),
   /** Mutação / cor da ave */
   mutation: varchar("mutation", { length: 255 }),
   /** Origem da ave: nascido no criatório, comprado, doado, troca */

@@ -405,7 +405,7 @@ export default function PlantelModule() {
       documents: docs,
       otherDocuments: otherDocs,
       sex: bird.sex as BirdSex,
-      birthDate: bird.birthDate ? new Date(bird.birthDate).toISOString().split("T")[0] : "",
+      birthDate: bird.birthDate ? (() => { const d = new Date(bird.birthDate); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`; })() : "",
       mutation: bird.mutation || "",
       origin: bird.origin as BirdOrigin,
       originBreeder: bird.originBreeder || "",
@@ -428,9 +428,13 @@ export default function PlantelModule() {
       motherNote: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherNote || ""; } catch { return ""; } })(),
       motherMutation: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherMutation || ""; } catch { return ""; } })(),
       motherBreeder: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.motherBreeder || ""; } catch { return ""; } })(),
-      birthDatePrecision: (() => { try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.birthDatePrecision || "full"; } catch { return "full" as DatePrecision; } })(),
-      birthMonth: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getMonth() + 1).padStart(2, "0"); })(),
-      birthYear: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getFullYear()); })(),
+      birthDatePrecision: (() => {
+        // Check DB column first, then notes metadata
+        if ((bird as any).birthDatePrecision === "year_only") return "year_only" as DatePrecision;
+        try { const p = bird.notes ? JSON.parse(bird.notes) : null; return p?._docMeta?.birthDatePrecision || "full"; } catch { return "full" as DatePrecision; }
+      })(),
+      birthMonth: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getUTCMonth() + 1).padStart(2, "0"); })(),
+      birthYear: (() => { if (!bird.birthDate) return ""; return String(new Date(bird.birthDate).getUTCFullYear()); })(),
       pendingFiles: [],
     });
     setEditingId(bird.id);
@@ -489,11 +493,12 @@ export default function PlantelModule() {
       ringNumber: fullCode,
       sex: form.sex,
       birthDate: (() => {
-        if (form.birthDatePrecision === "full" && form.birthDate) return new Date(form.birthDate);
-        if (form.birthDatePrecision === "month_year" && form.birthMonth && form.birthYear) return new Date(`${form.birthYear}-${form.birthMonth}-01`);
-        if (form.birthDatePrecision === "year_only" && form.birthYear) return new Date(`${form.birthYear}-01-01`);
+        if (form.birthDatePrecision === "full" && form.birthDate) return new Date(form.birthDate + "T12:00:00");
+        if (form.birthDatePrecision === "month_year" && form.birthMonth && form.birthYear) return new Date(`${form.birthYear}-${form.birthMonth}-15T12:00:00`);
+        if (form.birthDatePrecision === "year_only" && form.birthYear) return new Date(`${form.birthYear}-06-15T12:00:00`);
         return null;
       })(),
+      birthDatePrecision: (form.birthDatePrecision === "month_year" || form.birthDatePrecision === "year_only") ? "year_only" as const : "full" as const,
       mutation: form.mutation || null,
       origin: form.origin,
       originBreeder: form.originBreeder || null,
@@ -1602,7 +1607,16 @@ export default function PlantelModule() {
             <div>
               <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Data de Nascimento</p>
               <p className="text-sm font-semibold text-stone-800 mt-0.5">
-                {selectedBird.birthDate ? new Date(selectedBird.birthDate).toLocaleDateString("pt-BR") : "—"}
+                {(() => {
+                  if (!selectedBird.birthDate) return "—";
+                  const precision = (selectedBird as any).birthDatePrecision;
+                  if (precision === "year_only") {
+                    return new Date(selectedBird.birthDate).getUTCFullYear().toString();
+                  }
+                  // Use UTC to avoid timezone shifting the date
+                  const d = new Date(selectedBird.birthDate);
+                  return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
+                })()}
               </p>
             </div>
             <div>

@@ -1,0 +1,1 @@
+ALTER TABLE `plantel` ADD `birthDatePrecision` enum('full','year_only') DEFAULT 'full' NOT NULL;
