@@ -318,3 +318,216 @@ export async function generateSpeciesPdf(data: SpeciesPdfData): Promise<void> {
 
   doc.save(`plantel-${data.prefix.toLowerCase()}-${data.speciesName.toLowerCase().replace(/\s+/g, "-")}.pdf`);
 }
+
+
+// ===== MULTI-SPECIES PDF (all species in one document) =====
+
+export interface MultiSpeciesPdfData {
+  speciesGroups: {
+    speciesId: string;
+    speciesName: string;
+    prefix: string;
+    birds: BirdRow[];
+  }[];
+  filters?: PdfFilters;
+  columns?: string[];
+}
+
+export async function generateAllSpeciesPdf(data: MultiSpeciesPdfData): Promise<void> {
+  const logo = await loadLogo();
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = PDF_MARGIN.portrait;
+
+  const columns = data.columns && data.columns.length > 0 ? data.columns : [...DEFAULT_COLUMNS];
+  // Ensure "especie" column is included for multi-species
+  if (!columns.includes("especie")) {
+    columns.unshift("especie");
+  }
+
+  const filterSummary = buildFilterSummary(data.filters);
+
+  // Collect all filtered birds across all species
+  let allBirds: BirdRow[] = [];
+  for (const group of data.speciesGroups) {
+    const filtered = applyFilters(group.birds, data.filters);
+    allBirds = allBirds.concat(filtered);
+  }
+
+  const activeCount = allBirds.filter(b => b.status === "ativo").length;
+  const obitoCount = allBirds.filter(b => b.status === "obito").length;
+  const speciesCount = data.speciesGroups.length;
+
+  const subtitle = `${speciesCount} espécie${speciesCount !== 1 ? "s" : ""} · ${activeCount} ativa${activeCount !== 1 ? "s" : ""}${obitoCount > 0 ? ` · ${obitoCount} óbito${obitoCount !== 1 ? "s" : ""}` : ""} · ${allBirds.length} total`;
+
+  let y = drawBrandHeader(doc, pageW, logo, "Plantel Completo — Todas as Espécies", subtitle);
+
+  // Draw filter summary
+  if (filterSummary) {
+    const filterBoxX = margin;
+    const filterBoxW = pageW - margin * 2;
+    const filterBoxH = 9;
+    doc.setFillColor(255, 251, 235);
+    doc.setDrawColor(217, 169, 56);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(filterBoxX, y, filterBoxW, filterBoxH, 1.5, 1.5, "FD");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(146, 64, 14);
+    doc.text(filterSummary, pageW / 2, y + filterBoxH * 0.62, { align: "center", maxWidth: filterBoxW - 8 });
+    y += filterBoxH + 3;
+  }
+
+  // Table columns
+  const usableW = pageW - margin * 2;
+  const colDefs = getColumnDefs(columns, usableW);
+
+  const tableX = margin;
+  const rowH = 7;
+  const headerH = 8;
+
+  function drawTableHeader(startY: number): number {
+    doc.setFillColor(...BRAND.headerBg);
+    doc.rect(tableX, startY, pageW - margin * 2, headerH, "F");
+    doc.setFontSize(PDF_FONT.body);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.dark);
+
+    let cx = tableX + 2;
+    for (let i = 0; i < colDefs.length; i++) {
+      const col = colDefs[i];
+      if (col.align === "right") {
+        doc.text(col.label, pageW - margin - 2, startY + headerH * 0.65, { align: "right" });
+      } else {
+        doc.text(col.label, cx, startY + headerH * 0.65);
+      }
+      cx += col.width;
+    }
+    return startY + headerH;
+  }
+
+  y = drawTableHeader(y);
+
+  // Iterate species groups, adding a separator between species
+  let rowIndex = 0;
+  for (let g = 0; g < data.speciesGroups.length; g++) {
+    const group = data.speciesGroups[g];
+    const filteredBirds = applyFilters(group.birds, data.filters);
+    if (filteredBirds.length === 0) continue;
+
+    // Species separator row
+    if (g > 0) {
+      if (y + rowH + 4 > pageH - 18) {
+        drawBrandFooter(doc, pageW, pageH, doc.getNumberOfPages(), 0);
+        doc.addPage();
+        y = drawBrandHeader(doc, pageW, logo, "Plantel Completo — Todas as Espécies", "(continuação)");
+        y = drawTableHeader(y);
+      }
+      // Separator line
+      y += 2;
+      doc.setDrawColor(...BRAND.green);
+      doc.setLineWidth(0.6);
+      doc.line(tableX, y, pageW - margin, y);
+      y += 2;
+    }
+
+    // Species sub-header
+    if (y + rowH > pageH - 18) {
+      drawBrandFooter(doc, pageW, pageH, doc.getNumberOfPages(), 0);
+      doc.addPage();
+      y = drawBrandHeader(doc, pageW, logo, "Plantel Completo — Todas as Espécies", "(continuação)");
+      y = drawTableHeader(y);
+    }
+    doc.setFillColor(236, 253, 245); // emerald-50
+    doc.rect(tableX, y, pageW - margin * 2, rowH, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...BRAND.green);
+    const groupActiveCount = filteredBirds.filter(b => b.status === "ativo").length;
+    doc.text(`${group.speciesName} (${group.prefix}) — ${groupActiveCount} ativa${groupActiveCount !== 1 ? "s" : ""}, ${filteredBirds.length} total`, tableX + 3, y + rowH * 0.65);
+    y += rowH;
+
+    // Bird rows
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(PDF_FONT.body);
+
+    for (let i = 0; i < filteredBirds.length; i++) {
+      if (y + rowH > pageH - 18) {
+        drawBrandFooter(doc, pageW, pageH, doc.getNumberOfPages(), 0);
+        doc.addPage();
+        y = drawBrandHeader(doc, pageW, logo, "Plantel Completo — Todas as Espécies", "(continuação)");
+        y = drawTableHeader(y);
+      }
+
+      const bird = filteredBirds[i];
+
+      // Alternating row bg
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(tableX, y, pageW - margin * 2, rowH, "F");
+      }
+
+      // Row border
+      doc.setDrawColor(...BRAND.gridLine);
+      doc.setLineWidth(0.2);
+      doc.line(tableX, y + rowH, pageW - margin, y + rowH);
+
+      doc.setTextColor(...BRAND.text);
+      doc.setFontSize(PDF_FONT.body);
+
+      let cx = tableX + 2;
+      const textY = y + rowH * 0.65;
+
+      for (let j = 0; j < colDefs.length; j++) {
+        const col = colDefs[j];
+        const value = getCellValue(bird, col.key);
+
+        if (col.key === "codigo") {
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(...BRAND.dark);
+        } else if (col.key === "status") {
+          if (bird.status === "ativo") {
+            doc.setTextColor(...BRAND.green);
+          } else if (bird.status === "obito") {
+            doc.setTextColor(...BRAND.muted);
+          } else {
+            doc.setTextColor(...BRAND.text);
+          }
+          doc.setFont("helvetica", "bold");
+        } else {
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(...BRAND.text);
+        }
+
+        const maxW = col.width - 3;
+        let displayText = value;
+        if (doc.getTextWidth(displayText) > maxW) {
+          while (doc.getTextWidth(displayText + "…") > maxW && displayText.length > 1) {
+            displayText = displayText.slice(0, -1);
+          }
+          displayText += "…";
+        }
+
+        if (col.align === "right") {
+          doc.text(displayText, pageW - margin - 2, textY, { align: "right" });
+        } else {
+          doc.text(displayText, cx, textY);
+        }
+        cx += col.width;
+      }
+
+      y += rowH;
+      rowIndex++;
+    }
+  }
+
+  // Footer on all pages
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    drawBrandFooter(doc, pageW, pageH, p, totalPages);
+  }
+
+  doc.save("plantel-completo-todas-especies.pdf");
+}

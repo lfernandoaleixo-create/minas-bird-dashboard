@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { generateLineagePdf } from "@/lib/lineagePdf";
-import { generateSpeciesPdf, type PdfFilters, type BirdRow } from "@/lib/speciesPdf";
+import { generateSpeciesPdf, generateAllSpeciesPdf, type PdfFilters, type BirdRow } from "@/lib/speciesPdf";
 
 
 // Apenas as espécies do plantel (inCurrentFlock: true)
@@ -186,6 +186,17 @@ export default function PlantelModule() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [expandedSpecies, setExpandedSpecies] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
+
+  // ===== ALL-SPECIES PDF EXPORT CARD =====
+  const [allPdfCardOpen, setAllPdfCardOpen] = useState(false);
+  const [allPdfFilterSex, setAllPdfFilterSex] = useState<string>("todos");
+  const [allPdfFilterStatus, setAllPdfFilterStatus] = useState<string>("todos");
+  const [allPdfFilterNf, setAllPdfFilterNf] = useState<string>("todos");
+  const [allPdfFilterEnclosure, setAllPdfFilterEnclosure] = useState<string>("todos");
+  const [allPdfFilterMutation, setAllPdfFilterMutation] = useState<string>("todos");
+  const [allPdfFilterOrigin, setAllPdfFilterOrigin] = useState<string>("todos");
+  const [allPdfColumns, setAllPdfColumns] = useState<string[]>(["especie", "codigo", "sexo", "anilha", "gaiola", "mutacao", "status"]);
+  const [allPdfSelectedSpecies, setAllPdfSelectedSpecies] = useState<string>("todas");
 
   // ===== PDF FILTER MODAL =====
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
@@ -758,6 +769,220 @@ export default function PlantelModule() {
               Nova Ave
             </button>
           </div>
+        </div>
+
+        {/* Mini Card - Exportar PDF do Plantel */}
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setAllPdfCardOpen(!allPdfCardOpen)}
+            className="w-full flex items-center justify-between p-4 hover:bg-stone-50/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center border-2 border-emerald-200">
+                <Printer size={15} className="text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-stone-800">Exportar PDF do Plantel</p>
+                <p className="text-[11px] text-stone-400">Gere um PDF com todas ou uma espécie específica</p>
+              </div>
+            </div>
+            <ChevronDown size={18} className={cn("text-stone-400 transition-transform duration-200", allPdfCardOpen && "rotate-180")} />
+          </button>
+
+          {allPdfCardOpen && (
+            <div className="px-4 pb-4 border-t border-stone-100 pt-4 space-y-4">
+              {/* Espécie selector */}
+              <div>
+                <label className="text-[11px] font-medium text-stone-500 mb-1 block">Espécie</label>
+                <select
+                  value={allPdfSelectedSpecies}
+                  onChange={e => setAllPdfSelectedSpecies(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                >
+                  <option value="todas">Todas as Espécies (no mesmo PDF)</option>
+                  {SPECIES_LIST.map(sp => (
+                    <option key={sp.id} value={sp.id}>{sp.commonName}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filters grid */}
+              <div>
+                <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2">Filtros</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[10px] font-medium text-stone-400 mb-0.5 block">Sexo</label>
+                    <select value={allPdfFilterSex} onChange={e => setAllPdfFilterSex(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                      <option value="todos">Todos</option>
+                      <option value="macho">Macho</option>
+                      <option value="femea">Fêmea</option>
+                      <option value="indefinido">Indefinido</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-stone-400 mb-0.5 block">Status</label>
+                    <select value={allPdfFilterStatus} onChange={e => setAllPdfFilterStatus(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                      <option value="todos">Todos</option>
+                      <option value="ativo">Ativo</option>
+                      <option value="obito">Óbito</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-stone-400 mb-0.5 block">Nota Fiscal</label>
+                    <select value={allPdfFilterNf} onChange={e => setAllPdfFilterNf(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                      <option value="todos">Todos</option>
+                      <option value="com_nf">Com NF</option>
+                      <option value="sem_nf">Sem NF</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-stone-400 mb-0.5 block">Origem</label>
+                    <select value={allPdfFilterOrigin} onChange={e => setAllPdfFilterOrigin(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                      <option value="todos">Todas</option>
+                      <option value="nascido_criadouro">Nascido aqui</option>
+                      <option value="comprado">Comprado</option>
+                      <option value="doado">Doado</option>
+                      <option value="troca">Troca</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-stone-400 mb-0.5 block">Mutação</label>
+                    <select value={allPdfFilterMutation} onChange={e => setAllPdfFilterMutation(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                      <option value="todos">Todas</option>
+                      {Array.from(new Set(birds.map(b => b.mutation).filter(Boolean))).sort().map(mut => (
+                        <option key={mut} value={mut!}>{mut}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-stone-400 mb-0.5 block">Gaiola</label>
+                    <select value={allPdfFilterEnclosure} onChange={e => setAllPdfFilterEnclosure(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                      <option value="todos">Todas</option>
+                      {Array.from(new Set(birds.map(b => b.enclosure).filter(Boolean))).sort().map(enc => (
+                        <option key={enc} value={enc!}>{enc}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Columns selector */}
+              <div>
+                <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2">Colunas no PDF</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: "especie", label: "Espécie" },
+                    { key: "codigo", label: "Código" },
+                    { key: "sexo", label: "Sexo" },
+                    { key: "anilha", label: "Anilha" },
+                    { key: "gaiola", label: "Gaiola" },
+                    { key: "mutacao", label: "Mutação" },
+                    { key: "status", label: "Status" },
+                    { key: "nf", label: "Nota Fiscal" },
+                    { key: "origem", label: "Origem" },
+                    { key: "nascimento", label: "Nascimento" },
+                  ].map(col => (
+                    <button
+                      key={col.key}
+                      onClick={() => {
+                        if (allPdfColumns.includes(col.key)) {
+                          setAllPdfColumns(allPdfColumns.filter(c => c !== col.key));
+                        } else {
+                          const allKeys = ["especie","codigo","sexo","anilha","gaiola","mutacao","status","nf","origem","nascimento"];
+                          setAllPdfColumns(allKeys.filter(k => allPdfColumns.includes(k) || k === col.key));
+                        }
+                      }}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                        allPdfColumns.includes(col.key)
+                          ? "bg-emerald-100 border-emerald-300 text-emerald-800"
+                          : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
+                      )}
+                    >
+                      {col.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Generate button */}
+              <button
+                onClick={() => {
+                  if (allPdfSelectedSpecies === "todas") {
+                    // All species in one PDF
+                    const speciesGroups = groupedBySpecies.map(g => ({
+                      speciesId: g.speciesId,
+                      speciesName: g.speciesName,
+                      prefix: SPECIES_PREFIX[g.speciesId] || g.speciesId.substring(0, 2).toUpperCase(),
+                      birds: g.birds.map((b: any) => ({
+                        ringNumber: b.ringNumber,
+                        sex: b.sex,
+                        anilha: b.anilha || null,
+                        enclosure: b.enclosure,
+                        mutation: b.mutation,
+                        status: b.status,
+                        invoiceNumber: b.invoiceNumber || null,
+                        origin: b.origin || null,
+                        originBreeder: b.originBreeder || null,
+                        birthDate: b.birthDate || null,
+                        birthDatePrecision: b.birthDatePrecision || null,
+                        speciesName: b.speciesName || g.speciesName,
+                      })),
+                    }));
+                    generateAllSpeciesPdf({
+                      speciesGroups,
+                      filters: {
+                        sex: allPdfFilterSex,
+                        status: allPdfFilterStatus,
+                        nf: allPdfFilterNf,
+                        enclosure: allPdfFilterEnclosure,
+                        mutation: allPdfFilterMutation,
+                        origin: allPdfFilterOrigin,
+                      },
+                      columns: allPdfColumns,
+                    });
+                  } else {
+                    // Single species
+                    const group = groupedBySpecies.find(g => g.speciesId === allPdfSelectedSpecies);
+                    if (!group) return;
+                    const prefix = SPECIES_PREFIX[group.speciesId] || group.speciesId.substring(0, 2).toUpperCase();
+                    generateSpeciesPdf({
+                      speciesName: group.speciesName,
+                      prefix,
+                      birds: group.birds.map((b: any) => ({
+                        ringNumber: b.ringNumber,
+                        sex: b.sex,
+                        anilha: b.anilha || null,
+                        enclosure: b.enclosure,
+                        mutation: b.mutation,
+                        status: b.status,
+                        invoiceNumber: b.invoiceNumber || null,
+                        origin: b.origin || null,
+                        originBreeder: b.originBreeder || null,
+                        birthDate: b.birthDate || null,
+                        birthDatePrecision: b.birthDatePrecision || null,
+                        speciesName: b.speciesName || group.speciesName,
+                      })),
+                      filters: {
+                        sex: allPdfFilterSex,
+                        status: allPdfFilterStatus,
+                        nf: allPdfFilterNf,
+                        enclosure: allPdfFilterEnclosure,
+                        mutation: allPdfFilterMutation,
+                        origin: allPdfFilterOrigin,
+                      },
+                      columns: allPdfColumns,
+                    });
+                  }
+                }}
+                disabled={allPdfColumns.length === 0}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download size={14} />
+                Gerar PDF {allPdfSelectedSpecies === "todas" ? "(Todas as Espécies)" : ""}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Bird list grouped by species */}

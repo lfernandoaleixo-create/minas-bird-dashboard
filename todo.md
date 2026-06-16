@@ -474,3 +474,4 @@
 - [x] Clientes: criar aba/seção "Vendas" com listagem geral de todas as aves vendidas (consolidado)
 - [x] Clientes: filtros na aba Vendas por espécie, período, cliente
 - [x] Clientes: resumo com totais (quantidade vendida, valor total, pendente a receber)
+- [x] Plantel: mini card/botão de exportar PDF com filtros (espécie, mutação) e opção de incluir todas as espécies no mesmo PDF
