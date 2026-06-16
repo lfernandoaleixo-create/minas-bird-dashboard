@@ -414,7 +414,7 @@ export default function ClientsModule() {
         quantity: p.quantity,
         valueCents: p.valueCents,
         paymentMethod: p.paymentMethod,
-        saleDate: p.saleDate,
+        saleDate: p.saleDate ? String(p.saleDate) : "",
         saleStatus: p.saleStatus,
         installmentsCount: installments.length || 1,
         parcelasPagas: pagas.length,
@@ -439,7 +439,7 @@ export default function ClientsModule() {
     if (salesFilterDateTo) {
       list = list.filter(s => s.saleDate <= salesFilterDateTo);
     }
-    return list.sort((a, b) => (b.saleDate || "").localeCompare(a.saleDate || ""));
+    return list.sort((a, b) => String(b.saleDate || "").localeCompare(String(a.saleDate || "")));
   }, [allSalesData, salesFilterSpecies, salesFilterClient, salesFilterDateFrom, salesFilterDateTo]);
 
   // Unique species from all sales for filter dropdown
