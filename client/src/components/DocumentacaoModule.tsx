@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { generateChecklistPdf } from "@/lib/checklistPdf";
+import { generateChecklistPdf, generateReviewChecklistPdf } from "@/lib/checklistPdf";
 import DocumentosAuxiliares from "@/components/DocumentosAuxiliares";
 import {
   FileText,
@@ -710,6 +710,13 @@ function DocumentacaoModuleInner() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button
+                onClick={() => generateReviewChecklistPdf()}
+                variant="outline"
+                className="border-amber-300 text-amber-700 font-semibold hover:bg-amber-50"
+              >
+                <Download size={16} className="mr-1.5" /> PDF Revisão
+              </Button>
               <Button
                 onClick={() => generateChecklistPdf(documents)}
                 variant="outline"

@@ -475,3 +475,5 @@
 - [x] Clientes: filtros na aba Vendas por espécie, período, cliente
 - [x] Clientes: resumo com totais (quantidade vendida, valor total, pendente a receber)
 - [x] Plantel: mini card/botão de exportar PDF com filtros (espécie, mutação) e opção de incluir todas as espécies no mesmo PDF
+- [x] Documentos: criar card "PDF de Revisão" que gera PDF com todos os documentos sem nenhum ticado (checklist em branco para funcionário revisar)
+- [x] Documentos Auxiliares: criar card "PDF de Revisão" que gera PDF com todos os documentos auxiliares sem nenhum ticado (checklist em branco para funcionário revisar)

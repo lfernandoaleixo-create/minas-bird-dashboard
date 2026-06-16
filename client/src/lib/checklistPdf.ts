@@ -256,3 +256,132 @@ export async function generateChecklistPdf(documents: any[]) {
 
   doc.save("checklist-fiscalizacao-minas-bird.pdf");
 }
+
+/**
+ * PDF de Revisão — Checklist em branco (sem nenhum ticado)
+ * Para o funcionário usar em campo para revisar todos os documentos
+ */
+export async function generateReviewChecklistPdf() {
+  const logo = await loadLogo();
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = PDF_MARGIN.portrait;
+  const contentW = pageW - margin * 2;
+
+  // Header
+  let y = drawBrandHeader(doc, pageW, logo, "Revisão de Documentos", "Criatório Minas Bird — Checklist de Revisão Completa");
+
+  // Instruction box
+  y += 2;
+  doc.setFillColor(255, 251, 235);
+  doc.setDrawColor(217, 169, 56);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(margin, y, contentW, 14, 2, 2, "FD");
+
+  const today = new Date();
+  const todayStr = `${today.getDate().toString().padStart(2, "0")}/${(today.getMonth() + 1).toString().padStart(2, "0")}/${today.getFullYear()}`;
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(146, 64, 14);
+  doc.text(`Data: ${todayStr}`, margin + 4, y + 5.5);
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(146, 64, 14);
+  doc.text("Marque com X cada documento após conferir. Use este checklist para revisão periódica de toda documentação.", margin + 4, y + 10.5);
+
+  y += 20;
+
+  // Table header
+  const colX = {
+    checkbox: margin,
+    num: margin + 8,
+    doc: margin + 16,
+    category: pageW - margin - 55,
+  };
+
+  const drawTableHeader = () => {
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, y, contentW, 8, "F");
+    doc.setDrawColor(203, 213, 225);
+    doc.line(margin, y + 8, margin + contentW, y + 8);
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.muted);
+    doc.text("✓", colX.checkbox + 3.5, y + 5.5, { align: "center" });
+    doc.text("Nº", colX.num + 2, y + 5.5);
+    doc.text("DOCUMENTO", colX.doc, y + 5.5);
+    doc.text("CATEGORIA", colX.category, y + 5.5);
+    y += 10;
+  };
+
+  drawTableHeader();
+
+  // Table rows — all blank (no status marked)
+  const rowH = 12;
+
+  REQUIRED_DOCS.forEach((item, idx) => {
+    if (y + rowH > pageH - 20) {
+      drawBrandFooter(doc, pageW, pageH);
+      doc.addPage();
+      y = drawBrandHeader(doc, pageW, logo, "Revisão de Documentos", "(continuação)");
+      y += 2;
+      drawTableHeader();
+    }
+
+    // Alternating row background
+    if (idx % 2 === 0) {
+      doc.setFillColor(252, 252, 253);
+      doc.rect(margin, y, contentW, rowH, "F");
+    }
+
+    // Row border bottom
+    doc.setDrawColor(241, 245, 249);
+    doc.line(margin, y + rowH, margin + contentW, y + rowH);
+
+    // Empty checkbox square (for pen marking)
+    const cbX = colX.checkbox + 1;
+    const cbY = y + 2.5;
+    const cbSize = 6;
+    doc.setDrawColor(148, 163, 184);
+    doc.setLineWidth(0.4);
+    doc.rect(cbX, cbY, cbSize, cbSize);
+
+    // Number
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.text);
+    doc.text(`${(idx + 1).toString().padStart(2, "0")}`, colX.num + 2, y + 6);
+
+    // Document name
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.text);
+    const maxDocWidth = colX.category - colX.doc - 4;
+    const truncatedName = doc.splitTextToSize(item.label, maxDocWidth)[0];
+    doc.text(truncatedName, colX.doc, y + 5.5);
+
+    // Category
+    doc.setFontSize(6.5);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(item.category, colX.doc, y + 9.5);
+
+    // Category column
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.muted);
+    const catMaxW = pageW - margin - colX.category - 2;
+    const truncCat = doc.splitTextToSize(item.category, catMaxW)[0];
+    doc.text(truncCat, colX.category, y + 6);
+
+    y += rowH;
+  });
+
+  // Footer
+  drawBrandFooter(doc, pageW, pageH, 1, 1);
+
+  doc.save("revisao-documentos-minas-bird.pdf");
+}

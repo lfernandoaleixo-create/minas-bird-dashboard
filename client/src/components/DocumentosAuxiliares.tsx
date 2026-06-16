@@ -137,6 +137,15 @@ export default function DocumentosAuxiliares() {
     generateAuxiliaresPdf(items);
   };
 
+  const handleGenerateReviewPdf = () => {
+    // Gera PDF com todos os documentos sem nenhum ticado (checklist em branco)
+    const items = AUXILIARY_DOCS.map((d) => ({
+      title: d.title,
+      emMaos: false,
+    }));
+    generateAuxiliaresPdf(items);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -149,14 +158,24 @@ export default function DocumentosAuxiliares() {
             Materiais de apoio que o fiscal pode solicitar — marque quando estiver separado
           </p>
         </div>
-        <Button
-          onClick={handleGeneratePdf}
-          variant="outline"
-          className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
-        >
-          <Download size={14} />
-          PDF Auxiliares
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleGenerateReviewPdf}
+            variant="outline"
+            className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+          >
+            <Download size={14} />
+            PDF Revisão
+          </Button>
+          <Button
+            onClick={handleGeneratePdf}
+            variant="outline"
+            className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+          >
+            <Download size={14} />
+            PDF Auxiliares
+          </Button>
+        </div>
       </div>
 
       {/* Progress */}
