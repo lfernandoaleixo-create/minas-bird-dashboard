@@ -478,3 +478,5 @@
 - [x] Documentos: criar card "PDF de Revisão" que gera PDF com todos os documentos sem nenhum ticado (checklist em branco para funcionário revisar)
 - [x] Documentos Auxiliares: criar card "PDF de Revisão" que gera PDF com todos os documentos auxiliares sem nenhum ticado (checklist em branco para funcionário revisar)
 - [x] Bug: Acasalamento — ao formar casal e clicar em salvar, não está salvando; após salvar deve retornar ao painel de acasalamentos (corrigido: adicionado feedback de erro ao usuário + tratamento de sessão expirada)
+- [x] Acasalamentos: botão de excluir casal com confirmação de senha (123456)
+- [x] Acasalamentos: impedir que a mesma ave seja selecionada em mais de 1 casal ativo (validação de ave única)

@@ -289,6 +289,8 @@ export default function AcasalamentosModule() {
   const [form, setForm] = useState<PairForm>(EMPTY_FORM);
   const [expandedSpecies, setExpandedSpecies] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [filterStatus, setFilterStatus] = useState<PairStatus | "todos">("todos");
 
   // Genética local (apenas informativa, não salva)
@@ -311,12 +313,24 @@ export default function AcasalamentosModule() {
   }, [birds]);
 
   // Males and females by species
+  // IDs de aves já em casais ativos (excluir do seletor)
+  const birdsInActivePairs = useMemo(() => {
+    const ids = new Set<number>();
+    pairs.filter(p => p.status === "ativo").forEach(p => {
+      // Se estamos editando este casal, não bloquear as aves dele
+      if (editingId && p.id === editingId) return;
+      ids.add(p.maleId);
+      ids.add(p.femaleId);
+    });
+    return ids;
+  }, [pairs, editingId]);
+
   const getMalesBySpecies = (speciesId: string) => {
-    return activeBirds.filter(b => b.speciesId === speciesId && b.sex === "macho");
+    return activeBirds.filter(b => b.speciesId === speciesId && b.sex === "macho" && !birdsInActivePairs.has(b.id));
   };
 
   const getFemalesBySpecies = (speciesId: string) => {
-    return activeBirds.filter(b => b.speciesId === speciesId && b.sex === "femea");
+    return activeBirds.filter(b => b.speciesId === speciesId && b.sex === "femea" && !birdsInActivePairs.has(b.id));
   };
 
   // Filter pairs
@@ -430,12 +444,19 @@ export default function AcasalamentosModule() {
 
   // Handle delete
   const handleDelete = async (id: number) => {
+    if (deletePassword !== "123456") {
+      setDeleteError("Senha incorreta");
+      return;
+    }
     try {
       await deleteMut.mutateAsync({ id });
       utils.breeding.list.invalidate();
       setDeleteConfirm(null);
+      setDeletePassword("");
+      setDeleteError("");
     } catch (err) {
       console.error("Erro ao excluir casal:", err);
+      alert("Erro ao excluir casal");
     }
   };
 
@@ -694,6 +715,15 @@ export default function AcasalamentosModule() {
             >
               {createMut.isPending || updateMut.isPending ? "Salvando..." : editingId ? "Atualizar Casal" : "Criar Casal"}
             </Button>
+            {editingId && (
+              <Button
+                variant="outline"
+                onClick={() => { setDeleteConfirm(editingId); setDeletePassword(""); setDeleteError(""); }}
+                className="border-red-300 text-red-600 hover:bg-red-50"
+              >
+                <X size={14} className="mr-1" /> Excluir
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => { setView("list"); setEditingId(null); setForm(EMPTY_FORM); setMaleGenetics({ visual: [], splits: [] }); setFemaleGenetics({ visual: [], splits: [] }); setMaleLocked(false); setFemaleLocked(false); }}
@@ -701,6 +731,39 @@ export default function AcasalamentosModule() {
               Cancelar
             </Button>
           </div>
+          {/* Delete confirmation modal */}
+          {deleteConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4">
+                <h3 className="text-lg font-bold text-red-700 mb-2">Excluir Casal</h3>
+                <p className="text-sm text-stone-600 mb-4">Digite a senha para confirmar a exclusão:</p>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(""); }}
+                  placeholder="Senha..."
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all mb-2"
+                  autoFocus
+                />
+                {deleteError && <p className="text-xs text-red-600 font-semibold mb-2">{deleteError}</p>}
+                <div className="flex gap-3 mt-4">
+                  <Button
+                    onClick={() => handleDelete(deleteConfirm)}
+                    disabled={deleteMut.isPending}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {deleteMut.isPending ? "Excluindo..." : "Confirmar Exclusão"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setDeleteConfirm(null); setDeletePassword(""); setDeleteError(""); }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
