@@ -390,8 +390,15 @@ export default function AcasalamentosModule() {
       setForm(EMPTY_FORM);
       setMaleGenetics({ visual: [], splits: [] });
       setFemaleGenetics({ visual: [], splits: [] });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao salvar casal:", err);
+      const msg = err?.message || "Erro desconhecido";
+      if (msg.includes("login") || msg.includes("10001")) {
+        alert("Sua sessão expirou. Faça login novamente.");
+        window.location.reload();
+      } else {
+        alert(`Erro ao salvar casal: ${msg}`);
+      }
     }
   };
 

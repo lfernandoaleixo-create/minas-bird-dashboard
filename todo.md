@@ -477,3 +477,4 @@
 - [x] Plantel: mini card/botão de exportar PDF com filtros (espécie, mutação) e opção de incluir todas as espécies no mesmo PDF
 - [x] Documentos: criar card "PDF de Revisão" que gera PDF com todos os documentos sem nenhum ticado (checklist em branco para funcionário revisar)
 - [x] Documentos Auxiliares: criar card "PDF de Revisão" que gera PDF com todos os documentos auxiliares sem nenhum ticado (checklist em branco para funcionário revisar)
+- [x] Bug: Acasalamento — ao formar casal e clicar em salvar, não está salvando; após salvar deve retornar ao painel de acasalamentos (corrigido: adicionado feedback de erro ao usuário + tratamento de sessão expirada)
