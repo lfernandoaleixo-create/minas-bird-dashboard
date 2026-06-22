@@ -1057,17 +1057,17 @@ export const appRouter = router({
   // ACASALAMENTOS (BREEDING PAIRS)
   // =============================================
   breeding: router({
-    list: protectedProcedure.query(async () => {
+    list: publicProcedure.query(async () => {
       return getAllBreedingPairs();
     }),
 
-    getById: protectedProcedure
+    getById: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return getBreedingPairById(input.id);
       }),
 
-    create: protectedProcedure
+    create: publicProcedure
       .input(z.object({
         speciesId: z.string(),
         speciesName: z.string(),
@@ -1097,7 +1097,7 @@ export const appRouter = router({
         });
       }),
 
-    update: protectedProcedure
+    update: publicProcedure
       .input(z.object({
         id: z.number(),
         pairName: z.string().optional(),
@@ -1117,7 +1117,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await deleteBreedingPair(input.id);
