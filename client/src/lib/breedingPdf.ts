@@ -282,14 +282,22 @@ export async function generateSinglesPdf(
   doc.text(`${filteredFemales.length} Femeas`, margin + contentW * 3 / 4 + 1, y + 8, { align: "center" });
   y += 16;
 
-  // Column widths for singles table
-  const sColWidths = [
-    contentW * 0.14, // Codigo
-    contentW * 0.20, // Especie
-    contentW * 0.28, // Mutacao
-    contentW * 0.22, // Anilha (increased)
-    contentW * 0.16, // Gaiola
-  ];
+  // Column widths for singles table — when species is filtered, redistribute space to Mutacao/Anilha
+  const sColWidths = speciesFilter
+    ? [
+        contentW * 0.12, // Codigo
+        0,               // Especie (hidden)
+        contentW * 0.38, // Mutacao (much wider)
+        contentW * 0.38, // Anilha (much wider)
+        contentW * 0.12, // Gaiola
+      ]
+    : [
+        contentW * 0.12, // Codigo
+        contentW * 0.16, // Especie
+        contentW * 0.32, // Mutacao
+        contentW * 0.28, // Anilha
+        contentW * 0.12, // Gaiola
+      ];
 
   const drawSinglesHeader = () => {
     doc.setFillColor(...BRAND.headerBg);
@@ -357,18 +365,18 @@ export async function generateSinglesPdf(
       }
       tx += sColWidths[1];
 
-      // Mutacao
+      // Mutacao — sem truncamento
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.dark);
-      doc.text(truncate(b.mutation || "-", 26), tx, y + 5);
+      doc.text(b.mutation || "-", tx, y + 5);
       tx += sColWidths[2];
 
-      // Anilha
+      // Anilha — sem truncamento
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(60, 60, 60);
-      doc.text(truncate(b.anilha || "-", 22), tx, y + 5);
+      doc.text(b.anilha || "-", tx, y + 5);
       tx += sColWidths[3];
 
       // Gaiola
