@@ -480,3 +480,5 @@
 - [x] Bug: Acasalamento — ao formar casal e clicar em salvar, não está salvando; após salvar deve retornar ao painel de acasalamentos (corrigido: adicionado feedback de erro ao usuário + tratamento de sessão expirada)
 - [x] Acasalamentos: botão de excluir casal com confirmação de senha (123456)
 - [x] Acasalamentos: impedir que a mesma ave seja selecionada em mais de 1 casal ativo (validação de ave única)
+- [x] Acasalamentos: PDF dos casais para orientar veterinário na separação (gaiola, macho, fêmea, espécie, status)
+- [x] Acasalamentos: lista de aves solteiras (não estão em nenhum casal ativo) separadas por machos e fêmeas

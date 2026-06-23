@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Heart, Plus, ChevronDown, ChevronRight, Edit2, X, ArrowLeft,
-  Calendar, MapPin, FileText, AlertTriangle, FlaskConical, Save, Lock
+  Calendar, MapPin, FileText, AlertTriangle, FlaskConical, Save, Lock, Users
 } from "lucide-react";
+import { generateBreedingPdf, generateSinglesPdf, type PairData, type SingleBirdData } from "@/lib/breedingPdf";
 import { calculateBreedingForSpecies, type BreedingPrediction } from "@shared/geneticsEngine";
 import { formatGenotype, VISUAL_MUTATIONS, AVAILABLE_SPLITS, getVisualMutationsForSpecies, getAvailableSplitsForSpecies, type BirdGeneticsData, type SpeciesId } from "@shared/genetics";
 
@@ -292,6 +293,7 @@ export default function AcasalamentosModule() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [filterStatus, setFilterStatus] = useState<PairStatus | "todos">("todos");
+  const [showSingles, setShowSingles] = useState(false);
 
   // Genética local (apenas informativa, não salva)
   const [maleGenetics, setMaleGenetics] = useState<LocalGenetics>({ visual: [], splits: [] });
@@ -458,6 +460,64 @@ export default function AcasalamentosModule() {
       console.error("Erro ao excluir casal:", err);
       alert("Erro ao excluir casal");
     }
+  };
+
+  // Aves solteiras (não estão em casais ativos)
+  const singleMales = useMemo(() => {
+    const pairedIds = new Set<number>();
+    pairs.filter(p => p.status === "ativo").forEach(p => { pairedIds.add(p.maleId); pairedIds.add(p.femaleId); });
+    return activeBirds.filter(b => b.sex === "macho" && !pairedIds.has(b.id));
+  }, [activeBirds, pairs]);
+
+  const singleFemales = useMemo(() => {
+    const pairedIds = new Set<number>();
+    pairs.filter(p => p.status === "ativo").forEach(p => { pairedIds.add(p.maleId); pairedIds.add(p.femaleId); });
+    return activeBirds.filter(b => b.sex === "femea" && !pairedIds.has(b.id));
+  }, [activeBirds, pairs]);
+
+  // PDF dos casais
+  const handlePairsPdf = async () => {
+    const pairData: PairData[] = pairs.map(p => {
+      const male = getBirdInfo(p.maleId);
+      const female = getBirdInfo(p.femaleId);
+      return {
+        id: p.id,
+        speciesName: p.speciesName,
+        pairName: p.pairName || null,
+        enclosure: p.enclosure || null,
+        status: p.status,
+        maleCode: male?.ringNumber || `#${p.maleId}`,
+        maleMutation: male?.mutation || null,
+        maleAnilha: (male as any)?.anilha || null,
+        femaleCode: female?.ringNumber || `#${p.femaleId}`,
+        femaleMutation: female?.mutation || null,
+        femaleAnilha: (female as any)?.anilha || null,
+        startDate: p.startDate ? new Date(p.startDate).toLocaleDateString("pt-BR") : null,
+        notes: p.notes || null,
+      };
+    });
+    await generateBreedingPdf(pairData);
+  };
+
+  // PDF das solteiras
+  const handleSinglesPdf = async () => {
+    const males: SingleBirdData[] = singleMales.map(b => ({
+      ringNumber: b.ringNumber || null,
+      sex: "macho",
+      speciesName: FLOCK_SPECIES.find(s => s.id === b.speciesId)?.commonName || b.speciesId,
+      mutation: b.mutation || null,
+      anilha: (b as any).anilha || null,
+      enclosure: (b as any).enclosure || null,
+    }));
+    const females: SingleBirdData[] = singleFemales.map(b => ({
+      ringNumber: b.ringNumber || null,
+      sex: "femea",
+      speciesName: FLOCK_SPECIES.find(s => s.id === b.speciesId)?.commonName || b.speciesId,
+      mutation: b.mutation || null,
+      anilha: (b as any).anilha || null,
+      enclosure: (b as any).enclosure || null,
+    }));
+    await generateSinglesPdf(males, females);
   };
 
   // Stats
@@ -812,8 +872,8 @@ export default function AcasalamentosModule() {
         </div>
       </div>
 
-      {/* Filter */}
-      <div className="flex items-center gap-3 mb-5">
+      {/* Filter + Actions */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as PairStatus | "todos")}
@@ -824,6 +884,30 @@ export default function AcasalamentosModule() {
           <option value="em_descanso">Em Descanso</option>
           <option value="separado">Separados</option>
         </select>
+        <div className="flex items-center gap-2 ml-auto">
+          <Button
+            variant="outline"
+            onClick={handlePairsPdf}
+            className="gap-1.5 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            disabled={pairs.length === 0}
+          >
+            <FileText size={14} /> PDF Casais
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleSinglesPdf}
+            className="gap-1.5 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            <FileText size={14} /> PDF Solteiras
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowSingles(!showSingles)}
+            className={cn("gap-1.5 text-xs", showSingles ? "bg-blue-50 border-blue-400 text-blue-700" : "border-stone-200 text-stone-600")}
+          >
+            {showSingles ? "Ocultar Solteiras" : "Ver Solteiras"}
+          </Button>
+        </div>
       </div>
 
       {/* Loading */}
@@ -956,6 +1040,61 @@ export default function AcasalamentosModule() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Aves Solteiras Section */}
+      {showSingles && (
+        <div className="mt-6 space-y-4">
+          <h3 className="text-lg font-bold text-stone-800 flex items-center gap-2">
+            <Users size={18} className="text-blue-500" />
+            Aves Solteiras
+            <span className="text-sm font-normal text-stone-500">({singleMales.length + singleFemales.length} aves não vinculadas a casais ativos)</span>
+          </h3>
+
+          {/* Machos */}
+          <div className="bg-white rounded-2xl border border-blue-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 bg-blue-50 border-b border-blue-100">
+              <h4 className="font-bold text-blue-700">♂ Machos Solteiros ({singleMales.length})</h4>
+            </div>
+            {singleMales.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-stone-400 italic">Nenhum macho solteiro</p>
+            ) : (
+              <div className="divide-y divide-stone-100">
+                {singleMales.map(b => (
+                  <div key={b.id} className="flex items-center gap-4 px-5 py-2.5 text-sm">
+                    <span className="font-bold text-blue-700 min-w-[60px]">{b.ringNumber || `#${b.id}`}</span>
+                    <span className="text-stone-600 min-w-[120px]">{FLOCK_SPECIES.find(s => s.id === b.speciesId)?.commonName || b.speciesId}</span>
+                    <span className="text-stone-800 font-medium flex-1">{b.mutation || "—"}</span>
+                    <span className="text-stone-400 text-xs">{(b as any).anilha || ""}</span>
+                    <span className="text-stone-400 text-xs">{(b as any).enclosure || ""}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Fêmeas */}
+          <div className="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 bg-rose-50 border-b border-rose-100">
+              <h4 className="font-bold text-rose-700">♀ Fêmeas Solteiras ({singleFemales.length})</h4>
+            </div>
+            {singleFemales.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-stone-400 italic">Nenhuma fêmea solteira</p>
+            ) : (
+              <div className="divide-y divide-stone-100">
+                {singleFemales.map(b => (
+                  <div key={b.id} className="flex items-center gap-4 px-5 py-2.5 text-sm">
+                    <span className="font-bold text-rose-600 min-w-[60px]">{b.ringNumber || `#${b.id}`}</span>
+                    <span className="text-stone-600 min-w-[120px]">{FLOCK_SPECIES.find(s => s.id === b.speciesId)?.commonName || b.speciesId}</span>
+                    <span className="text-stone-800 font-medium flex-1">{b.mutation || "—"}</span>
+                    <span className="text-stone-400 text-xs">{(b as any).anilha || ""}</span>
+                    <span className="text-stone-400 text-xs">{(b as any).enclosure || ""}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
