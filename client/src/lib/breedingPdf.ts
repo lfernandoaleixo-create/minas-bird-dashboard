@@ -74,15 +74,15 @@ export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: stri
 
     // Table layout — 7 columns, redistributed to use full width
     const contentW = pageW - margin * 2; // ~281mm
-    // Redistribute: reduce Gaiola, give more to Anilha columns
+    // Redistribute: reduce Gaiola and Mutacao, maximize Anilha columns
     const colW = [
-      28,   // Gaiola
-      28,   // Macho Codigo
-      52,   // Macho Mutacao
-      42,   // Macho Anilha (increased)
-      28,   // Femea Codigo
-      52,   // Femea Mutacao
-      51,   // Femea Anilha (increased significantly)
+      24,   // Gaiola
+      26,   // Macho Codigo
+      48,   // Macho Mutacao
+      43,   // Macho Anilha
+      26,   // Femea Codigo
+      46,   // Femea Mutacao
+      68,   // Femea Anilha (maximized to prevent cutoff)
     ];
 
     // Section headers: MACHO / FEMEA
@@ -191,14 +191,14 @@ export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: stri
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...BRAND.text);
-      doc.text(truncate(p.maleMutation || "-", 26), tx, y + 6);
+      doc.text(truncate(p.maleMutation || "-", 24), tx, y + 6);
       tx += colW[2];
 
       // MACHO Anilha
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(60, 60, 60);
-      doc.text(truncate(p.maleAnilha || "-", 22), tx, y + 6);
+      doc.text(truncate(p.maleAnilha || "-", 24), tx, y + 6);
       tx += colW[3];
 
       // FEMEA Codigo
@@ -212,14 +212,14 @@ export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: stri
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...BRAND.text);
-      doc.text(truncate(p.femaleMutation || "-", 26), tx, y + 6);
+      doc.text(truncate(p.femaleMutation || "-", 22), tx, y + 6);
       tx += colW[5];
 
       // FEMEA Anilha
-      doc.setFontSize(8);
+      doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(60, 60, 60);
-      doc.text(truncate(p.femaleAnilha || "-", 26), tx, y + 6);
+      doc.text(p.femaleAnilha || "-", tx, y + 6);
 
       y += rowH;
     }
