@@ -294,6 +294,8 @@ export default function AcasalamentosModule() {
   const [deleteError, setDeleteError] = useState("");
   const [filterStatus, setFilterStatus] = useState<PairStatus | "todos">("todos");
   const [showSingles, setShowSingles] = useState(false);
+  const [singlesPdfSpecies, setSinglesPdfSpecies] = useState<string>("");
+  const [showSinglesPdfModal, setShowSinglesPdfModal] = useState(false);
 
   // Genética local (apenas informativa, não salva)
   const [maleGenetics, setMaleGenetics] = useState<LocalGenetics>({ visual: [], splits: [] });
@@ -517,7 +519,9 @@ export default function AcasalamentosModule() {
       anilha: (b as any).anilha || null,
       enclosure: (b as any).enclosure || null,
     }));
-    await generateSinglesPdf(males, females);
+    const filter = singlesPdfSpecies || undefined;
+    await generateSinglesPdf(males, females, filter);
+    setShowSinglesPdfModal(false);
   };
 
   // Stats
@@ -895,7 +899,7 @@ export default function AcasalamentosModule() {
           </Button>
           <Button
             variant="outline"
-            onClick={handleSinglesPdf}
+            onClick={() => setShowSinglesPdfModal(true)}
             className="gap-1.5 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
           >
             <FileText size={14} /> PDF Solteiras
@@ -1094,6 +1098,40 @@ export default function AcasalamentosModule() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Selecionar especie para PDF Solteiras */}
+      {showSinglesPdfModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-lg font-bold text-stone-800 mb-4">PDF Aves Solteiras</h3>
+            <p className="text-sm text-stone-500 mb-3">Selecione a especie para gerar o PDF:</p>
+            <select
+              value={singlesPdfSpecies}
+              onChange={e => setSinglesPdfSpecies(e.target.value)}
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm mb-4"
+            >
+              <option value="">Todas as Especies</option>
+              {FLOCK_SPECIES.map(s => (
+                <option key={s.id} value={s.commonName}>{s.commonName}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSinglesPdf}
+                className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-blue-700 transition"
+              >
+                Gerar PDF
+              </button>
+              <button
+                onClick={() => setShowSinglesPdfModal(false)}
+                className="flex-1 border border-stone-300 rounded-lg py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50 transition"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -38,7 +38,7 @@ export interface SingleBirdData {
 }
 
 /**
- * Gera PDF dos casais — LANDSCAPE, colunas claras, fontes grandes
+ * Gera PDF dos casais — LANDSCAPE, colunas bem distribuídas, linhas separadas
  */
 export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: string): Promise<void> {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -70,19 +70,19 @@ export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: stri
 
     const title = speciesTitle || `Casais ${spName}`;
     let y = drawBrandHeader(doc, pageW, logoBase64, title, `${spPairs.length} casal(is) - ${new Date().toLocaleDateString("pt-BR")}`);
-    y += 3;
+    y += 2;
 
-    // Table layout — 7 columns with clear separation
-    // | Gaiola | MACHO Codigo | MACHO Mutacao | MACHO Anilha | FEMEA Codigo | FEMEA Mutacao | FEMEA Anilha |
+    // Table layout — 7 columns, redistributed to use full width
     const contentW = pageW - margin * 2; // ~281mm
+    // Redistribute: reduce Gaiola, give more to Anilha columns
     const colW = [
-      35,   // Gaiola
-      30,   // Macho Codigo
-      55,   // Macho Mutacao
-      40,   // Macho Anilha
-      30,   // Femea Codigo
-      55,   // Femea Mutacao
-      36,   // Femea Anilha
+      28,   // Gaiola
+      28,   // Macho Codigo
+      52,   // Macho Mutacao
+      42,   // Macho Anilha (increased)
+      28,   // Femea Codigo
+      52,   // Femea Mutacao
+      51,   // Femea Anilha (increased significantly)
     ];
 
     // Section headers: MACHO / FEMEA
@@ -134,22 +134,41 @@ export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: stri
         doc.addPage();
         pageNum++;
         y = drawBrandHeader(doc, pageW, logoBase64, `${title} (cont.)`, "");
-        y += 3;
+        y += 2;
+
+        // Re-draw section labels on new page
+        doc.setFillColor(239, 246, 255);
+        doc.rect(machoStart, y, colW[1] + colW[2] + colW[3], 7, "F");
+        doc.setFillColor(254, 242, 242);
+        doc.rect(femeaStart, y, colW[4] + colW[5] + colW[6], 7, "F");
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...BRAND.blue);
+        doc.text("MACHO", machoStart + (colW[1] + colW[2] + colW[3]) / 2, y + 5, { align: "center" });
+        doc.setTextColor(...BRAND.red);
+        doc.text("FEMEA", femeaStart + (colW[4] + colW[5] + colW[6]) / 2, y + 5, { align: "center" });
+        y += 8;
+
         drawTableHeader();
       }
 
       const p = sorted[i];
-      const rowH = 8;
+      const rowH = 9;
 
-      // Alternating row background
+      // Alternating row background for readability
       if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 248);
+        doc.setFillColor(245, 248, 245);
         doc.rect(margin, y, contentW, rowH, "F");
       }
 
-      // Vertical separator between macho and femea
-      doc.setDrawColor(200, 200, 200);
+      // Draw horizontal line ABOVE each row (visible separator between pairs)
+      doc.setDrawColor(180, 180, 180);
       doc.setLineWidth(0.3);
+      doc.line(margin, y, margin + contentW, y);
+
+      // Vertical separator between macho and femea (thicker, more visible)
+      doc.setDrawColor(140, 140, 140);
+      doc.setLineWidth(0.5);
       doc.line(femeaStart - 0.5, y, femeaStart - 0.5, y + rowH);
 
       let tx = margin + 2;
@@ -158,52 +177,57 @@ export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: stri
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.dark);
-      doc.text(p.enclosure || "-", tx, y + 5.5);
+      doc.text(p.enclosure || "-", tx, y + 6);
       tx += colW[0];
 
       // MACHO Codigo
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.blue);
-      doc.text(p.maleCode || "-", tx, y + 5.5);
+      doc.text(p.maleCode || "-", tx, y + 6);
       tx += colW[1];
 
       // MACHO Mutacao
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...BRAND.text);
-      doc.text(truncate(p.maleMutation || "-", 28), tx, y + 5.5);
+      doc.text(truncate(p.maleMutation || "-", 26), tx, y + 6);
       tx += colW[2];
 
       // MACHO Anilha
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(60, 60, 60);
-      doc.text(truncate(p.maleAnilha || "-", 20), tx, y + 5.5);
+      doc.text(truncate(p.maleAnilha || "-", 22), tx, y + 6);
       tx += colW[3];
 
       // FEMEA Codigo
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.red);
-      doc.text(p.femaleCode || "-", tx, y + 5.5);
+      doc.text(p.femaleCode || "-", tx, y + 6);
       tx += colW[4];
 
       // FEMEA Mutacao
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...BRAND.text);
-      doc.text(truncate(p.femaleMutation || "-", 28), tx, y + 5.5);
+      doc.text(truncate(p.femaleMutation || "-", 26), tx, y + 6);
       tx += colW[5];
 
       // FEMEA Anilha
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(60, 60, 60);
-      doc.text(truncate(p.femaleAnilha || "-", 18), tx, y + 5.5);
+      doc.text(truncate(p.femaleAnilha || "-", 26), tx, y + 6);
 
       y += rowH;
     }
+
+    // Draw bottom line of last row
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, margin + contentW, y);
   }
 
   // Draw footers on all pages
@@ -220,11 +244,17 @@ export async function generateBreedingPdf(pairs: PairData[], speciesTitle?: stri
 
 /**
  * Gera PDF das aves solteiras separadas por machos e femeas
+ * Aceita speciesFilter para filtrar por espécie específica
  */
 export async function generateSinglesPdf(
   males: SingleBirdData[],
   females: SingleBirdData[],
+  speciesFilter?: string,
 ): Promise<void> {
+  // Apply species filter if provided
+  const filteredMales = speciesFilter ? males.filter(b => b.speciesName === speciesFilter) : males;
+  const filteredFemales = speciesFilter ? females.filter(b => b.speciesName === speciesFilter) : females;
+
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -234,8 +264,9 @@ export async function generateSinglesPdf(
   const logoBase64 = await loadLogo();
 
   let pageNum = 1;
-  const totalBirds = males.length + females.length;
-  let y = drawBrandHeader(doc, pageW, logoBase64, "Aves Solteiras", `${totalBirds} ave(s) - ${males.length} machos - ${females.length} femeas`);
+  const totalBirds = filteredMales.length + filteredFemales.length;
+  const titleText = speciesFilter ? `Aves Solteiras - ${speciesFilter}` : "Aves Solteiras";
+  let y = drawBrandHeader(doc, pageW, logoBase64, titleText, `${totalBirds} ave(s) - ${filteredMales.length} machos - ${filteredFemales.length} femeas`);
   y += 4;
 
   // Summary box
@@ -246,18 +277,18 @@ export async function generateSinglesPdf(
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.blue);
-  doc.text(`${males.length} Machos`, margin + contentW / 4 - 1, y + 8, { align: "center" });
+  doc.text(`${filteredMales.length} Machos`, margin + contentW / 4 - 1, y + 8, { align: "center" });
   doc.setTextColor(...BRAND.red);
-  doc.text(`${females.length} Femeas`, margin + contentW * 3 / 4 + 1, y + 8, { align: "center" });
+  doc.text(`${filteredFemales.length} Femeas`, margin + contentW * 3 / 4 + 1, y + 8, { align: "center" });
   y += 16;
 
   // Column widths for singles table
   const sColWidths = [
     contentW * 0.14, // Codigo
-    contentW * 0.22, // Especie
-    contentW * 0.26, // Mutacao
-    contentW * 0.20, // Anilha
-    contentW * 0.18, // Gaiola
+    contentW * 0.20, // Especie
+    contentW * 0.28, // Mutacao
+    contentW * 0.22, // Anilha (increased)
+    contentW * 0.16, // Gaiola
   ];
 
   const drawSinglesHeader = () => {
@@ -268,7 +299,10 @@ export async function generateSinglesPdf(
     doc.setTextColor(...BRAND.dark);
     let tx = margin + 2;
     doc.text("Codigo", tx, y + 5); tx += sColWidths[0];
-    doc.text("Especie", tx, y + 5); tx += sColWidths[1];
+    if (!speciesFilter) {
+      doc.text("Especie", tx, y + 5);
+    }
+    tx += sColWidths[1];
     doc.text("Mutacao", tx, y + 5); tx += sColWidths[2];
     doc.text("Anilha", tx, y + 5); tx += sColWidths[3];
     doc.text("Gaiola", tx, y + 5);
@@ -287,7 +321,7 @@ export async function generateSinglesPdf(
         drawBrandFooter(doc, pageW, pageH, pageNum, 0);
         doc.addPage();
         pageNum++;
-        y = drawBrandHeader(doc, pageW, logoBase64, "Aves Solteiras (cont.)", "");
+        y = drawBrandHeader(doc, pageW, logoBase64, `${titleText} (cont.)`, "");
         y += 4;
         drawSinglesHeader();
       }
@@ -296,9 +330,14 @@ export async function generateSinglesPdf(
       const rowH = 7;
 
       if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 248);
+        doc.setFillColor(245, 248, 245);
         doc.rect(margin, y, contentW, rowH, "F");
       }
+
+      // Row separator line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(margin, y, margin + contentW, y);
 
       let tx = margin + 2;
 
@@ -309,25 +348,27 @@ export async function generateSinglesPdf(
       doc.text(b.ringNumber || "-", tx, y + 5);
       tx += sColWidths[0];
 
-      // Especie
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...BRAND.text);
-      doc.text(truncate(b.speciesName || "-", 20), tx, y + 5);
+      // Especie (skip if filtered by species)
+      if (!speciesFilter) {
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...BRAND.text);
+        doc.text(truncate(b.speciesName || "-", 18), tx, y + 5);
+      }
       tx += sColWidths[1];
 
       // Mutacao
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...BRAND.dark);
-      doc.text(truncate(b.mutation || "-", 24), tx, y + 5);
+      doc.text(truncate(b.mutation || "-", 26), tx, y + 5);
       tx += sColWidths[2];
 
       // Anilha
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(60, 60, 60);
-      doc.text(truncate(b.anilha || "-", 20), tx, y + 5);
+      doc.text(truncate(b.anilha || "-", 22), tx, y + 5);
       tx += sColWidths[3];
 
       // Gaiola
@@ -344,10 +385,10 @@ export async function generateSinglesPdf(
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.blue);
-  doc.text(`MACHOS SOLTEIROS (${males.length})`, margin, y);
+  doc.text(`MACHOS SOLTEIROS (${filteredMales.length})`, margin, y);
   y += 6;
   drawSinglesHeader();
-  drawBirdRows(males);
+  drawBirdRows(filteredMales);
 
   // ===== FEMEAS =====
   y += 8;
@@ -355,16 +396,16 @@ export async function generateSinglesPdf(
     drawBrandFooter(doc, pageW, pageH, pageNum, 0);
     doc.addPage();
     pageNum++;
-    y = drawBrandHeader(doc, pageW, logoBase64, "Aves Solteiras (cont.)", "");
+    y = drawBrandHeader(doc, pageW, logoBase64, `${titleText} (cont.)`, "");
     y += 4;
   }
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND.red);
-  doc.text(`FEMEAS SOLTEIRAS (${females.length})`, margin, y);
+  doc.text(`FEMEAS SOLTEIRAS (${filteredFemales.length})`, margin, y);
   y += 6;
   drawSinglesHeader();
-  drawBirdRows(females);
+  drawBirdRows(filteredFemales);
 
   // Draw footers on all pages
   const totalPages = pageNum;
@@ -374,7 +415,9 @@ export async function generateSinglesPdf(
   }
 
   const now = new Date();
-  const filename = `aves-solteiras_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}.pdf`;
+  const filename = speciesFilter
+    ? `aves-solteiras-${speciesFilter.toLowerCase().replace(/\s+/g, "-")}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}.pdf`
+    : `aves-solteiras_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}.pdf`;
   doc.save(filename);
 }
 
