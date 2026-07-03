@@ -28,6 +28,8 @@ import {
   Shield,
   Download,
   XCircle,
+  ClipboardList,
+  Printer,
 } from "lucide-react";
 
 // Categorias de documentos do criatório
@@ -906,6 +908,85 @@ function DocumentacaoModuleInner() {
   );
 }
 
+// POP - Procedimentos Operacionais Padrão
+const POP_DOCUMENTS = [
+  {
+    id: "pop-triagem",
+    title: "Entrada na Sala de Triagem",
+    code: "POP-BIO-001",
+    description: "Procedimento completo para recebimento de aves: verificação documental, identificação, avaliação inicial e classificação (APTA / OBSERVAÇÃO / URGÊNCIA).",
+    pdfUrl: "/manus-storage/01-entrada-sala-triagem_2b6946d9.pdf",
+    pages: 5,
+  },
+];
+
+function POPSection() {
+  const handlePrint = (url: string) => {
+    window.open(url, "_blank");
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-stone-800">Procedimentos Operacionais Padrão</h2>
+          <p className="text-sm text-stone-500 mt-0.5">
+            Manuais padronizados para cada etapa do manejo — imprima e cole na parede do setor
+          </p>
+        </div>
+      </div>
+
+      {/* POP Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {POP_DOCUMENTS.map((pop) => (
+          <div
+            key={pop.id}
+            className="group relative bg-white border border-stone-200 rounded-2xl p-5 hover:shadow-lg hover:border-emerald-200 transition-all duration-200"
+          >
+            {/* Icon + Code */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <ClipboardList size={20} className="text-emerald-600" />
+              </div>
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider bg-stone-50 px-2 py-1 rounded-md">
+                {pop.code}
+              </span>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-sm font-bold text-stone-800 mb-1.5">{pop.title}</h3>
+
+            {/* Description */}
+            <p className="text-xs text-stone-500 leading-relaxed mb-4">{pop.description}</p>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-stone-100">
+              <span className="text-[10px] text-stone-400 font-medium">{pop.pages} páginas</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handlePrint(pop.pdfUrl)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                >
+                  <Printer size={13} />
+                  Imprimir
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Placeholder for future POPs */}
+        <div className="border-2 border-dashed border-stone-200 rounded-2xl p-5 flex flex-col items-center justify-center text-center min-h-[180px] opacity-50">
+          <ClipboardList size={24} className="text-stone-300 mb-2" />
+          <p className="text-xs font-semibold text-stone-400">Próximos POPs</p>
+          <p className="text-[10px] text-stone-300 mt-1">Quarentena, Saída da Triagem...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Wrapper component that adds tabs
 export default function DocumentacaoModule() {
   const [activeTab, setActiveTab] = useState("documentos");
@@ -937,12 +1018,21 @@ export default function DocumentacaoModule() {
         >
           Documentos Auxiliares
         </TabsTrigger>
+        <TabsTrigger
+          value="pop"
+          className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-xl px-5 py-2.5 text-sm font-semibold"
+        >
+          POP
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="documentos">
         <DocumentacaoModuleInner />
       </TabsContent>
       <TabsContent value="auxiliares">
         <DocumentosAuxiliares />
+      </TabsContent>
+      <TabsContent value="pop">
+        <POPSection />
       </TabsContent>
     </Tabs>
     </div>
