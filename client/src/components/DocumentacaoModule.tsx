@@ -935,7 +935,7 @@ function POPSection() {
   const [viewingTitle, setViewingTitle] = useState<string>("");
 
   const handleView = (url: string, title: string) => {
-    setViewingPdf(url);
+    setViewingPdf(url + "?inline=1");
     setViewingTitle(title);
   };
 

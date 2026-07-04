@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { ENV } from "./env";
+
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
     const key = (req.params as any)[0] as string;
@@ -31,8 +32,31 @@ export function registerStorageProxy(app: Express) {
         res.status(502).send("Empty signed URL from backend");
         return;
       }
-      res.set("Cache-Control", "no-store");
-      res.redirect(307, url);
+
+      // Check if the request wants inline viewing (for iframe embedding)
+      const inline = req.query.inline === "1";
+
+      if (inline) {
+        // Stream the content directly to avoid cross-origin iframe blocking
+        const fileResp = await fetch(url);
+        if (!fileResp.ok) {
+          res.status(502).send("Failed to fetch file from storage");
+          return;
+        }
+        const contentType = fileResp.headers.get("content-type") || "application/octet-stream";
+        res.set("Content-Type", contentType);
+        res.set("Cache-Control", "public, max-age=3600");
+        res.set("Content-Disposition", "inline");
+        // Remove any X-Frame-Options to allow iframe embedding
+        res.removeHeader("X-Frame-Options");
+
+        const buffer = await fileResp.arrayBuffer();
+        res.send(Buffer.from(buffer));
+      } else {
+        // Default: redirect (for direct download/print in new tab)
+        res.set("Cache-Control", "no-store");
+        res.redirect(307, url);
+      }
     } catch (err) {
       console.error("[StorageProxy] failed:", err);
       res.status(502).send("Storage proxy error");
