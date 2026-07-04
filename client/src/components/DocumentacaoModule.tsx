@@ -931,49 +931,15 @@ const POP_DOCUMENTS = [
 ];
 
 function POPSection() {
-  const [viewingPdf, setViewingPdf] = useState<string | null>(null);
-  const [viewingTitle, setViewingTitle] = useState<string>("");
-
-  const handleView = (url: string, title: string) => {
-    setViewingPdf(url + "?inline=1");
-    setViewingTitle(title);
+  const handleView = (url: string) => {
+    // Open PDF in new tab using inline proxy - works in all browsers
+    window.open(url + "?inline=1", "_blank");
   };
 
   const handleDownloadPdf = (url: string) => {
+    // Open PDF for download/print
     window.open(url, "_blank");
   };
-
-  if (viewingPdf) {
-    return (
-      <div className="space-y-4">
-        {/* Back button + title */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setViewingPdf(null)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-lg transition-colors"
-          >
-            <XCircle size={14} />
-            Voltar
-          </button>
-          <h2 className="text-base font-bold text-stone-800">{viewingTitle}</h2>
-        </div>
-        {/* Embedded PDF viewer */}
-        <div className="w-full rounded-2xl overflow-hidden border border-stone-200 shadow-sm" style={{ height: "80vh" }}>
-          <object
-            data={viewingPdf}
-            type="application/pdf"
-            className="w-full h-full"
-          >
-            <embed
-              src={viewingPdf}
-              type="application/pdf"
-              className="w-full h-full"
-            />
-          </object>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -1015,7 +981,7 @@ function POPSection() {
               <span className="text-[10px] text-stone-400 font-medium">{pop.pages} páginas</span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleView(pop.pdfUrl, pop.title)}
+                  onClick={() => handleView(pop.pdfUrl)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
                 >
                   <Eye size={13} />
