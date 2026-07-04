@@ -959,11 +959,17 @@ function POPSection() {
         </div>
         {/* Embedded PDF viewer */}
         <div className="w-full rounded-2xl overflow-hidden border border-stone-200 shadow-sm" style={{ height: "80vh" }}>
-          <iframe
-            src={viewingPdf}
+          <object
+            data={viewingPdf}
+            type="application/pdf"
             className="w-full h-full"
-            title={viewingTitle}
-          />
+          >
+            <embed
+              src={viewingPdf}
+              type="application/pdf"
+              className="w-full h-full"
+            />
+          </object>
         </div>
       </div>
     );
