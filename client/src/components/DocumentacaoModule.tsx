@@ -927,6 +927,14 @@ const POP_DOCUMENTS = [
     pdfUrl: "/manus-storage/02-quarentena_aa9ccdd6.pdf",
     pages: 5,
   },
+  {
+    id: "pop-saida-triagem",
+    title: "Saída da Sala de Triagem",
+    code: "POP-BIO-003",
+    description: "Procedimento para liberação de aves após triagem: critérios de liberação, transferência ao setor de quarentena, registro de saída e higienização obrigatória da sala.",
+    pdfUrl: "/manus-storage/03-saida-sala-triagem_7f47b8df.pdf",
+    pages: 4,
+  },
 ];
 
 function POPSection() {
@@ -984,12 +992,6 @@ function POPSection() {
           </div>
         ))}
 
-        {/* Placeholder for future POPs */}
-        <div className="border-2 border-dashed border-stone-200 rounded-2xl p-5 flex flex-col items-center justify-center text-center min-h-[180px] opacity-50">
-          <ClipboardList size={24} className="text-stone-300 mb-2" />
-          <p className="text-xs font-semibold text-stone-400">Próximos POPs</p>
-          <p className="text-[10px] text-stone-300 mt-1">Saída da Triagem...</p>
-        </div>
       </div>
     </div>
   );
