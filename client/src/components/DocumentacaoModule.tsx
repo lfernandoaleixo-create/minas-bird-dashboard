@@ -923,8 +923,8 @@ const POP_DOCUMENTS = [
     title: "Quarentena",
     code: "POP-BIO-002",
     description: "Protocolo de isolamento sanitário de 40 dias: exames laboratoriais (PCR, parasitológico), monitoramento diário, critérios de liberação e biossegurança.",
-    pdfUrl: "/manus-storage/02-quarentena_aa9ccdd6.pdf",
-    pages: 5,
+    pdfUrl: "/manus-storage/02-quarentena_4ffa2a40.pdf",
+    pages: 6,
   },
 ];
 
