@@ -918,6 +918,14 @@ const POP_DOCUMENTS = [
     pdfUrl: "/manus-storage/01-entrada-sala-triagem_2b6946d9.pdf",
     pages: 5,
   },
+  {
+    id: "pop-quarentena",
+    title: "Quarentena",
+    code: "POP-BIO-002",
+    description: "Protocolo de isolamento sanitário de 40 dias: exames laboratoriais (PCR, parasitológico), monitoramento diário, critérios de liberação e biossegurança.",
+    pdfUrl: "/manus-storage/02-quarentena_aa9ccdd6.pdf",
+    pages: 5,
+  },
 ];
 
 function POPSection() {
@@ -980,7 +988,7 @@ function POPSection() {
         <div className="border-2 border-dashed border-stone-200 rounded-2xl p-5 flex flex-col items-center justify-center text-center min-h-[180px] opacity-50">
           <ClipboardList size={24} className="text-stone-300 mb-2" />
           <p className="text-xs font-semibold text-stone-400">Próximos POPs</p>
-          <p className="text-[10px] text-stone-300 mt-1">Quarentena, Saída da Triagem...</p>
+          <p className="text-[10px] text-stone-300 mt-1">Saída da Triagem...</p>
         </div>
       </div>
     </div>
