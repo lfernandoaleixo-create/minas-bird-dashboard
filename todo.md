@@ -482,3 +482,4 @@
 - [x] Acasalamentos: impedir que a mesma ave seja selecionada em mais de 1 casal ativo (validação de ave única)
 - [x] Acasalamentos: PDF dos casais para orientar veterinário na separação (gaiola, macho, fêmea, espécie, status)
 - [x] Acasalamentos: lista de aves solteiras (não estão em nenhum casal ativo) separadas por machos e fêmeas
+- [x] POP cards: substituir botão "Imprimir" por 2 botões — "Visualizar" (abre PDF embutido no sistema) e "PDF" (abre para impressão)

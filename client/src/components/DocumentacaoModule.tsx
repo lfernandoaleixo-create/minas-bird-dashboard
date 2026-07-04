@@ -30,6 +30,8 @@ import {
   XCircle,
   ClipboardList,
   Printer,
+  Eye,
+  FileDown,
 } from "lucide-react";
 
 // Categorias de documentos do criatório
@@ -929,9 +931,43 @@ const POP_DOCUMENTS = [
 ];
 
 function POPSection() {
-  const handlePrint = (url: string) => {
+  const [viewingPdf, setViewingPdf] = useState<string | null>(null);
+  const [viewingTitle, setViewingTitle] = useState<string>("");
+
+  const handleView = (url: string, title: string) => {
+    setViewingPdf(url);
+    setViewingTitle(title);
+  };
+
+  const handleDownloadPdf = (url: string) => {
     window.open(url, "_blank");
   };
+
+  if (viewingPdf) {
+    return (
+      <div className="space-y-4">
+        {/* Back button + title */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setViewingPdf(null)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-lg transition-colors"
+          >
+            <XCircle size={14} />
+            Voltar
+          </button>
+          <h2 className="text-base font-bold text-stone-800">{viewingTitle}</h2>
+        </div>
+        {/* Embedded PDF viewer */}
+        <div className="w-full rounded-2xl overflow-hidden border border-stone-200 shadow-sm" style={{ height: "80vh" }}>
+          <iframe
+            src={viewingPdf}
+            className="w-full h-full"
+            title={viewingTitle}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -973,11 +1009,18 @@ function POPSection() {
               <span className="text-[10px] text-stone-400 font-medium">{pop.pages} páginas</span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handlePrint(pop.pdfUrl)}
+                  onClick={() => handleView(pop.pdfUrl, pop.title)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
                 >
-                  <Printer size={13} />
-                  Imprimir
+                  <Eye size={13} />
+                  Visualizar
+                </button>
+                <button
+                  onClick={() => handleDownloadPdf(pop.pdfUrl)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-lg transition-colors border border-stone-200"
+                >
+                  <FileDown size={13} />
+                  PDF
                 </button>
               </div>
             </div>
