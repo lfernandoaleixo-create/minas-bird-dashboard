@@ -959,6 +959,14 @@ const POP_DOCUMENTS = [
     pdfUrl: "/manus-storage/05-cozinha_dd1bd0cc.pdf",
     pages: 5,
   },
+  {
+    id: "reg-visitas-veterinarias",
+    title: "Visitas Veterinárias",
+    code: "REG-BIO-002",
+    description: "Livro de registro para visitas do Médico Veterinário ao criatório. 100 fichas numeradas em formato card com campos de procedimentos, observações, assinatura e carimbo CRMV.",
+    pdfUrl: "/manus-storage/livro-visitas-veterinarias_d7646a44.pdf",
+    pages: 102,
+  },
 ];
 
 function POPSection() {
