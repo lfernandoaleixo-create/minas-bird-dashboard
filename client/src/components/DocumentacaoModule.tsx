@@ -935,6 +935,14 @@ const POP_DOCUMENTS = [
     pdfUrl: "/manus-storage/03-saida-sala-triagem_7f47b8df.pdf",
     pages: 4,
   },
+  {
+    id: "livro-registro-aves",
+    title: "Livro de Registro de Aves",
+    code: "REG-BIO-001",
+    description: "Livro de registro para controle de entrada e saída de aves nas salas de Triagem e Quarentena. 50 fichas numeradas com campos detalhados de observação, estado da ave e assinaturas.",
+    pdfUrl: "/manus-storage/livro-registro-aves_fd33037b.pdf",
+    pages: 52,
+  },
 ];
 
 function POPSection() {

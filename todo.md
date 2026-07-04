@@ -484,3 +484,4 @@
 - [x] Acasalamentos: lista de aves solteiras (não estão em nenhum casal ativo) separadas por machos e fêmeas
 - [x] POP cards: substituir botão "Imprimir" por 2 botões — "Visualizar" (abre PDF embutido no sistema) e "PDF" (abre para impressão)
 - [x] POP-BIO-003 (Saída da Sala de Triagem): PDF gerado com 4 páginas, aprovado pelo Fernando, publicado no dashboard
+- [x] Livro de Registro de Aves (REG-BIO-001): 52 páginas (capa + antecapa + 50 fichas numeradas), aprovado e publicado no dashboard
