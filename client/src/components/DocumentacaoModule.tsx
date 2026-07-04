@@ -951,6 +951,14 @@ const POP_DOCUMENTS = [
     pdfUrl: "/manus-storage/04-sala-veterinario_eb89d51d.pdf",
     pages: 5,
   },
+  {
+    id: "pop-cozinha",
+    title: "Cozinha",
+    code: "POP-BIO-005",
+    description: "Procedimento para uso da cozinha: manipulação segura de alimentos frescos, armazenamento de rações e sementes, higienização diária/semanal/mensal e controle de qualidade.",
+    pdfUrl: "/manus-storage/05-cozinha_dd1bd0cc.pdf",
+    pages: 5,
+  },
 ];
 
 function POPSection() {

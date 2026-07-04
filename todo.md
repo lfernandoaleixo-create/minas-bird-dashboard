@@ -486,3 +486,4 @@
 - [x] POP-BIO-003 (Saída da Sala de Triagem): PDF gerado com 4 páginas, aprovado pelo Fernando, publicado no dashboard
 - [x] Livro de Registro de Aves (REG-BIO-001): 52 páginas (capa + antecapa + 50 fichas numeradas), aprovado e publicado no dashboard
 - [x] POP-BIO-004 (Sala do Veterinário - Consultas e Internações de Urgência): PDF gerado com 5 páginas, aprovado e publicado no dashboard
+- [x] POP-BIO-005 (Cozinha - Manipulação de Alimentos e Ração): PDF gerado com 5 páginas, aprovado e publicado no dashboard
