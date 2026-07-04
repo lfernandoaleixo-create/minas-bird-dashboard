@@ -30,7 +30,6 @@ import {
   XCircle,
   ClipboardList,
   Printer,
-  Eye,
   FileDown,
 } from "lucide-react";
 
@@ -931,14 +930,9 @@ const POP_DOCUMENTS = [
 ];
 
 function POPSection() {
-  const handleView = (url: string) => {
-    // Open PDF in new tab using inline proxy - works in all browsers
-    window.open(url + "?inline=1", "_blank");
-  };
-
   const handleDownloadPdf = (url: string) => {
-    // Open PDF for download/print
-    window.open(url, "_blank");
+    // Open PDF in new tab for viewing/printing
+    window.open(url + "?inline=1", "_blank");
   };
 
   return (
@@ -979,22 +973,13 @@ function POPSection() {
             {/* Footer */}
             <div className="flex items-center justify-between pt-3 border-t border-stone-100">
               <span className="text-[10px] text-stone-400 font-medium">{pop.pages} páginas</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleView(pop.pdfUrl)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
-                >
-                  <Eye size={13} />
-                  Visualizar
-                </button>
-                <button
-                  onClick={() => handleDownloadPdf(pop.pdfUrl)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-lg transition-colors border border-stone-200"
-                >
-                  <FileDown size={13} />
-                  PDF
-                </button>
-              </div>
+              <button
+                onClick={() => handleDownloadPdf(pop.pdfUrl)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                <FileDown size={13} />
+                PDF
+              </button>
             </div>
           </div>
         ))}
