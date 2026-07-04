@@ -943,6 +943,14 @@ const POP_DOCUMENTS = [
     pdfUrl: "/manus-storage/livro-registro-aves_fd33037b.pdf",
     pages: 52,
   },
+  {
+    id: "pop-sala-veterinario",
+    title: "Sala do Veterinário",
+    code: "POP-BIO-004",
+    description: "Procedimento para consultas de rotina, atendimentos de urgência e internações de aves: exame clínico, prescrição, protocolo de internação, critérios de alta e biossegurança.",
+    pdfUrl: "/manus-storage/04-sala-veterinario_eb89d51d.pdf",
+    pages: 5,
+  },
 ];
 
 function POPSection() {
