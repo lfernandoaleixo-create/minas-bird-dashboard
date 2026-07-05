@@ -967,6 +967,14 @@ const POP_DOCUMENTS = [
     pdfUrl: "/manus-storage/livro-visitas-veterinarias_d7646a44.pdf",
     pages: 102,
   },
+  {
+    id: "prontuario-veterinario",
+    title: "Prontuário Veterinário Individual",
+    code: "REG-BIO-003",
+    description: "Prontuário para acompanhamento clínico individual de aves. 50 folhas destacáveis (frente e verso) com identificação, diagnóstico inicial e espaço amplo para anotações. Inclui registro de controle de folhas destacadas.",
+    pdfUrl: "/manus-storage/prontuario-veterinario_a24e4d8d.pdf",
+    pages: 104,
+  },
 ];
 
 function POPSection() {

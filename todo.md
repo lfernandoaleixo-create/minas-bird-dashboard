@@ -488,3 +488,4 @@
 - [x] POP-BIO-004 (Sala do Veterinário - Consultas e Internações de Urgência): PDF gerado com 5 páginas, aprovado e publicado no dashboard
 - [x] POP-BIO-005 (Cozinha - Manipulação de Alimentos e Ração): PDF gerado com 5 páginas, aprovado e publicado no dashboard
 - [x] REG-BIO-002 (Livro de Visitas Veterinárias): 102 páginas (capa + contracapa + 100 fichas numeradas), aprovado e publicado no dashboard
+- [x] REG-BIO-003 (Prontuário Veterinário Individual): 104 páginas (capa + contracapa + registro de destacamento + 50 prontuários frente/verso com picote lateral), aprovado e publicado no dashboard
